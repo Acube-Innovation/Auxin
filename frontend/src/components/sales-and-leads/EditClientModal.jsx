@@ -338,11 +338,13 @@ function EditClientModal({ isOpen, onClose, onSubmit, clientData }) {
     { value: "Barge Owners", label: "Barge Owners" },
     { value: "Broker", label: "Broker" },
     { value: "Cha", label: "CHA" },
+    { value: "Charterer", label: "Charterer" },
     { value: "Consignee", label: "Consignee" },
     { value: "Freigt Forwarder", label: "Freigt Forwarder" },
     { value: "Other", label: "Other" },
     { value: "Ship Owners", label: "Ship Owners" },
     { value: "Shipper", label: "Shipper" },
+    { value: "Supplier", label: "Supplier" },
     { value: "Transporter", label: "Transporter" },
   ];
 

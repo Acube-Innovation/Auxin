@@ -251,6 +251,30 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Get all events across all clients (flattened with clientId / clientName).
+// Must stay above GET /:id, otherwise "/events" is matched as a client id.
+router.get('/events', authMiddleware, async (req, res) => {
+  try {
+    const clients = await Client.find({}, { companyName: 1, events: 1 }).lean();
+    const all = [];
+    for (const c of clients) {
+      if (Array.isArray(c.events)) {
+        for (const e of c.events) {
+          all.push({
+            clientId: c._id,
+            clientName: c.companyName,
+            ...e,
+          });
+        }
+      }
+    }
+    res.json(all);
+  } catch (error) {
+    console.error('Error fetching all events:', error);
+    res.status(500).json({ message: 'Error fetching all events', error: error.message });
+  }
+});
+
 // Get single client by ID
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
@@ -731,29 +755,6 @@ router.delete('/:id/events/:eventId', authMiddleware, async (req, res) => {
     res.json({ message: 'Event deleted successfully', client });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting event', error: error.message });
-  }
-});
-
-
-router.get('/events', authMiddleware, async (req, res) => {
-  try {
-    const clients = await Client.find({}, { companyName: 1, events: 1 }).lean();
-    const all = [];
-    for (const c of clients) {
-      if (Array.isArray(c.events)) {
-        for (const e of c.events) {
-          all.push({
-            clientId: c._id,
-            clientName: c.companyName,
-            ...e,
-          });
-        }
-      }
-    }
-    res.json(all);
-  } catch (error) {
-    console.error('Error fetching all events:', error);
-    res.status(500).json({ message: 'Error fetching all events', error: error.message });
   }
 });
 

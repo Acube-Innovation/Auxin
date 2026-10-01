@@ -58,7 +58,7 @@ function Reports() {
 
   // Full options for Excel "Legend" or reference
   const clientDropdownOptions = {
-    clientType: ["Agent", "Barge Operator", "Barge Owners", "Broker", "CHA", "Consignee", "Freigt Forwarder", "Other", "Ship Owners", "Shipper", "Transporter"],
+    clientType: ["Agent", "Barge Operator", "Barge Owners", "Broker", "CHA", "Charterer", "Consignee", "Freigt Forwarder", "Other", "Ship Owners", "Shipper", "Supplier", "Transporter"],
     leadType: ["Client", "Lead"],
     leadSource: ["Advertisement", "Cold Call", "Conference", "Employee Referral", "Exhibitor", "Exhibition As Visitor", "External Referral", "SOCIAL MEDIA"],
     leadStatus: ["Attempted To Contact", "Contact In Future", "Contacted", "Junk Lead", "Lost Lead", "Negotiation", "New", "Qualified", "Quoted", "Won"],

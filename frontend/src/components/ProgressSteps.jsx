@@ -1,12 +1,14 @@
 import React from "react";
 import "./ProgressSteps.css";
 
-function ProgressSteps({ currentStep = 1, onStepClick }) {
-  const steps = [
-    { id: 1, label: "Corporate Details" },
-    { id: 2, label: "Billing Details" },
-    { id: 3, label: "Review Changes" },
-  ];
+const DEFAULT_STEPS = ["Corporate Details", "Billing Details", "Review Changes"];
+
+// steps: array of labels (["Fixture", "Cargo", ...]) or of { id, label }; ids default to 1..n
+function ProgressSteps({ currentStep = 1, onStepClick, steps: stepsProp }) {
+  const source = Array.isArray(stepsProp) && stepsProp.length > 0 ? stepsProp : DEFAULT_STEPS;
+  const steps = source.map((step, index) =>
+    typeof step === "string" ? { id: index + 1, label: step } : { id: step.id ?? index + 1, label: step.label }
+  );
 
   const handleStepClick = (stepId) => {
     if (onStepClick) {
