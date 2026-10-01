@@ -1,0 +1,105 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kpi {
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+button.kpi {
+  cursor: pointer;
+}
+
+button.kpi:hover {
+  border-color: #84adff;
+}
+
+.kpiValue {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0b3a6f;
+}
+
+.kpiLabel {
+  font-size: 0.8rem;
+  color: #667085;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card {
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.card:hover {
+  border-color: #84adff;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.vessel {
+  font-weight: 700;
+  color: #0b3a6f;
+  font-size: 1.05rem;
+}
+
+.port {
+  font-size: 0.86rem;
+}
+
+.counts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.count {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.checksBar {
+  height: 6px;
+  border-radius: 3px;
+  background: #eaecf0;
+  overflow: hidden;
+}
+
+.checksBar > div {
+  height: 100%;
+  background: #12b76a;
+}

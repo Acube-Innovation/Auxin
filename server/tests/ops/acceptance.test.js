@@ -565,3 +565,53 @@ test('ETA change: assignees other than the editor are told which of their tasks 
   assert.match(note.title, /dates changed by admin/);
   assert.match(note.body, /of your tasks? moved/);
 });
+
+// ------------------------------------------------------------------ step 10: Report View and fleet dashboard
+test('Report View: counts equal the Operations View totals (scope §13); N/A left out; on-time %', async () => {
+  const { status, data: r } = await call('GET', `/ops/voyages/${ctx.voyage._id}/report`);
+  assert.equal(status, 200, JSON.stringify(r));
+  const ov = (await call('GET', `/ops/voyages/${ctx.voyage._id}/tasks`)).data;
+  assert.deepEqual(r.byBucket, ov.byBucket, 'same bucket counts as the Operations View');
+  assert.equal(r.totals.tasks, ov.total);
+  const na = ov.tasks.filter((t) => t.status === 'NA').length;
+  const done = ov.tasks.filter((t) => t.status === 'DONE');
+  assert.equal(r.totals.notApplicable, na);
+  assert.equal(r.totals.counted, ov.total - na);
+  assert.equal(r.totals.done, done.length);
+  assert.equal(r.byStatus.DONE + r.byStatus.NOT_STARTED + r.byStatus.INITIATED + r.byStatus.AWAITING, r.totals.counted);
+  assert.equal(r.totals.pctComplete, Math.round((done.length / r.totals.counted) * 1000) / 10);
+  const withDue = done.filter((t) => t.dueDate);
+  assert.equal(r.totals.onTime, withDue.filter((t) => t.overdueDays === 0).length);
+  assert.equal(r.byStage.reduce((n, g) => n + g.total, 0), r.totals.counted);
+  assert.equal(r.overdue.length, ov.byBucket.OVERDUE);
+  assert.ok(r.overdue[0].overdueDays >= r.overdue[r.overdue.length - 1].overdueDays, 'most overdue first');
+  const salalah = r.portTimeline.find((p) => p.name === 'Salalah');
+  assert.equal(r.portTimeline[0].kind, 'DELIVERY');
+  assert.equal(r.portTimeline[r.portTimeline.length - 1].kind, 'REDELIVERY');
+  const arr = salalah.events.find((e) => e.key === 'arrival');
+  assert.equal(arr.delayMinutes, Math.round((new Date(arr.actual) - new Date(arr.original)) / 60000));
+});
+
+test('fleet dashboard: cards, KPIs and tasks due today; scope by user, operator filter cannot widen it', async () => {
+  const admin = (await call('GET', '/ops/dashboard')).data;
+  assert.equal(admin.kpis.activeVoyages, 1);
+  const card = admin.voyages[0];
+  const r = (await call('GET', `/ops/voyages/${ctx.voyage._id}/report`)).data;
+  assert.equal(card.counts.overdue, r.byBucket.OVERDUE);
+  assert.equal(admin.kpis.overdue, card.counts.overdue);
+  assert.equal(card.voyageNo, ctx.voyage.voyageNo);
+  assert.ok(card.currentPort || card.nextPort || card.redelivery);
+  assert.equal(admin.tasksScope, 'all');
+  assert.equal(admin.canFilterOperator, true);
+  assert.equal(admin.tasksToday.length, card.counts.today);
+
+  const ops1 = (await call('GET', '/ops/dashboard', null, 'ops1')).data;
+  assert.equal(ops1.tasksScope, 'mine');
+  assert.equal(ops1.canFilterOperator, false);
+  assert.equal(ops1.voyages.length, 1);
+
+  const ops2 = (await call('GET', `/ops/dashboard?operator=${ops1.myEmployeeId}`, null, 'ops2')).data;
+  assert.equal(ops2.voyages.length, 0, 'ops2 sees no voyage, whatever the operator filter');
+  assert.equal((await call('GET', `/ops/dashboard?operator=${ctx.e2}`)).data.voyages.length, 0, 'Test Op Two operates no voyage');
+  assert.equal((await call('GET', '/ops/dashboard?operator=bad')).status, 400);
+});

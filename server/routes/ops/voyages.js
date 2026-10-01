@@ -478,6 +478,14 @@ router.post('/:id/tasks', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error adding task'); }
 });
 
+// Report View (G2): progress by stage, counts by status, % complete, on-time %, overdue list, port timeline
+router.get('/:id/report', async (req, res) => {
+  try {
+    const voyage = await loadVisible(req, req.params.id);
+    res.json(await require('../../services/ops/reports').voyageReport(voyage._id));
+  } catch (err) { sendError(res, err, 'Error building the report'); }
+});
+
 router.get('/:id/revisions', async (req, res) => {
   try {
     const voyage = await loadVisible(req, req.params.id);

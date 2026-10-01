@@ -25,6 +25,7 @@ import VoyageList from "./pages/operations/VoyageList";
 import VoyageWizard from "./pages/operations/wizard/VoyageWizard";
 import VoyageWorkspace from "./pages/operations/workspace/VoyageWorkspace";
 import MyTasks from "./pages/operations/MyTasks";
+import OpsDashboard from "./pages/operations/OpsDashboard";
 import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "./config/opsRoles";
 
 
@@ -83,6 +84,7 @@ function App() {
           <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
 
           {/* Vessel Operations (Phase 2) */}
+          <Route path="/operations" element={<ProtectedRoute roles={ALL_OPS_ROLES}><OpsDashboard /></ProtectedRoute>} />
           <Route path="/operations/voyages" element={<ProtectedRoute roles={ALL_OPS_ROLES}><VoyageList /></ProtectedRoute>} />
           <Route path="/operations/voyages/new" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />
           <Route path="/operations/voyages/:id/edit" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />

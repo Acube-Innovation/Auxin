@@ -11,6 +11,7 @@ import {
   FaCogs,
   FaShip,
   FaTasks,
+  FaAnchor,
 } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Sidebar.module.css";
@@ -201,6 +202,12 @@ function Sidebar() {
             <div className={styles["menu-section-one"]}>
               <p className={styles["section-title"]}>VESSEL OPERATIONS</p>
               <ul>
+                <li className={location.pathname === "/operations" ? styles.active : ""}>
+                  <Link to="/operations" className={styles["sidebar-link"]}>
+                    <FaAnchor className={styles.icon} style={opsIconStyle} aria-hidden="true" />
+                    Ops Dashboard
+                  </Link>
+                </li>
                 <li className={isActive("/operations/voyages") ? styles.active : ""}>
                   <Link to="/operations/voyages" className={styles["sidebar-link"]}>
                     <FaShip className={styles.icon} style={opsIconStyle} aria-hidden="true" />

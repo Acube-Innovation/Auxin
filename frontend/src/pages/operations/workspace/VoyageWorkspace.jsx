@@ -16,14 +16,16 @@ import OverviewTab from "./OverviewTab";
 import PortCallsTab from "./PortCallsTab";
 import ActivityTab from "./ActivityTab";
 import DailyChecksTab from "./DailyChecksTab";
+import ReportTab from "./ReportTab";
 import styles from "../masters/Masters.module.css";
 import ws from "./Workspace.module.css";
 
 const TABS = [
   { key: "overview", label: "Overview" },
-  { key: "portcalls", label: "Port Calls & SOF" },
-  { key: "checks", label: "Daily Checks" },
   { key: "tasks", label: "Operations View" },
+  { key: "portcalls", label: "Port Calls & SOF" },
+  { key: "report", label: "Report View" },
+  { key: "checks", label: "Daily Checks" },
   { key: "activity", label: "Activity" },
 ];
 const STATUS_CLASS = { DRAFT: styles.chipNone, ACTIVE: styles.chipActive, COMPLETED: styles.chipExcel, CANCELLED: styles.chipInactive };
@@ -34,7 +36,7 @@ const STATUS_ACTIONS = {
   CANCELLED: [["DRAFT", "Restore as draft"]],
 };
 
-// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, E1–E2, G1)
+// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, E1–E2, G1–G2)
 function VoyageWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -223,6 +225,7 @@ function VoyageWorkspace() {
 
         {tab === "overview" && <OverviewTab voyage={voyage} officeTz={officeTz} canEdit={canEdit} onActivated={load} onOpenTasks={(b) => { setTaskBucket(b); setTab("tasks"); }}
           onOpenChecks={() => setTab("checks")} refreshKey={refreshKey} />}
+        {tab === "report" && <ReportTab voyage={voyage} refreshKey={refreshKey} />}
         {tab === "checks" && <DailyChecksTab voyage={voyage} officeTz={officeTz} refreshKey={refreshKey} onChanged={(res) => afterChange(res, "Due dates moved")} />}
         {tab === "portcalls" && <PortCallsTab voyage={voyage} officeTz={officeTz} editable={editable} refreshKey={refreshKey} onAction={onAction} />}
         {tab === "tasks" && (
