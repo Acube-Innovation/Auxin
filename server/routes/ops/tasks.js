@@ -96,6 +96,7 @@ router.post('/bulk', async (req, res) => {
         try {
           const { task, voyage } = await loadTask(req, id, { forWrite: true, session });
           const p = { ...patch };
+          if (p.dueDate !== undefined && !p.status && ['DONE', 'NA'].includes(task.status)) throw badRequest('Done / N/A tasks keep their due date');
           if (p.addAssignees) {
             p.assignedTo = [...new Set([...(task.assignedTo || []).map(String), ...p.addAssignees.map(String)])];
             delete p.addAssignees;

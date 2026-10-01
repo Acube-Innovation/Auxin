@@ -323,6 +323,11 @@ test('bulk change, ad-hoc task on an active voyage, my tasks across voyages', as
   const naBulk = await call('POST', '/ops/tasks/bulk', { ids, patch: { status: 'NA' } });
   assert.equal(naBulk.data.updated, 0);
   assert.equal(naBulk.data.skipped.length, 2, 'N/A without a reason is skipped');
+  const doneId = taskByCode(tasks, 'T001')._id;
+  await patchTask(doneId, { status: 'DONE' });
+  const dueBulk = await call('POST', '/ops/tasks/bulk', { ids: [...ids, doneId], patch: { dueDate: '2026-08-01' } });
+  assert.equal(dueBulk.data.updated, 2);
+  assert.deepEqual(dueBulk.data.skipped.map((x) => x.reason), ['Done / N/A tasks keep their due date']);
 
   const add = await call('POST', `/ops/voyages/${ctx.voyage._id}/tasks`, { name: 'Send cargo docs to bank', dueDate: '2026-07-30', priority: 'LOW', assignedTo: [ctx.e2] });
   assert.equal(add.status, 201, JSON.stringify(add.data));
