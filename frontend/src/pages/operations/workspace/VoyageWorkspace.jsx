@@ -17,6 +17,7 @@ import PortCallsTab from "./PortCallsTab";
 import ActivityTab from "./ActivityTab";
 import DailyChecksTab from "./DailyChecksTab";
 import ReportTab from "./ReportTab";
+import DocumentsTab from "./DocumentsTab";
 import styles from "../masters/Masters.module.css";
 import ws from "./Workspace.module.css";
 
@@ -26,6 +27,7 @@ const TABS = [
   { key: "portcalls", label: "Port Calls & SOF" },
   { key: "report", label: "Report View" },
   { key: "checks", label: "Daily Checks" },
+  { key: "documents", label: "Documents" },
   { key: "activity", label: "Activity" },
 ];
 const STATUS_CLASS = { DRAFT: styles.chipNone, ACTIVE: styles.chipActive, COMPLETED: styles.chipExcel, CANCELLED: styles.chipInactive };
@@ -36,7 +38,7 @@ const STATUS_ACTIONS = {
   CANCELLED: [["DRAFT", "Restore as draft"]],
 };
 
-// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, E1–E2, G1–G2)
+// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, E1–E2, G1–G2, I2)
 function VoyageWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -236,7 +238,8 @@ function VoyageWorkspace() {
                   onChanged={(res) => afterChange(res, "Due dates moved")} />}
           </div>
         )}
-        {tab === "activity" && <ActivityTab voyageId={voyage._id} officeTz={officeTz} refreshKey={refreshKey} />}
+        {tab === "documents" && <DocumentsTab voyage={voyage} officeTz={officeTz} refreshKey={refreshKey} />}
+        {tab === "activity" && <ActivityTab voyageId={voyage._id} voyageNo={voyage.voyageNo} officeTz={officeTz} refreshKey={refreshKey} />}
       </div>
 
       <PortCallDialog mode={dialog?.mode} portCall={dialog?.portCall} portCalls={voyage.portCalls} options={options} settings={settings}

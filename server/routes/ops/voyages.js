@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 const { DateTime } = require('luxon');
 const Voyage = require('../../models/ops/Voyage');
 const PortCall = require('../../models/ops/PortCall');
@@ -330,6 +332,8 @@ router.delete('/:id', async (req, res) => {
     }
     await PortCall.deleteMany({ voyage: voyage._id });
     await VoyageTask.deleteMany({ voyage: voyage._id });
+    await Promise.all(['DateRevision', 'VoyageLog', 'DailyCheckLog', 'VoyageDocument'].map((m) => require(`../../models/ops/${m}`).deleteMany({ voyage: voyage._id })));
+    fs.rmSync(path.join(require('./tasks').STORAGE, String(voyage._id)), { recursive: true, force: true }); // its documents and task files
     await voyage.deleteOne();
     res.json({ message: `Voyage ${voyage.voyageNo} deleted` });
   } catch (err) { sendError(res, err, 'Error deleting voyage'); }
@@ -511,17 +515,19 @@ router.get('/:id/revisions', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error fetching date revisions'); }
 });
 
-// Activity timeline (feature D10): voyage log, key-date revisions and changes people made to tasks.
-// System-written task entries (generation, recalculation) are left out — the date revision that caused them says how many moved.
+// Activity timeline (features D10, C3): voyage log (incl. documents), key-date revisions and changes people made to tasks.
+// System-written task entries (recalculation, generated repeats) are left out unless ?auto=1 — the date revision
+// that caused them says how many moved.
 router.get('/:id/activity', async (req, res) => {
   try {
     const voyage = await loadVisible(req, req.params.id);
-    const limit = Math.min(500, parseInt(req.query.limit, 10) || 300);
+    const limit = Math.min(5000, parseInt(req.query.limit, 10) || 1000);
+    const auto = req.query.auto === '1'; // also the automatic entries (recalculated due dates, generated repeats)
     const [logs, revisions, tasks] = await Promise.all([
       VoyageLog.find({ voyage: voyage._id }).populate('by', 'username').sort({ at: -1 }).limit(limit).lean(),
       DateRevision.find({ voyage: voyage._id }).populate('by', 'username')
         .populate({ path: 'portCall', select: 'seq type timeZone port', populate: { path: 'port', select: 'name' } }).sort({ at: -1 }).limit(limit).lean(),
-      VoyageTask.find({ voyage: voyage._id, history: { $elemMatch: { auto: { $ne: true }, field: { $ne: 'created' } } } })
+      VoyageTask.find({ voyage: voyage._id, history: { $elemMatch: { ...(auto ? {} : { auto: { $ne: true } }), field: { $ne: 'created' } } } })
         .select('name code history').populate('history.by', 'username').lean(),
     ]);
     const zoneOf = (r) => {
@@ -531,21 +537,22 @@ router.get('/:id/activity', async (req, res) => {
       return OFFICE_TZ;
     };
     const items = [
-      ...logs.map((l) => ({ kind: 'voyage', at: l.at, by: l.by?.username || 'system', type: l.type, text: l.text })),
+      ...logs.map((l) => ({ kind: l.type === 'DOCUMENT' ? 'document' : 'voyage', at: l.at, by: l.by?.username || 'system', type: l.type, text: l.text })),
       ...revisions.map((r) => ({
         kind: 'date', at: r.at, by: r.by?.username || 'system', field: r.field, port: r.portCall?.port?.name || null,
         from: r.from, to: r.to, zone: zoneOf(r), reason: r.reason, tasksMoved: r.tasksMoved,
       })),
-      ...tasks.flatMap((t) => t.history.filter((h) => !h.auto && h.field !== 'created').map((h) => ({
-        kind: 'task', at: h.at, by: h.by?.username || 'system', task: t.name, code: t.code, field: h.field, from: h.from, to: h.to, note: h.note,
+      ...tasks.flatMap((t) => t.history.filter((h) => (auto || !h.auto) && h.field !== 'created').map((h) => ({
+        kind: 'task', at: h.at, by: h.by?.username || 'system', task: t.name, code: t.code, field: h.field, from: h.from, to: h.to, note: h.note, auto: Boolean(h.auto),
       }))),
-    ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, limit);
-    res.json({ items });
+    ].sort((a, b) => new Date(b.at) - new Date(a.at));
+    res.json({ items: items.slice(0, limit), total: items.length });
   } catch (err) { sendError(res, err, 'Error fetching activity'); }
 });
 
 router.use('/:id/port-calls', require('./portCalls'));
 router.use('/:id/daily-checks', require('./dailyChecks'));
+router.use('/:id/documents', require('./documents'));
 
 module.exports = router;
 module.exports.loadVisible = loadVisible;

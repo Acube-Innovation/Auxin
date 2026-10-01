@@ -58,6 +58,10 @@ before(async () => {
   await Client.create({ companyName: 'Agent Co', clientType: 'Agent', createdBy: admin._id, assignedTo: admin._id });
   ctx.e2 = String(e2._id);
   run('scripts/seedSampleVoyage.js');
+  // Create every collection and index now, so that index builds do not run alongside the first transactions
+  const fs = require('node:fs');
+  for (const f of fs.readdirSync(path.join(SERVER_DIR, 'models', 'ops'))) require(path.join(SERVER_DIR, 'models', 'ops', f));
+  await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
 
   server = spawn('node', ['server.js'], { cwd: SERVER_DIR, env: ENV, stdio: ['ignore', 'pipe', 'pipe'] });
   await new Promise((resolve, reject) => {
@@ -74,6 +78,12 @@ before(async () => {
 
 after(async () => {
   if (server) server.kill();
+  // Files of the test voyages (documents, task attachments) live on disk, not in the dropped database
+  try {
+    const STORAGE = require('../../routes/ops/tasks').STORAGE;
+    const ids = await mongoose.connection.db.collection('voyages').distinct('_id');
+    for (const id of ids) require('node:fs').rmSync(path.join(STORAGE, String(id)), { recursive: true, force: true });
+  } catch (e) { /* nothing stored */ }
   await mongoose.connection.dropDatabase().catch(() => {});
   await mongoose.disconnect();
 });
@@ -665,4 +675,74 @@ test('H3 port report and H4 summary: original / planned / actual with delays and
   assert.ok(sum.voyage.portCalls.length >= 3);
   assert.equal(sum.totals.counted + sum.totals.notApplicable, sum.totals.tasks);
   assert.ok(sum.revisions > 0);
+});
+
+// ------------------------------------------------------------------ step 12: voyage documents and activity
+const docsUrl = () => `/ops/voyages/${ctx.voyage._id}/documents`;
+const uploadDocs = (files, fields = {}, who = 'admin') => {
+  const form = new FormData();
+  for (const [name, text] of files) form.append('files', new Blob([text], { type: 'application/pdf' }), name);
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  return fetch(`${API}${docsUrl()}`, { method: 'POST', headers: { Authorization: `Bearer ${tokens[who]}` }, body: form })
+    .then(async (r) => ({ status: r.status, data: await r.json() }));
+};
+
+test('documents: upload with category and port, list, download, edit, delete (file removed); access and file types', async () => {
+  const up = await uploadDocs([['CP Sample.pdf', 'charter party'], ['Recap v2.pdf', 'recap']], { category: 'CP', portCall: ctx.calls.salalah._id, notes: 'Signed copy' });
+  assert.equal(up.status, 201, JSON.stringify(up.data));
+  assert.equal(up.data.length, 2);
+  assert.equal(up.data[0].category, 'CP');
+  assert.equal(up.data[0].portCall.port.name, 'Salalah');
+  assert.equal(up.data[0].uploadedBy.username, 'admin');
+  assert.equal(up.data[0].userRole, 'admin');
+  const list = (await call('GET', docsUrl())).data;
+  assert.equal(list.documents.length, 2);
+  assert.ok(list.categories.some((c) => c.value === 'SOF'));
+  assert.equal(list.canEdit, true);
+  const cp = list.documents.find((d) => d.fileName === 'CP Sample.pdf');
+  const dl = await fetch(`${API}${docsUrl()}/${cp._id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` } });
+  assert.equal(await dl.text(), 'charter party');
+  const recap = list.documents.find((d) => d.fileName === 'Recap v2.pdf');
+  const ed = await call('PATCH', `${docsUrl()}/${recap._id}`, { category: 'RECAP', title: 'Fixture recap', portCall: null });
+  assert.equal(ed.data.category, 'RECAP');
+  assert.equal(ed.data.portCall, null);
+  assert.equal((await call('PATCH', `${docsUrl()}/${recap._id}`, { category: 'NOPE' })).status, 400);
+
+  assert.equal((await uploadDocs([['tool.exe', 'x']])).status, 400, 'file type refused');
+  assert.equal((await uploadDocs([])).status, 400, 'no file');
+  assert.equal((await call('GET', docsUrl(), null, 'ops2')).status, 404, 'ops2 cannot see the voyage documents');
+  assert.equal((await uploadDocs([['x.pdf', 'x']], {}, 'ops2')).status, 404);
+
+  const fs = require('node:fs');
+  const STORAGE = require('../../routes/ops/tasks').STORAGE;
+  const stored = path.join(STORAGE, (await require('../../models/ops/VoyageDocument').findById(cp._id)).filePath);
+  assert.ok(fs.existsSync(stored));
+  const del = await call('DELETE', `${docsUrl()}/${cp._id}`);
+  assert.equal(del.status, 200);
+  assert.ok(!fs.existsSync(stored), 'file removed from disk');
+  assert.equal((await call('GET', docsUrl())).data.documents.length, 1);
+});
+
+test('activity: documents listed; automatic entries only on request; filters on the client', async () => {
+  const a = (await call('GET', `/ops/voyages/${ctx.voyage._id}/activity`)).data;
+  assert.ok(a.items.some((i) => i.kind === 'document' && /Charter party: CP Sample\.pdf, Recap v2\.pdf uploaded/.test(i.text)));
+  assert.ok(a.items.some((i) => i.kind === 'document' && /CP Sample\.pdf deleted/.test(i.text)));
+  assert.ok(!a.items.some((i) => i.auto));
+  const all = (await call('GET', `/ops/voyages/${ctx.voyage._id}/activity?auto=1`)).data;
+  assert.ok(all.total > a.total, 'automatic recalculation entries are added with auto=1');
+  assert.ok(all.items.some((i) => i.auto && i.field === 'dueDate'));
+});
+
+test('deleting a draft voyage removes its documents and files', async () => {
+  const fs = require('node:fs');
+  const STORAGE = require('../../routes/ops/tasks').STORAGE;
+  const clone = (await call('POST', `/ops/voyages/${ctx.voyage._id}/clone`)).data;
+  const form = new FormData();
+  form.append('files', new Blob(['draft cp'], { type: 'application/pdf' }), 'draft.pdf');
+  const r = await fetch(`${API}/ops/voyages/${clone._id}/documents`, { method: 'POST', headers: { Authorization: `Bearer ${tokens.admin}` }, body: form });
+  assert.equal(r.status, 201);
+  assert.ok(fs.existsSync(path.join(STORAGE, String(clone._id))));
+  assert.equal((await call('DELETE', `/ops/voyages/${clone._id}`)).status, 200);
+  assert.ok(!fs.existsSync(path.join(STORAGE, String(clone._id))), 'storage folder removed');
+  assert.equal(await require('../../models/ops/VoyageDocument').countDocuments({ voyage: clone._id }), 0);
 });

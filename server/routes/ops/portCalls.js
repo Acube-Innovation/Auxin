@@ -177,8 +177,13 @@ router.put('/:pcId', async (req, res) => {
       }
     }
 
+    const changes = (({ _id, __v, createdAt, updatedAt, ...fields }) => fields)(pc.toObject({ depopulate: true }));
     const out = await taskEngine.withTransaction(async (session) => {
-      await pc.save({ session });
+      // Load and write inside the transaction: if MongoDB retries it (write conflict, catalog change),
+      // the retry applies the change again instead of saving an already-"saved" document (nothing).
+      const fresh = await PortCall.findById(pc._id).session(session);
+      fresh.set(changes);
+      await fresh.save({ session });
       const update = { updatedBy: req.user._id };
       // Entering an actual time ends a manual vessel-status override (C6)
       if (actualChanged.length) update.vesselStatusOverride = { value: null, setBy: null, setAt: null };
