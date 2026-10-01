@@ -310,7 +310,7 @@ router.put('/:id', async (req, res) => {
     }
     emitDatesChanged(req, current._id, result);
     emitVoyageUpdated(req, current._id, wantsStatus ? 'status' : 'voyage');
-    res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon });
+    res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon, autoCompleted: result.autoCompleted || 0 });
   } catch (err) { sendError(res, err, 'Error updating voyage'); }
 });
 

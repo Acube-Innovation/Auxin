@@ -86,6 +86,7 @@ function VoyageWorkspace() {
   // After any change: refresh, then show which due dates moved (feature F3)
   const afterChange = async (res, title) => {
     await load();
+    if (res && res.autoCompleted) showToast(`${res.autoCompleted} task${res.autoCompleted === 1 ? "" : "s"} marked Done automatically (linked date entered)`, "info");
     if (res && res.movedTasks && res.movedTasks.length) setMoved({ ...res, title });
   };
 
