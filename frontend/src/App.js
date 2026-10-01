@@ -20,6 +20,8 @@ import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceManagement from "./pages/team-management/AttendanceManagement";
 import HelpSupport from "./pages/HelpSupport";
+import OpsMasters from "./pages/operations/OpsMasters";
+import { OPS_MASTERS_ROLES } from "./config/opsRoles";
 
 
 
@@ -75,6 +77,10 @@ function App() {
           <Route path="/checkin-history" element={<ProtectedRoute><CheckInHistory /></ProtectedRoute>} />
 
           <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
+
+          {/* Vessel Operations (Phase 2) */}
+          <Route path="/operations/masters" element={<Navigate to="/operations/masters/vessels" replace />} />
+          <Route path="/operations/masters/:master" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsMasters /></ProtectedRoute>} />
 
           <Route path="/venkat" element={<ProtectedRoute><Venkat /></ProtectedRoute>} />
           <Route path="/example" element={<Example />} />

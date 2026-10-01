@@ -9,5 +9,6 @@ const { ALL_OPS } = require('../../services/ops/roles');
 router.use(authMiddleware, requireRole(ALL_OPS));
 
 router.use('/lookups', require('./lookups'));
+router.use('/', require('./masters'));
 
 module.exports = router;
