@@ -1,0 +1,45 @@
+.wizard {
+  max-width: 1400px;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* ProgressSteps is absolutely positioned for the Phase 1 modals; place it in the page flow here */
+.steps :global(.progress-steps) {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  height: auto;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.steps :global(.step-label) {
+  font-size: 0.95rem;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  margin-top: 1rem;
+  background: linear-gradient(to top, #fafbfb 75%, rgba(250, 251, 251, 0));
+  z-index: 5;
+}
+
+@media (max-width: 900px) {
+  .steps :global(.step-divider) {
+    width: 12px;
+  }
+}

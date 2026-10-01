@@ -6,6 +6,8 @@ export const OPS_OPERATORS = ["operations_executive", "executive_post_fixture"];
 export const OPS_READ_ONLY = ["managing_director", "director"];
 
 export const ALL_OPS_ROLES = [...OPS_ADMIN, ...OPS_MANAGERS, ...OPS_OPERATORS, ...OPS_READ_ONLY];
+// Create / edit voyages (directors and MD are read-only)
+export const OPS_EDITOR_ROLES = [...OPS_ADMIN, ...OPS_MANAGERS, ...OPS_OPERATORS];
 // Ops Masters menu (Menu Structure §5): admin edits, managers view / edit task templates
 export const OPS_MASTERS_ROLES = [...OPS_ADMIN, ...OPS_MANAGERS];
 

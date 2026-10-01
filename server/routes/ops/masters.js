@@ -34,6 +34,10 @@ router.get('/meta', (req, res) => {
     linkedFields: constants.LINKED_FIELDS,
     userRoles: require('../../models/User').schema.path('role').enumValues,
     officeTimeZone: OFFICE_TZ,
+    suggestionSettings: (({ WAIT_HOURS_CARGO, WAIT_HOURS_BUNKER, DEFAULT_OPS_DAYS, DEFAULT_BUNKER_DAYS, SAIL_BUFFER_HOURS }) => ({
+      waitHoursCargo: WAIT_HOURS_CARGO, waitHoursBunker: WAIT_HOURS_BUNKER, defaultOpsDays: DEFAULT_OPS_DAYS,
+      defaultBunkerDays: DEFAULT_BUNKER_DAYS, sailBufferHours: SAIL_BUFFER_HOURS,
+    }))(require('../../services/ops/config')),
     voyageStatuses: require('../../models/ops/Voyage').VOYAGE_STATUSES,
     canEdit: {
       vessels: ADMIN.includes(req.user.role),

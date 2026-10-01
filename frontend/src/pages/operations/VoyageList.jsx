@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import OpsLayout from "../../components/operations/OpsLayout";
 import VoyageSummaryModal from "../../components/operations/VoyageSummaryModal";
 import DeleteModal from "../../components/delete-modal/DeleteModal";
@@ -24,6 +25,8 @@ const PAGE_SIZE = 20;
 // Voyages — /operations/voyages (features B1, B10)
 function VoyageList() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("ALL");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -43,6 +46,14 @@ function VoyageList() {
     OpsMasterService.getVessels().then(setVessels).catch(() => {});
     EmployeeService.getEmployees().then((list) => setEmployees(Array.isArray(list) ? list : [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const open = searchParams.get("open");
+    if (open) {
+      setViewId(open);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Wait until typing pauses before searching
   useEffect(() => {
@@ -66,10 +77,8 @@ function VoyageList() {
   const copy = async (v) => {
     try {
       const created = await OpsVoyageService.clone(v._id);
-      showToast(`Draft ${created.voyageNo} created from ${v.voyageNo} (dates left empty)`, "success");
-      setTab("DRAFT");
-      setPage(1);
-      load();
+      showToast(`Draft ${created.voyageNo} created from ${v.voyageNo} — enter the new dates`, "success");
+      navigate(`/operations/voyages/${created._id}/edit`);
     } catch (e) {
       showToast(e.message, "error");
     }
@@ -113,7 +122,7 @@ function VoyageList() {
                 {employees.map((e) => <option key={e._id} value={e._id}>{e.employeeName}</option>)}
               </select>
             </div>
-            {data.canCreate && <span className={styles.subtle}>New voyages are created with the New Voyage form (next step).</span>}
+            {data.canCreate && <button className={styles.btnPrimary} onClick={() => navigate("/operations/voyages/new")}>+ New Voyage</button>}
           </div>
 
           <div className={styles.tableWrap}>
@@ -158,6 +167,7 @@ function VoyageList() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
                       <button className={styles.btnLink} onClick={() => setViewId(v._id)}>View</button>
+                      {v.status === "DRAFT" && v.permissions?.canEdit && <button className={styles.btnLink} onClick={() => navigate(`/operations/voyages/${v._id}/edit`)}>Edit</button>}
                       {v.permissions?.canCopy && <button className={styles.btnLink} onClick={() => copy(v)}>Copy</button>}
                       {v.permissions?.canDelete && <button className={styles.btnLink} style={{ color: "#d92d20" }} onClick={() => setToDelete(v)}>Delete</button>}
                       </div>

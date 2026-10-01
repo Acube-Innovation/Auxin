@@ -22,7 +22,8 @@ import AttendanceManagement from "./pages/team-management/AttendanceManagement";
 import HelpSupport from "./pages/HelpSupport";
 import OpsMasters from "./pages/operations/OpsMasters";
 import VoyageList from "./pages/operations/VoyageList";
-import { OPS_MASTERS_ROLES, ALL_OPS_ROLES } from "./config/opsRoles";
+import VoyageWizard from "./pages/operations/wizard/VoyageWizard";
+import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "./config/opsRoles";
 
 
 
@@ -81,6 +82,8 @@ function App() {
 
           {/* Vessel Operations (Phase 2) */}
           <Route path="/operations/voyages" element={<ProtectedRoute roles={ALL_OPS_ROLES}><VoyageList /></ProtectedRoute>} />
+          <Route path="/operations/voyages/new" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />
+          <Route path="/operations/voyages/:id/edit" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />
           <Route path="/operations/masters" element={<Navigate to="/operations/masters/vessels" replace />} />
           <Route path="/operations/masters/:master" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsMasters /></ProtectedRoute>} />
 
