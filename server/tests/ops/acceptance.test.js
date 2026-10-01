@@ -368,3 +368,97 @@ test('task attachments: upload, download, remove; operators outside the voyage c
   await Voyage.updateOne({ _id: ctx.voyage._id }, { $set: { status: 'ACTIVE' } });
   require('node:fs').rmSync(path.join(require('../../routes/ops/tasks').STORAGE, String(ctx.voyage._id)), { recursive: true, force: true });
 });
+
+// ------------------------------------------------------------------ step 8: daily checks and recurring tasks
+const checksUrl = () => `/ops/voyages/${ctx.voyage._id}/daily-checks`;
+
+test('daily checklist: today\'s log from the vessel status, created once; past / future dates', async () => {
+  await call('PUT', `/ops/voyages/${ctx.voyage._id}/vessel-status`, { value: 'AT_DISCHARGE_PORT' }); // Kakinada: ATA only = Waiting for Berth
+  // Earlier tests moved the vessel through several statuses today, each adding its checks; start a fresh day
+  await require('../../models/ops/DailyCheckLog').deleteMany({ voyage: ctx.voyage._id });
+  const { status, data } = await call('GET', checksUrl());
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal(data.vesselStatus, 'AT_DISCHARGE_PORT');
+  assert.equal(data.log.items.length, 8);
+  assert.ok(data.log.items.some((i) => i.name === 'Update ETC Discharge Port' && i.linkedField === 'portCall.DISCHARGING.planned.etc'));
+  assert.equal(data.editable, true);
+  const again = (await call('GET', checksUrl())).data;
+  assert.equal(again.log._id, data.log._id);
+  assert.equal(again.history.length, 1);
+  assert.equal(again.history[0].total, 8);
+  const { DateTime } = require('luxon');
+  const past = (await call('GET', `${checksUrl()}?date=${DateTime.fromISO(data.today).minus({ days: 3 }).toISODate()}`)).data;
+  assert.equal(past.log, null);
+  assert.equal(past.editable, false);
+  const future = (await call('GET', `${checksUrl()}?date=${DateTime.fromISO(data.today).plus({ days: 2 }).toISODate()}`)).data;
+  assert.equal(future.preview.length, 8);
+  assert.equal(future.editable, false);
+  ctx.checks = data.log;
+});
+
+test('daily checklist: tick with who / when and a remark; other operators cannot', async () => {
+  const item = ctx.checks.items.find((i) => i.name === 'Check Weather Updates');
+  const r = await call('PATCH', `${checksUrl()}/items/${item._id}`, { done: true, remark: 'Calm, no swell' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const after = r.data.log.items.find((i) => i._id === item._id);
+  assert.equal(after.done, true);
+  assert.equal(after.doneBy.username, 'admin');
+  assert.ok(after.doneAt);
+  assert.equal(after.remark, 'Calm, no swell');
+  assert.equal(r.data.history[0].done, 1);
+  assert.equal((await call('PATCH', `${checksUrl()}/items/${item._id}`, { done: false }, 'ops2')).status, 404);
+  const undo = await call('PATCH', `${checksUrl()}/items/${item._id}`, { done: false });
+  assert.equal(undo.data.log.items.find((i) => i._id === item._id).doneBy, null);
+  await call('PATCH', `${checksUrl()}/items/${item._id}`, { done: true });
+});
+
+test('daily checklist: entering a linked date ticks its check (D9); a status change adds the new set and keeps ticks', async () => {
+  const kak = (await call('GET', `/ops/voyages/${ctx.voyage._id}`)).data.portCalls.find((p) => p._id === ctx.calls.kakinada._id);
+  const etc = new Date(new Date(kak.planned.etc).getTime() + 6 * 3600000).toISOString();
+  const r = await call('PUT', `/ops/voyages/${ctx.voyage._id}/port-calls/${ctx.calls.kakinada._id}`, { planned: { etc } });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.checksTicked, 1);
+  let log = (await call('GET', checksUrl())).data.log;
+  const upd = log.items.find((i) => i.name === 'Update ETC Discharge Port');
+  assert.equal(upd.done, true);
+  assert.equal(upd.auto, true);
+  assert.match(upd.autoNote, /Ticked automatically when Port call – ETC was entered/);
+
+  await call('PUT', `/ops/voyages/${ctx.voyage._id}/vessel-status`, { value: 'ENROUTE_DISCHARGE_PORT' });
+  const d = (await call('GET', checksUrl())).data;
+  log = d.log;
+  assert.equal(d.vesselStatus, 'ENROUTE_DISCHARGE_PORT');
+  assert.deepEqual(log.statuses, ['AT_DISCHARGE_PORT', 'ENROUTE_DISCHARGE_PORT']);
+  assert.equal(log.items.length, 12, '4 new checks; the 4 with the same name as today\'s are not repeated');
+  assert.equal(log.items.filter((i) => i.done).length, 2, 'ticks of the first set are kept');
+  await call('PUT', `/ops/voyages/${ctx.voyage._id}/vessel-status`, { value: null });
+});
+
+test('recurring hire payment: repeats generated up to a week ahead until re-delivery; a shorter cycle closes the extra ones', async () => {
+  const { DateTime } = require('luxon');
+  const r = await call('PUT', `/ops/voyages/${ctx.voyage._id}`, { redelivery: { estimated: iso('2026-12-31T12:00', 'Asia/Kolkata') } });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const hire = async () => (await call('GET', checksUrl())).data.recurring;
+  let list = await hire();
+  const first = list.find((t) => t.recurrenceIndex === 0);
+  const today = (await call('GET', checksUrl())).data.today;
+  const limit = DateTime.fromISO(today).plus({ days: 7 }).toISODate();
+  const expected = [];
+  for (let k = 0; ; k++) {
+    const d = DateTime.fromISO(first.dueDate).plus({ days: 15 * k }).toISODate();
+    if (d > '2026-12-31' || d > limit) break;
+    expected.push(d);
+  }
+  assert.deepEqual(list.map((t) => t.dueDate), expected);
+  assert.equal(list[1].baseName, 'Next Hire Payment #2');
+  assert.equal(list[1].assignedTo.length, first.assignedTo.length);
+  assert.equal((await call('GET', checksUrl())).data.recurring.length, expected.length, 'not generated twice');
+
+  // Re-delivery 10 days after the first payment: only #1 (and #2 if inside) stay open
+  const end = DateTime.fromISO(first.dueDate).plus({ days: 10 }).toISODate();
+  await call('PUT', `/ops/voyages/${ctx.voyage._id}`, { redelivery: { estimated: iso(`${end}T12:00`, 'Asia/Kolkata') } });
+  list = await hire();
+  assert.equal(list.length, expected.length);
+  assert.ok(list.filter((t) => t.recurrenceIndex > 0).every((t) => t.status === 'NA' && /recurring cycle/.test(t.naReason)));
+  assert.equal(list[0].status, 'NOT_STARTED');
+});

@@ -183,8 +183,10 @@ router.put('/:pcId', async (req, res) => {
       await Voyage.updateOne({ _id: voyage._id }, { $set: update }, { session });
       const result = await afterChange(voyage, session, req, revisions);
       // D9: tasks linked to the dates just entered complete themselves
-      result.autoCompleted = await taskEngine.autoCompleteLinked(voyage._id,
+      const linked = await taskEngine.linkedEntered(voyage._id,
         revisions.filter((r) => r.to).map((r) => ({ field: `portCall.${r.field}`, portCall: pc._id, portType: pc.type })), { session, user: req.user });
+      result.autoCompleted = linked.tasks;
+      result.checksTicked = linked.checks;
       return result;
     });
     emitDatesChanged(req, voyage._id, out);
@@ -195,6 +197,7 @@ router.put('/:pcId', async (req, res) => {
       movedTasks: out.movedTasks,
       dueSoon: out.dueSoon,
       autoCompleted: out.autoCompleted || 0,
+      checksTicked: out.checksTicked || 0,
     });
   } catch (err) { sendError(res, err, 'Error updating port call'); }
 });

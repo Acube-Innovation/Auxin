@@ -145,7 +145,7 @@ async function writeLinkedValue(task, voyage, value, { session } = {}) {
     return {
       revision: { portCall: pc._id, field: target.field, from: before || null, to: at },
       actualChanged: target.group === 'actual',
-      changed: { field: `portCall.${target.field}`, portCall: pc._id },
+      changed: { field: `portCall.${target.field}`, portCall: pc._id, portType: pc.type },
     };
   }
   const v = await Voyage.findById(voyage._id).session(session || null);

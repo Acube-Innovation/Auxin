@@ -15,6 +15,7 @@ const taskEngine = require('../../services/ops/taskEngine');
 const engine = require('../../services/ops/dueDateEngine');
 const { applySuggestions, manualFlagsFromInput } = require('../../services/ops/suggestions');
 const { effectiveVesselStatus } = require('../../services/ops/vesselStatus');
+const { generateRecurring } = require('../../services/ops/recurring');
 const { normaliseVoyage, normalisePortCall, assertPortCallOrder, badRequest } = require('../../services/ops/voyageInput');
 const { OFFICE_TZ } = require('../../services/ops/config');
 const { VESSEL_STATUS_VALUES } = require('../../services/ops/constants');
@@ -301,8 +302,10 @@ router.put('/:id', async (req, res) => {
           by: req.user._id, reason: req.body.reason || '', tasksMoved: recalc.movedTasks.length,
         })), { session });
       }
-      recalc.autoCompleted = await taskEngine.autoCompleteLinked(voyage._id,
+      const linked = await taskEngine.linkedEntered(voyage._id,
         changed.filter(([g, k]) => voyage[g] && voyage[g][k]).map(([g, k]) => ({ field: `${g}.${k}`, portCall: null })), { session, user: req.user });
+      recalc.autoCompleted = linked.tasks;
+      recalc.checksTicked = linked.checks;
       return recalc;
     });
     if (wantsStatus) {
@@ -310,7 +313,7 @@ router.put('/:id', async (req, res) => {
     }
     emitDatesChanged(req, current._id, result);
     emitVoyageUpdated(req, current._id, wantsStatus ? 'status' : 'voyage');
-    res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon, autoCompleted: result.autoCompleted || 0 });
+    res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon, autoCompleted: result.autoCompleted || 0, checksTicked: result.checksTicked || 0 });
   } catch (err) { sendError(res, err, 'Error updating voyage'); }
 });
 
@@ -438,6 +441,7 @@ router.put('/:id/vessel-status', async (req, res) => {
 router.get('/:id/tasks', async (req, res) => {
   try {
     const voyage = await loadVisible(req, req.params.id);
+    if (voyage.status === 'ACTIVE') await generateRecurring(voyage._id).catch((e) => console.error('recurring:', e.message));
     const filter = { voyage: voyage._id };
     for (const k of ['stage', 'portCall', 'status', 'priority']) if (req.query[k]) filter[k] = req.query[k];
     if (req.query.assignee) filter.assignedTo = req.query.assignee;
@@ -518,6 +522,7 @@ router.get('/:id/activity', async (req, res) => {
 });
 
 router.use('/:id/port-calls', require('./portCalls'));
+router.use('/:id/daily-checks', require('./dailyChecks'));
 
 module.exports = router;
 module.exports.loadVisible = loadVisible;

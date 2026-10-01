@@ -23,4 +23,5 @@ module.exports = {
   DEFAULT_BUNKER_DAYS: num('OPS_DEFAULT_BUNKER_DAYS', 1),  // bunkering calls: ETC = ETB + 1 day (our assumption — to confirm)
   SAIL_BUFFER_HOURS: num('OPS_SAIL_BUFFER_HOURS', 0),      // ETS = ETC + buffer
   DUE_SOON_DAYS: num('OPS_DUE_SOON_DAYS', 2),              // "due within 48 hours" in the ETA-change alert
+  RECURRING_LOOKAHEAD_DAYS: num('OPS_RECURRING_LOOKAHEAD_DAYS', 7), // next recurring instance appears this many days before it is due
 };

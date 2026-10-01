@@ -15,12 +15,14 @@ import { portOption } from "../wizard/wizardModel";
 import OverviewTab from "./OverviewTab";
 import PortCallsTab from "./PortCallsTab";
 import ActivityTab from "./ActivityTab";
+import DailyChecksTab from "./DailyChecksTab";
 import styles from "../masters/Masters.module.css";
 import ws from "./Workspace.module.css";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "portcalls", label: "Port Calls & SOF" },
+  { key: "checks", label: "Daily Checks" },
   { key: "tasks", label: "Operations View" },
   { key: "activity", label: "Activity" },
 ];
@@ -32,7 +34,7 @@ const STATUS_ACTIONS = {
   CANCELLED: [["DRAFT", "Restore as draft"]],
 };
 
-// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, G1)
+// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, E1–E2, G1)
 function VoyageWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -86,6 +88,7 @@ function VoyageWorkspace() {
   // After any change: refresh, then show which due dates moved (feature F3)
   const afterChange = async (res, title) => {
     await load();
+    if (res && res.checksTicked) showToast(`${res.checksTicked} daily check${res.checksTicked === 1 ? "" : "s"} ticked automatically`, "info");
     if (res && res.autoCompleted) showToast(`${res.autoCompleted} task${res.autoCompleted === 1 ? "" : "s"} marked Done automatically (linked date entered)`, "info");
     if (res && res.movedTasks && res.movedTasks.length) setMoved({ ...res, title });
   };
@@ -218,7 +221,9 @@ function VoyageWorkspace() {
           ))}
         </nav>
 
-        {tab === "overview" && <OverviewTab voyage={voyage} officeTz={officeTz} canEdit={canEdit} onActivated={load} onOpenTasks={(b) => { setTaskBucket(b); setTab("tasks"); }} />}
+        {tab === "overview" && <OverviewTab voyage={voyage} officeTz={officeTz} canEdit={canEdit} onActivated={load} onOpenTasks={(b) => { setTaskBucket(b); setTab("tasks"); }}
+          onOpenChecks={() => setTab("checks")} refreshKey={refreshKey} />}
+        {tab === "checks" && <DailyChecksTab voyage={voyage} officeTz={officeTz} refreshKey={refreshKey} onChanged={(res) => afterChange(res, "Due dates moved")} />}
         {tab === "portcalls" && <PortCallsTab voyage={voyage} officeTz={officeTz} editable={editable} refreshKey={refreshKey} onAction={onAction} />}
         {tab === "tasks" && (
           <div className={styles.card}>

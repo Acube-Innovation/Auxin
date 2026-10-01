@@ -9,6 +9,8 @@ const User = require('../../models/User');
 const engine = require('./dueDateEngine');
 const { deriveVesselStatus } = require('./vesselStatus');
 const { DUE_SOON_DAYS } = require('./config');
+const dailyChecks = require('./dailyChecks');
+const { generateRecurring } = require('./recurring');
 const { DateTime } = require('luxon');
 
 const OPEN = ['NOT_STARTED', 'INITIATED', 'AWAITING'];
@@ -195,6 +197,7 @@ async function activate(voyageId, { excluded = [], adhocTasks = [] } = {}, user)
     const stagesById = new Map((await OpsStage.find().session(session).lean()).map((s) => [idOf(s), s]));
     for (const a of adhocTasks) docs.push(buildAdhocTask(a, voyage, portCalls, stagesById, user));
     await VoyageTask.insertMany(docs, { session });
+    await generateRecurring(voyage._id, { session, user }); // repeats already due (e.g. a voyage entered late)
 
     // Freeze the original plan (feature C3)
     voyage.delivery.original = voyage.delivery.estimated || null;
@@ -238,6 +241,8 @@ async function recalculate(voyageId, { session, user = null, reason = '' } = {})
     }
     if (!t.dueOverridden && t.anchor && t.anchor.event) {
       const next = engine.dueDateFor(t, voyage, pc, portCalls, t.recurrenceIndex);
+      // A repeat that now falls after the end of its cycle is closed by generateRecurring below
+      if (t.recurrenceIndex > 0 && next === null && t.dueDate) continue;
       if (next !== t.dueDate) {
         update.dueDate = next;
         update.reminderSent = [];
@@ -253,7 +258,8 @@ async function recalculate(voyageId, { session, user = null, reason = '' } = {})
   const today = engine.todayIn();
   const soonLimit = DateTime.fromISO(today).plus({ days: DUE_SOON_DAYS }).toISODate();
   const dueSoon = moved.filter((m) => m.to && m.to <= soonLimit);
-  return { movedTasks: moved, dueSoon };
+  const recurring = await generateRecurring(voyage._id, { session, user });
+  return { movedTasks: moved, dueSoon, recurring };
 }
 
 // ------------------------------------------------------------------ port calls added / cancelled on an active voyage
@@ -322,6 +328,13 @@ async function addAdhocTask(voyageId, input, user) {
   });
 }
 
+// D9 for everything linked to dates just entered: tasks set to complete automatically, and today's daily checks
+async function linkedEntered(voyageId, changes, { session, user }) {
+  const tasks = await autoCompleteLinked(voyageId, changes, { session, user });
+  const checks = await dailyChecks.tickLinked(voyageId, changes, { session, user });
+  return { tasks, checks };
+}
+
 async function refreshVesselStatus(voyageId, { session }) {
   const { voyage, portCalls } = await loadContext(voyageId, session);
   const status = deriveVesselStatus(voyage, portCalls);
@@ -333,5 +346,5 @@ async function refreshVesselStatus(voyageId, { session }) {
 }
 
 module.exports = {
-  withTransaction, preview, activate, recalculate, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, autoCompleteLinked, addAdhocTask, OPEN,
+  withTransaction, preview, activate, recalculate, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, autoCompleteLinked, linkedEntered, addAdhocTask, OPEN,
 };

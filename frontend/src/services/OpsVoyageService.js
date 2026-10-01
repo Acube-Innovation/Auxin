@@ -15,6 +15,8 @@ const OpsVoyageService = {
   getTasks: (id, params) => opsRequest(`/voyages/${id}/tasks`, { params }),
   getRevisions: (id) => opsRequest(`/voyages/${id}/revisions`),
   getActivity: (id) => opsRequest(`/voyages/${id}/activity`),
+  getDailyChecks: (id, date) => opsRequest(`/voyages/${id}/daily-checks`, { params: { date } }),
+  updateDailyCheck: (id, itemId, data) => opsRequest(`/voyages/${id}/daily-checks/items/${itemId}`, { method: "PATCH", body: data }),
 
   addPortCall: (id, data) => opsRequest(`/voyages/${id}/port-calls`, { method: "POST", body: data }),
   updatePortCall: (id, pcId, data) => opsRequest(`/voyages/${id}/port-calls/${pcId}`, { method: "PUT", body: data }),

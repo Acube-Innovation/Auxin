@@ -31,6 +31,8 @@ async function main() {
     await PortCall.deleteMany({ voyage: existing._id });
     await require('../models/ops/VoyageTask').deleteMany({ voyage: existing._id });
     await require('../models/ops/DateRevision').deleteMany({ voyage: existing._id });
+    await require('../models/ops/VoyageLog').deleteMany({ voyage: existing._id });
+    await require('../models/ops/DailyCheckLog').deleteMany({ voyage: existing._id });
     await existing.deleteOne();
     console.log(`Deleted previous sample voyage ${existing.voyageNo}`);
   }

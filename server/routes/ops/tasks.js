@@ -164,7 +164,9 @@ router.patch('/:taskId', async (req, res) => {
         await taskEngine.refreshVesselStatus(voyage._id, { session });
         if (linked && linked.revision) {
           await DateRevision.create([{ ...linked.revision, voyage: voyage._id, by: req.user._id, reason: `Recorded when completing "${task.name}"`, tasksMoved: recalc.movedTasks.length }], { session });
-          recalc.autoCompleted = await taskEngine.autoCompleteLinked(voyage._id, [linked.changed], { session, user: req.user });
+          const ticked = await taskEngine.linkedEntered(voyage._id, [linked.changed], { session, user: req.user });
+          recalc.autoCompleted = ticked.tasks;
+          recalc.checksTicked = ticked.checks;
         }
       }
       return { task, voyage, ...recalc };
@@ -172,7 +174,7 @@ router.patch('/:taskId', async (req, res) => {
     emitUpdated(req, [out.voyage._id]);
     const io = req.app.get('io');
     if (io && out.movedTasks.length) io.to(`voyage-${out.voyage._id}`).emit('ops-dates-changed', { voyageId: String(out.voyage._id), moved: out.movedTasks.length, dueSoon: out.dueSoon.length });
-    res.json({ task: await taskOut(out.task._id), movedTasks: out.movedTasks.filter((m) => String(m.id) !== String(out.task._id)), dueSoon: out.dueSoon, autoCompleted: out.autoCompleted || 0 });
+    res.json({ task: await taskOut(out.task._id), movedTasks: out.movedTasks.filter((m) => String(m.id) !== String(out.task._id)), dueSoon: out.dueSoon, autoCompleted: out.autoCompleted || 0, checksTicked: out.checksTicked || 0 });
   } catch (err) { sendError(res, err, 'Error updating task'); }
 });
 

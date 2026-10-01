@@ -1,6 +1,7 @@
 import React from "react";
 import RotationTimeline from "../../../components/operations/RotationTimeline";
 import ActivatePanel from "./ActivatePanel";
+import TodayChecksCard from "./TodayChecksCard";
 import { BUCKETS, formatInstant, formatInstantDate } from "../../../utils/opsFormat";
 import styles from "../masters/Masters.module.css";
 import ws from "./Workspace.module.css";
@@ -10,8 +11,8 @@ const Row = ({ label, children }) => (
   <div className={ws.kv}><div>{label}</div><div>{children}</div></div>
 );
 
-// Overview tab: rotation timeline, task counts, parties, fixture, cargo, delivery / re-delivery, bunkers
-function OverviewTab({ voyage, officeTz, canEdit, onOpenTasks, onActivated }) {
+// Overview tab: rotation timeline, task counts, today's checks, parties, fixture, cargo, delivery / re-delivery, bunkers
+function OverviewTab({ voyage, officeTz, canEdit, onOpenTasks, onActivated, onOpenChecks, refreshKey }) {
   const f = voyage.fixture || {};
   const at = (iso, tz) => (iso ? formatInstant(iso, tz) : "—");
   const counts = voyage.tasks?.byBucket || {};
@@ -38,9 +39,10 @@ function OverviewTab({ voyage, officeTz, canEdit, onOpenTasks, onActivated }) {
               </button>
             ))}
           </div>
-          <div className={styles.hint} style={{ marginTop: 8 }}>Daily checks for the vessel's status arrive in Step 8; working the tasks (done, re-date, assign) in Step 7.</div>
         </div>
       )}
+
+      {voyage.status === "ACTIVE" && <TodayChecksCard voyage={voyage} officeTz={officeTz} refreshKey={refreshKey} onOpen={onOpenChecks} />}
 
       <div className={ws.grid2}>
         <div className={styles.card}>
