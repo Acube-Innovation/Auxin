@@ -35,6 +35,8 @@ async function applyTaskPatch(task, patch, { session } = {}) {
 
   if (patch.priority !== undefined) {
     if (!['HIGH', 'MEDIUM', 'LOW'].includes(patch.priority)) throw badRequest('priority must be HIGH, MEDIUM or LOW');
+    // Reminders follow the priority unless the template gave the task its own reminder profile (F2)
+    if (task.reminderProfile === task.priority) task.reminderProfile = patch.priority;
     set('priority', patch.priority);
   }
   if (patch.remarks !== undefined) set('remarks', String(patch.remarks || ''));

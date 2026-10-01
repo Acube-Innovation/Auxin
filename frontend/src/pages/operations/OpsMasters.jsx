@@ -8,6 +8,8 @@ import PortsMaster from "./masters/PortsMaster";
 import TaskTemplatesMaster from "./masters/TaskTemplatesMaster";
 import StagesMaster from "./masters/StagesMaster";
 import DailyCheckSetsMaster from "./masters/DailyCheckSetsMaster";
+import ScheduledJobs from "./masters/ScheduledJobs";
+import { OPS_ADMIN, hasRole } from "../../config/opsRoles";
 import styles from "./masters/Masters.module.css";
 
 const MASTERS = [
@@ -16,9 +18,10 @@ const MASTERS = [
   { key: "task-templates", label: "Task Templates", edit: "taskTemplates", Component: TaskTemplatesMaster },
   { key: "stages", label: "Stages", edit: "stages", Component: StagesMaster },
   { key: "daily-checks", label: "Daily Check Sets", edit: "dailyChecks", Component: DailyCheckSetsMaster },
+  { key: "jobs", label: "Scheduled Jobs", edit: null, Component: ScheduledJobs, adminOnly: true },
 ];
 
-// Ops Masters — /operations/masters/:master (features A1–A5)
+// Ops Masters — /operations/masters/:master (features A1–A5; Scheduled Jobs F1–F6, admin)
 function OpsMasters() {
   const { master } = useParams();
   const { showToast } = useToast();
@@ -30,7 +33,8 @@ function OpsMasters() {
       .catch((e) => showToast(`Could not load settings: ${e.message}`, "error"));
   }, [showToast]);
 
-  const current = MASTERS.find((m) => m.key === master);
+  const visible = MASTERS.filter((m) => !m.adminOnly || hasRole(OPS_ADMIN));
+  const current = visible.find((m) => m.key === master);
   if (!current) return <Navigate to="/operations/masters/vessels" replace />;
   const { Component } = current;
 
@@ -41,7 +45,7 @@ function OpsMasters() {
     >
       <div className={styles.page}>
         <nav className={styles.tabs} aria-label="Masters">
-          {MASTERS.map((m) => (
+          {visible.map((m) => (
             <Link key={m.key} to={`/operations/masters/${m.key}`} className={`${styles.tab} ${m.key === master ? styles.tabActive : ""}`}>
               {m.label}
             </Link>

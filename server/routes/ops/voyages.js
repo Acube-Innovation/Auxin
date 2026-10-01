@@ -12,6 +12,7 @@ const DateRevision = require('../../models/ops/DateRevision');
 const VoyageLog = require('../../models/ops/VoyageLog');
 const access = require('../../services/ops/accessScope');
 const taskEngine = require('../../services/ops/taskEngine');
+const etaAlerts = require('../../services/ops/etaAlerts');
 const engine = require('../../services/ops/dueDateEngine');
 const { applySuggestions, manualFlagsFromInput } = require('../../services/ops/suggestions');
 const { effectiveVesselStatus } = require('../../services/ops/vesselStatus');
@@ -125,6 +126,7 @@ function withCreatorAsOperator(user, operators) {
 
 // Tell open voyage workspaces that dates moved (step 6 listens for it)
 function emitDatesChanged(req, voyageId, result) {
+  etaAlerts.datesChanged(voyageId, result, req.user);
   const io = req.app.get('io');
   if (io && result && result.movedTasks && result.movedTasks.length) {
     io.to(`voyage-${voyageId}`).emit('ops-dates-changed', { voyageId: String(voyageId), moved: result.movedTasks.length, dueSoon: result.dueSoon.length });

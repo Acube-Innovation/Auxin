@@ -390,6 +390,16 @@ function NotificationBell({ small = true }) {
           });
         }
         
+        // Vessel Operations reminders / alerts also pop up in the page (feature F1)
+        if (String(payload.type || '').startsWith('ops-') && !(notificationSupported && permissionStatus === 'granted')) {
+          setInAppReminders(prev => {
+            const next = [{ id, title: payload.title, body: payload.body, meta: { url: payload.url } }, ...prev].slice(0, 6);
+            setTimeout(() => setInAppReminders(cur => cur.filter(r => r.id !== id)), 15000);
+            return next;
+          });
+          playBeep();
+        }
+
         // Show browser notification if permission granted
         if (notificationSupported && permissionStatus === 'granted') {
           try {
@@ -670,7 +680,10 @@ function NotificationBell({ small = true }) {
               </div>
               <div className={styles.inAppReminderAction}>
                 <button onClick={() => {
-                  try { window.open(r.meta?.url || r.meta?.link || '/', '_blank'); } catch (e) {}
+                  try {
+                    const url = r.meta?.url || r.meta?.link || '/';
+                    if (url.startsWith('/operations')) window.location.assign(url); else window.open(url, '_blank');
+                  } catch (e) {}
                 }} className={styles.inAppReminderButton}>
                   Open
                 </button>
@@ -740,7 +753,12 @@ function NotificationBell({ small = true }) {
                 <div 
                   key={n.id} 
                   className={`${styles.item} ${n.read ? styles.read : styles.unread}`}
-                  onClick={() => markAsRead(n.id)}
+                  onClick={() => {
+                    markAsRead(n.id);
+                    // Vessel Operations entries open their voyage / task / My Tasks
+                    const url = n.meta?.url;
+                    if (url && url.startsWith('/operations')) { setIsOpen(false); window.location.assign(url); }
+                  }}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className={styles.itemContent}>

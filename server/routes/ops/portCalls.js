@@ -10,6 +10,7 @@ const VoyageLog = require('../../models/ops/VoyageLog');
 const Port = require('../../models/ops/Port');
 const access = require('../../services/ops/accessScope');
 const taskEngine = require('../../services/ops/taskEngine');
+const etaAlerts = require('../../services/ops/etaAlerts');
 const { applySuggestions, manualFlagsFromInput } = require('../../services/ops/suggestions');
 const { normalisePortCall, assertPortCallOrder, badRequest } = require('../../services/ops/voyageInput');
 const { sendError, httpError } = require('./helpers');
@@ -59,6 +60,7 @@ async function afterChange(voyage, session, req, revisions = []) {
 }
 
 function emitDatesChanged(req, voyageId, result) {
+  etaAlerts.datesChanged(voyageId, result, req.user);
   const io = req.app.get('io');
   if (io && result.movedTasks.length) {
     io.to(`voyage-${voyageId}`).emit('ops-dates-changed', { voyageId: String(voyageId), moved: result.movedTasks.length, dueSoon: result.dueSoon.length });

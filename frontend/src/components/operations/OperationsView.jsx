@@ -26,7 +26,7 @@ const OPEN = ["NOT_STARTED", "INITIATED", "AWAITING"];
 
 // Operations View (G1, D1–D8): the voyage's tasks by stage and port, colour buckets, filters,
 // inline status, one-click Done, bulk changes, ad-hoc tasks and the task panel.
-function OperationsView({ voyage, editable, refreshKey, initialBucket = "", officeTz, onChanged }) {
+function OperationsView({ voyage, editable, refreshKey, initialBucket = "", officeTz, onChanged, openTaskId = "", onTaskClosed }) {
   const { showToast } = useToast();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -40,6 +40,8 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
   const [stages, setStages] = useState([]);
   const [me, setMe] = useState(null);
   useEffect(() => { setBucket(initialBucket); }, [initialBucket]);
+  // Links from notifications: /operations/voyages/:id?tab=tasks&task=<taskId>
+  useEffect(() => { if (openTaskId) setOpenTask(openTaskId); }, [openTaskId]);
 
   useEffect(() => {
     EmployeeService.getEmployees().then((l) => setEmployees(Array.isArray(l) ? l : [])).catch(() => {});
@@ -225,7 +227,7 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
         Click a task to see its details, files and history. {editable ? "“✓ Done” records today as the completion date; open the task to choose another date." : "Read only."}
       </div>
 
-      {openTask && <TaskDrawer taskId={openTask} employees={employees} officeTz={officeTz} onClose={() => setOpenTask(null)} onChanged={changed} />}
+      {openTask && <TaskDrawer taskId={openTask} employees={employees} officeTz={officeTz} onClose={() => { setOpenTask(null); if (onTaskClosed) onTaskClosed(); }} onChanged={changed} />}
       {adding && <AdhocTaskDialog voyage={voyage} stages={stages} employees={employees} myEmployeeId={me} onClose={() => setAdding(false)} onSubmit={addTask} />}
       <OpsModal isOpen={Boolean(bulkDialog)} title={bulkDialog?.kind === "NA" ? `Mark ${sel.length} task(s) Not applicable` : `Set the due date of ${sel.length} task(s)`}
         onClose={() => setBulkDialog(null)} width={500}

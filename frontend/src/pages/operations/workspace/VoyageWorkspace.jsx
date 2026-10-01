@@ -229,6 +229,7 @@ function VoyageWorkspace() {
           <div className={styles.card}>
             {voyage.status === "DRAFT" ? <div className={styles.empty}>Tasks are created when the voyage is activated (Overview → Preview tasks).</div>
               : <OperationsView voyage={voyage} editable={editable} refreshKey={refreshKey} initialBucket={taskBucket} officeTz={officeTz}
+                  openTaskId={params.get("task") || ""} onTaskClosed={() => params.get("task") && setParams({ tab: "tasks" }, { replace: true })}
                   onChanged={(res) => afterChange(res, "Due dates moved")} />}
           </div>
         )}

@@ -173,6 +173,7 @@ router.patch('/:taskId', async (req, res) => {
     });
     emitUpdated(req, [out.voyage._id]);
     const io = req.app.get('io');
+    if (out.movedTasks.length) require('../../services/ops/etaAlerts').datesChanged(out.voyage._id, out, req.user);
     if (io && out.movedTasks.length) io.to(`voyage-${out.voyage._id}`).emit('ops-dates-changed', { voyageId: String(out.voyage._id), moved: out.movedTasks.length, dueSoon: out.dueSoon.length });
     res.json({ task: await taskOut(out.task._id), movedTasks: out.movedTasks.filter((m) => String(m.id) !== String(out.task._id)), dueSoon: out.dueSoon, autoCompleted: out.autoCompleted || 0, checksTicked: out.checksTicked || 0 });
   } catch (err) { sendError(res, err, 'Error updating task'); }

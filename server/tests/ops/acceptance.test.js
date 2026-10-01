@@ -14,7 +14,8 @@ const PORT = 5055;
 const API = `http://127.0.0.1:${PORT}/api`;
 const TEST_URI = process.env.MONGO_URI.replace(/\/auxin_db(\?|$)/, '/auxin_test$1');
 const SERVER_DIR = path.join(__dirname, '..', '..');
-const ENV = { ...process.env, MONGO_URI: TEST_URI, PORT: String(PORT), EMAIL_USER: '', EMAIL_PASS: '' };
+// Scheduler off (jobs are started through "Run now"), reminders allowed at any time of day
+const ENV = { ...process.env, MONGO_URI: TEST_URI, PORT: String(PORT), EMAIL_USER: '', EMAIL_PASS: '', OPS_JOBS_DISABLED: '1', OPS_REMINDER_TIME: '00:00' };
 assert.notEqual(TEST_URI, process.env.MONGO_URI, 'test must not use the app database');
 
 let server;
@@ -461,4 +462,106 @@ test('recurring hire payment: repeats generated up to a week ahead until re-deli
   assert.equal(list.length, expected.length);
   assert.ok(list.filter((t) => t.recurrenceIndex > 0).every((t) => t.status === 'NA' && /recurring cycle/.test(t.naReason)));
   assert.equal(list[0].status, 'NOT_STARTED');
+});
+
+// ------------------------------------------------------------------ step 9: scheduled jobs, reminders, digest, escalation
+const runJob = (name) => call('POST', `/ops/jobs/${name}/run`);
+const emails = async (q = '') => (await call('GET', `/ops/jobs/emails?limit=200${q}`)).data;
+
+test('jobs: admin sees the five jobs; others are refused', async () => {
+  const { status, data } = await call('GET', '/ops/jobs');
+  assert.equal(status, 200);
+  assert.deepEqual(data.jobs.map((j) => j.name).sort(), ['ops-daily-checks', 'ops-daily-digest', 'ops-escalation', 'ops-recurring', 'ops-reminder-scan']);
+  assert.equal(data.jobs.find((j) => j.name === 'ops-daily-digest').schedule, 'Daily at 07:30');
+  assert.ok(data.jobs.every((j) => j.nextRunAt));
+  assert.equal(data.emailConfigured, false);
+  assert.equal((await call('GET', '/ops/jobs', null, 'ops1')).status, 403);
+  assert.equal((await call('POST', '/ops/jobs/nope/run')).status, 404);
+});
+
+test('reminder scan: one email + bell per assignee, never twice; HIGH gets the day-before reminder, LOW no overdue reminder', async () => {
+  const Notification = require('../../models/Notification');
+  const User = require('../../models/User');
+  const ops1 = await User.findOne({ username: 'ops1' });
+  const r = await runJob('ops-reminder-scan');
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.ok(r.data.result.tasks > 50, `overdue tasks reminded: ${r.data.result.tasks}`);
+  const mail = (await emails('&kind=REMINDER')).find((e) => e.to === 'ops1@auxin.local');
+  assert.ok(mail, 'reminder email for Test Op One');
+  assert.equal(mail.status, 'SKIPPED', 'email is not configured in tests');
+  assert.match(mail.subject, /^Vessel ops reminder: \d+ overdue/);
+  const html = (await call('GET', `/ops/jobs/emails/${mail._id}`)).data.html;
+  assert.ok(html.includes(ctx.voyage.voyageNo) && html.includes('Overdue'));
+  assert.ok(await Notification.exists({ userId: ops1._id, 'payload.type': 'ops-reminder' }));
+
+  const again = await runJob('ops-reminder-scan');
+  assert.equal(again.data.result.tasks, 0, 'nothing is reminded twice on the same day');
+
+  const { DateTime } = require('luxon');
+  const today = (await call('GET', '/ops/tasks/mine')).data.today;
+  const open = (await freshTasks()).filter((t) => ['NOT_STARTED', 'INITIATED'].includes(t.status) && t.assignedTo.length);
+  const [a, b] = open;
+  await patchTask(a._id, { priority: 'HIGH', dueDate: DateTime.fromISO(today).plus({ days: 1 }).toISODate() });
+  await patchTask(b._id, { priority: 'LOW', dueDate: DateTime.fromISO(today).minus({ days: 1 }).toISODate() });
+  const third = await runJob('ops-reminder-scan');
+  assert.equal(third.data.result.tasks, 1, 'only the HIGH task due tomorrow');
+  const latest = (await emails('&kind=REMINDER'))[0];
+  assert.match(latest.subject, /1 due tomorrow/);
+});
+
+test('escalation: overdue beyond the limit goes to the managers once', async () => {
+  const User = require('../../models/User');
+  await User.create({ username: 'mgr', password: 'x', role: 'chartering_manager', emailId: 'mgr@auxin.local' });
+  const r = await runJob('ops-escalation');
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.ok(r.data.result.tasks > 50);
+  assert.equal(r.data.result.recipients, 1);
+  const mail = (await emails('&kind=ESCALATION'))[0];
+  assert.equal(mail.to, 'mgr@auxin.local');
+  assert.match(mail.subject, /^Escalation: \d+ tasks overdue beyond the limit/);
+  assert.equal((await runJob('ops-escalation')).data.result.tasks, 0, 'each task escalates once per due date');
+});
+
+test('morning summary: per operator and vessel, with today\'s checks', async () => {
+  const r = await runJob('ops-daily-digest');
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.ok(r.data.result.people >= 1);
+  const mail = (await emails('&kind=DIGEST')).find((e) => e.to === 'ops1@auxin.local');
+  assert.match(mail.subject, /^Morning summary \d\d-\w{3}-\d{4}: \d+ overdue, \d+ due today, \d+ checks/);
+  const html = (await call('GET', `/ops/jobs/emails/${mail._id}`)).data.html;
+  assert.ok(html.includes(ctx.voyage.voyageNo) && html.includes('Today\'s checks'));
+});
+
+test('night jobs: daily checklists are started; recurring tasks run without duplicates', async () => {
+  const DailyCheckLog = require('../../models/ops/DailyCheckLog');
+  await DailyCheckLog.deleteMany({ voyage: ctx.voyage._id });
+  const r = await runJob('ops-daily-checks');
+  assert.equal(r.data.result.voyages, 1);
+  assert.ok(await DailyCheckLog.exists({ voyage: ctx.voyage._id }));
+  const rec = await runJob('ops-recurring');
+  assert.equal(rec.data.error, null);
+  assert.equal(rec.data.result.created, 0);
+  const jobs = (await call('GET', '/ops/jobs')).data.jobs;
+  assert.equal(jobs.find((j) => j.name === 'ops-daily-checks').lastTrigger, 'manual');
+});
+
+test('ETA change: assignees other than the editor are told which of their tasks moved', async () => {
+  const Notification = require('../../models/Notification');
+  const User = require('../../models/User');
+  const ops1 = await User.findOne({ username: 'ops1' });
+  // (the port calls all have actual arrivals by now, so a planned ETA no longer moves anything: change re-delivery)
+  const v = (await call('GET', `/ops/voyages/${ctx.voyage._id}`)).data;
+  const before = await Notification.countDocuments({ userId: ops1._id, 'payload.type': 'ops-eta-change' });
+  const r = await call('PUT', `/ops/voyages/${ctx.voyage._id}`,
+    { redelivery: { estimated: new Date(new Date(v.redelivery.estimated).getTime() + 5 * 86400000).toISOString() }, reason: 'Slow discharge' });
+  assert.ok(r.data.movedTasks.length > 0);
+  let n = before;
+  for (let i = 0; i < 20 && n === before; i++) {
+    await new Promise((res) => setTimeout(res, 100));
+    n = await Notification.countDocuments({ userId: ops1._id, 'payload.type': 'ops-eta-change' });
+  }
+  assert.equal(n, before + 1);
+  const note = await Notification.findOne({ userId: ops1._id, 'payload.type': 'ops-eta-change' }).sort({ createdAt: -1 });
+  assert.match(note.title, /dates changed by admin/);
+  assert.match(note.body, /of your tasks? moved/);
 });

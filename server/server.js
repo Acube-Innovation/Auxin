@@ -234,7 +234,10 @@ app.use('/api/ops', require('./routes/ops'));
 
 // ====== DATABASE CONNECTION ======
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected'))
+  .then(() => {
+    console.log('✅ MongoDB connected');
+    require('./jobs/ops/scheduler').start(io); // Vessel Operations reminders, digest, escalation, daily checks
+  })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ====== SERVE FRONTEND ======
