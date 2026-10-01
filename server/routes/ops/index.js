@@ -11,5 +11,6 @@ router.use(authMiddleware, requireRole(ALL_OPS));
 router.use('/lookups', require('./lookups'));
 router.use('/', require('./masters'));
 router.use('/voyages', require('./voyages'));
+router.use('/tasks', require('./tasks'));
 
 module.exports = router;

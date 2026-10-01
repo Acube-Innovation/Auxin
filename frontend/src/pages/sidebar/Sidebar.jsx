@@ -10,12 +10,13 @@ import {
   FaSignOutAlt,
   FaCogs,
   FaShip,
+  FaTasks,
 } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Sidebar.module.css";
 import DateRangePickerModal from "../../components/DateRangePickerModal";
 import useDateRange from "../../hooks/useDateRange";
-import { OPS_MASTERS_ROLES, ALL_OPS_ROLES } from "../../config/opsRoles";
+import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "../../config/opsRoles";
 
 import auxin_logo from "../../assets/auxin_logo.png";
 import users from "../../assets/dashboard/users.svg";
@@ -206,6 +207,14 @@ function Sidebar() {
                     Voyages
                   </Link>
                 </li>
+                {OPS_EDITOR_ROLES.includes(userRole) && (
+                  <li className={isActive("/operations/my-tasks") ? styles.active : ""}>
+                    <Link to="/operations/my-tasks" className={styles["sidebar-link"]}>
+                      <FaTasks className={styles.icon} style={opsIconStyle} aria-hidden="true" />
+                      My Tasks
+                    </Link>
+                  </li>
+                )}
                 {OPS_MASTERS_ROLES.includes(userRole) && (
                   <li className={isActive("/operations/masters") ? styles.active : ""}>
                     <Link to="/operations/masters/vessels" className={styles["sidebar-link"]}>

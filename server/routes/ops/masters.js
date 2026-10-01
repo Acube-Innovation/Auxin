@@ -34,6 +34,7 @@ router.get('/meta', (req, res) => {
     linkedFields: constants.LINKED_FIELDS,
     userRoles: require('../../models/User').schema.path('role').enumValues,
     officeTimeZone: OFFICE_TZ,
+    myEmployeeId: require('../../services/ops/accessScope').employeeIdOf(req.user), // for "my tasks" filters
     suggestionSettings: (({ WAIT_HOURS_CARGO, WAIT_HOURS_BUNKER, DEFAULT_OPS_DAYS, DEFAULT_BUNKER_DAYS, SAIL_BUFFER_HOURS }) => ({
       waitHoursCargo: WAIT_HOURS_CARGO, waitHoursBunker: WAIT_HOURS_BUNKER, defaultOpsDays: DEFAULT_OPS_DAYS,
       defaultBunkerDays: DEFAULT_BUNKER_DAYS, sailBufferHours: SAIL_BUFFER_HOURS,

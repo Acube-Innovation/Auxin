@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import OpsLayout from "../../../components/operations/OpsLayout";
-import VoyageTaskList from "../../../components/operations/VoyageTaskList";
+import OperationsView from "../../../components/operations/OperationsView";
 import PortCallDialog from "../../../components/operations/PortCallDialog";
 import KeyDatesDialog from "../../../components/operations/KeyDatesDialog";
 import EtaChangeModal from "../../../components/operations/EtaChangeModal";
@@ -21,7 +21,7 @@ import ws from "./Workspace.module.css";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "portcalls", label: "Port Calls & SOF" },
-  { key: "tasks", label: "Tasks" },
+  { key: "tasks", label: "Operations View" },
   { key: "activity", label: "Activity" },
 ];
 const STATUS_CLASS = { DRAFT: styles.chipNone, ACTIVE: styles.chipActive, COMPLETED: styles.chipExcel, CANCELLED: styles.chipInactive };
@@ -32,7 +32,7 @@ const STATUS_ACTIONS = {
   CANCELLED: [["DRAFT", "Restore as draft"]],
 };
 
-// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D10, G1 read-only for now)
+// Voyage workspace — /operations/voyages/:id?tab=… (features C1–C6, D1–D10, G1)
 function VoyageWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -222,8 +222,8 @@ function VoyageWorkspace() {
         {tab === "tasks" && (
           <div className={styles.card}>
             {voyage.status === "DRAFT" ? <div className={styles.empty}>Tasks are created when the voyage is activated (Overview → Preview tasks).</div>
-              : <VoyageTaskList voyageId={voyage._id} refreshKey={refreshKey} initialBucket={taskBucket} />}
-            <div className={styles.hint} style={{ marginTop: 8 }}>Marking tasks done, re-dating and assigning arrive with the Operations View (Step 7).</div>
+              : <OperationsView voyage={voyage} editable={editable} refreshKey={refreshKey} initialBucket={taskBucket} officeTz={officeTz}
+                  onChanged={(res) => afterChange(res, "Due dates moved")} />}
           </div>
         )}
         {tab === "activity" && <ActivityTab voyageId={voyage._id} officeTz={officeTz} refreshKey={refreshKey} />}

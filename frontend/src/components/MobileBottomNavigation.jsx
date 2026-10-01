@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "./MobileBottomNavigation.module.css";
+import { OPS_EDITOR_ROLES, hasRole } from "../config/opsRoles";
 
 function MobileBottomNavigation() {
   const navigate = useNavigate();
@@ -46,6 +47,17 @@ function MobileBottomNavigation() {
         </svg>
       ),
     },
+    // Operations people get My Tasks (Vessel Operations) in place of Sales & Leads
+    ...(hasRole(OPS_EDITOR_ROLES) ? [{
+      id: "mytasks",
+      label: "My Tasks",
+      path: "/operations/my-tasks",
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor" />
+        </svg>
+      ),
+    }] : []),
     {
       id: "settings",
       label: "Settings",
@@ -61,13 +73,15 @@ function MobileBottomNavigation() {
     },
   ];
 
+  const items = hasRole(OPS_EDITOR_ROLES) && !hasRole(["admin"]) ? navItems.filter((i) => i.id !== "sales") : navItems;
+
   const handleNavigation = (path) => {
     navigate(path);
   };
 
   return (
     <nav className={styles.bottomNavigation}>
-      {navItems.map((item) => {
+      {items.map((item) => {
         // mark active when exact or when current path starts with the nav path (handles nested routes)
         const isActive = location.pathname === item.path || location.pathname.startsWith(item.path);
         return (

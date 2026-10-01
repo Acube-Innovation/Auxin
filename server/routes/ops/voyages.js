@@ -301,6 +301,8 @@ router.put('/:id', async (req, res) => {
           by: req.user._id, reason: req.body.reason || '', tasksMoved: recalc.movedTasks.length,
         })), { session });
       }
+      recalc.autoCompleted = await taskEngine.autoCompleteLinked(voyage._id,
+        changed.filter(([g, k]) => voyage[g] && voyage[g][k]).map(([g, k]) => ({ field: `${g}.${k}`, portCall: null })), { session, user: req.user });
       return recalc;
     });
     if (wantsStatus) {
@@ -432,7 +434,7 @@ router.put('/:id/vessel-status', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error setting vessel status'); }
 });
 
-// ------------------------------------------------------------------ tasks (read; editing arrives in step 7)
+// ------------------------------------------------------------------ tasks (editing one task: /api/ops/tasks)
 router.get('/:id/tasks', async (req, res) => {
   try {
     const voyage = await loadVisible(req, req.params.id);
@@ -453,6 +455,21 @@ router.get('/:id/tasks', async (req, res) => {
     for (const t of out) byBucket[t.bucket] = (byBucket[t.bucket] || 0) + 1;
     res.json({ today, total: out.length, byBucket, tasks: out });
   } catch (err) { sendError(res, err, 'Error fetching tasks'); }
+});
+
+// Ad-hoc task on an active voyage (D7): { name, dueDate | anchor + offsetDays, priority, stage, portCall, assignedTo, remarks }
+router.post('/:id/tasks', async (req, res) => {
+  try {
+    const voyage = await loadEditable(req, req.params.id);
+    if (Array.isArray(req.body.assignedTo) && req.body.assignedTo.some((id) => !mongoose.isValidObjectId(id))) throw badRequest('assignedTo contains an invalid id');
+    const task = await taskEngine.addAdhocTask(voyage._id, req.body, req.user);
+    emitVoyageUpdated(req, voyage._id, 'tasks');
+    const out = await VoyageTask.findById(task._id)
+      .populate('stage', 'name code order scope')
+      .populate({ path: 'portCall', select: 'seq type port timeZone status', populate: { path: 'port', select: 'name' } })
+      .populate('assignedTo', 'employeeName').lean();
+    res.status(201).json({ ...out, ...engine.derive(out) });
+  } catch (err) { sendError(res, err, 'Error adding task'); }
 });
 
 router.get('/:id/revisions', async (req, res) => {

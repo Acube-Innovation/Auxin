@@ -244,3 +244,122 @@ test('activity feed: activation and key-date changes with reasons, without the a
   const sorted = [...items].sort((a, b) => new Date(b.at) - new Date(a.at));
   assert.deepEqual(items.map((i) => i.at), sorted.map((i) => i.at), 'newest first');
 });
+
+// ------------------------------------------------------------------ step 7: working on tasks
+const patchTask = (id, body, who = 'admin') => call('PATCH', `/ops/tasks/${id}`, body, who);
+const freshTasks = async () => (await call('GET', `/ops/voyages/${ctx.voyage._id}/tasks`)).data.tasks;
+
+test('task status: start date on Initiated, one-click Done = today, future completion and N/A without reason refused, re-open clears completion', async () => {
+  const t = taskByCode(await freshTasks(), 'T002');
+  const started = await patchTask(t._id, { status: 'INITIATED' });
+  assert.equal(started.status, 200, JSON.stringify(started.data));
+  assert.equal(started.data.task.status, 'INITIATED');
+  assert.ok(started.data.task.startDate);
+  const today = (await call('GET', '/ops/tasks/mine')).data.today;
+  const done = await patchTask(t._id, { status: 'DONE' });
+  assert.equal(done.data.task.completedDate, today);
+  assert.equal(done.data.task.bucket, 'CLOSED');
+  assert.equal((await patchTask(t._id, { completedDate: '2999-01-01' })).status, 400);
+  const back = await patchTask(t._id, { status: 'NOT_STARTED' });
+  assert.equal(back.data.task.completedDate, null);
+  assert.equal((await patchTask(t._id, { status: 'NA' })).status, 400);
+  const na = await patchTask(t._id, { status: 'NA', naReason: 'Handled by owners' });
+  assert.equal(na.data.task.naReason, 'Handled by owners');
+  const full = (await call('GET', `/ops/tasks/${t._id}`)).data;
+  const fields = full.history.filter((h) => !h.auto).map((h) => h.field);
+  assert.ok(fields.includes('status') && fields.includes('naReason') && fields.includes('completedDate'));
+  assert.equal(full.history.find((h) => h.field === 'naReason').by.username, 'admin');
+});
+
+test('due date set by hand is locked against recalculation until unlocked', async () => {
+  const t = taskByCode(await freshTasks(), 'T100', 3); // Appoint Discharge Port Agents (Kakinada ETA based)
+  const set = await patchTask(t._id, { dueDate: '2026-07-05' });
+  assert.equal(set.data.task.dueOverridden, true);
+  const url = `/ops/voyages/${ctx.voyage._id}/port-calls/${ctx.calls.kakinada._id}`;
+  const kak = (await call('GET', `/ops/voyages/${ctx.voyage._id}`)).data.portCalls.find((p) => p._id === ctx.calls.kakinada._id);
+  const later = new Date(new Date(kak.planned.eta).getTime() + 2 * 86400000).toISOString();
+  const r = await call('PUT', url, { planned: { eta: later }, reason: 'Slow steaming' });
+  assert.ok(!r.data.movedTasks.some((m) => String(m.id) === String(t._id)), 'locked task did not move');
+  const unlocked = await patchTask(t._id, { unlockDueDate: true });
+  assert.equal(unlocked.data.task.dueOverridden, false);
+  assert.notEqual(unlocked.data.task.dueDate, '2026-07-05', 'recalculated from the anchor again');
+});
+
+test('completing a task with a linked field records the date on the voyage (C5) and moves dependent tasks', async () => {
+  const tasks = await freshTasks();
+  const t037 = taskByCode(tasks, 'T037'); // Bunker to be Booked → bunker.bookedOn
+  assert.equal(taskByCode(tasks, 'T041').dueDate, null);
+  const r = await patchTask(t037._id, { status: 'DONE', linkedValue: iso('2026-07-02T15:00', 'Asia/Kolkata') });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.task.status, 'DONE');
+  assert.ok(r.data.movedTasks.some((m) => m.code === 'T041'), 'task waiting for the bunker booking got a date');
+  const v = (await call('GET', `/ops/voyages/${ctx.voyage._id}`)).data;
+  assert.equal(v.bunker.bookedOn, iso('2026-07-02T15:00', 'Asia/Kolkata'));
+  const revisions = (await call('GET', `/ops/voyages/${ctx.voyage._id}/revisions`)).data;
+  assert.ok(revisions.some((x) => x.field === 'bunker.bookedOn' && /Bunker to be Booked/.test(x.reason)));
+  const none = await patchTask(taskByCode(tasks, 'T001')._id, { linkedValue: iso('2026-07-02T15:00', 'Asia/Kolkata') });
+  assert.equal(none.status, 400, 'a task without a linked field cannot record a date');
+});
+
+test('entering a linked field ticks tasks set to complete automatically (D9)', async () => {
+  const VoyageTask = require('../../models/ops/VoyageTask');
+  const t111 = taskByCode(await freshTasks(), 'T111', 3);
+  await VoyageTask.updateOne({ _id: t111._id }, { $set: { autoCompleteOnField: true } });
+  const url = `/ops/voyages/${ctx.voyage._id}/port-calls/${ctx.calls.kakinada._id}`;
+  const r = await call('PUT', url, { actual: { ata: iso('2026-07-24T06:00', 'Asia/Kolkata'), norTendered: iso('2026-07-24T07:00', 'Asia/Kolkata') } });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.autoCompleted, 1);
+  const after = (await call('GET', `/ops/tasks/${t111._id}`)).data;
+  assert.equal(after.status, 'DONE');
+  assert.ok(after.history.some((h) => /Completed automatically/.test(h.note || '')));
+});
+
+test('bulk change, ad-hoc task on an active voyage, my tasks across voyages', async () => {
+  const tasks = await freshTasks();
+  const ids = ['T003', 'T004'].map((c) => taskByCode(tasks, c)._id);
+  const bulk = await call('POST', '/ops/tasks/bulk', { ids, patch: { priority: 'HIGH', addAssignees: [ctx.e2] } });
+  assert.equal(bulk.status, 200, JSON.stringify(bulk.data));
+  assert.equal(bulk.data.updated, 2);
+  const naBulk = await call('POST', '/ops/tasks/bulk', { ids, patch: { status: 'NA' } });
+  assert.equal(naBulk.data.updated, 0);
+  assert.equal(naBulk.data.skipped.length, 2, 'N/A without a reason is skipped');
+
+  const add = await call('POST', `/ops/voyages/${ctx.voyage._id}/tasks`, { name: 'Send cargo docs to bank', dueDate: '2026-07-30', priority: 'LOW', assignedTo: [ctx.e2] });
+  assert.equal(add.status, 201, JSON.stringify(add.data));
+  assert.equal(add.data.dueOverridden, true);
+  assert.equal(add.data.assignedTo[0].employeeName, 'Test Op Two');
+  assert.equal((await call('POST', `/ops/voyages/${ctx.voyage._id}/tasks`, { name: '' })).status, 400);
+
+  const mine = (await call('GET', '/ops/tasks/mine', null, 'ops2')).data;
+  const names = mine.tasks.map((t) => t.baseName || t.name);
+  assert.ok(names.includes('Send cargo docs to bank'));
+  assert.ok(mine.tasks.every((t) => t.voyage.voyageNo && t.status !== 'DONE'));
+  assert.equal(mine.total, mine.tasks.length);
+  const adminMine = (await call('GET', '/ops/tasks/mine')).data;
+  assert.equal(adminMine.notLinked, true, 'admin has no employee record, so no personal tasks');
+});
+
+test('task attachments: upload, download, remove; operators outside the voyage cannot see the task', async () => {
+  const t = taskByCode(await freshTasks(), 'T005');
+  const form = new FormData();
+  form.append('file', new Blob(['hello recap'], { type: 'text/plain' }), 'recap.txt');
+  const up = await fetch(`${API}/ops/tasks/${t._id}/attachments`, { method: 'POST', headers: { Authorization: `Bearer ${tokens.admin}` }, body: form });
+  assert.equal(up.status, 201);
+  const att = (await up.json()).attachments[0];
+  assert.equal(att.fileName, 'recap.txt');
+  const dl = await fetch(`${API}/ops/tasks/${t._id}/attachments/${att._id}`, { headers: { Authorization: `Bearer ${tokens.admin}` } });
+  assert.equal(await dl.text(), 'hello recap');
+  const VoyageTask = require('../../models/ops/VoyageTask');
+  const Voyage = require('../../models/ops/Voyage');
+  // ops2 sees the voyage only through assigned tasks: remove them and the task disappears for ops2
+  await VoyageTask.updateMany({ voyage: ctx.voyage._id }, { $pull: { assignedTo: ctx.e2 } });
+  assert.equal((await call('GET', `/ops/tasks/${t._id}`, null, 'ops2')).status, 404);
+  assert.equal((await call('PATCH', `/ops/tasks/${t._id}`, { priority: 'LOW' }, 'ops2')).status, 404);
+  const del = await call('DELETE', `/ops/tasks/${t._id}/attachments/${att._id}`);
+  assert.equal(del.status, 200);
+  assert.equal(del.data.attachments.length, 0);
+  await Voyage.updateOne({ _id: ctx.voyage._id }, { $set: { status: 'COMPLETED' } });
+  assert.equal((await patchTask(t._id, { priority: 'LOW' })).status, 400, 'tasks of a completed voyage are frozen');
+  await Voyage.updateOne({ _id: ctx.voyage._id }, { $set: { status: 'ACTIVE' } });
+  require('node:fs').rmSync(path.join(require('../../routes/ops/tasks').STORAGE, String(ctx.voyage._id)), { recursive: true, force: true });
+});

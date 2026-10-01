@@ -147,3 +147,5 @@ client/node_modules/
 # Cache folders
 .cache/
 client/node_modules/.cache/
+# Phase 2 private files (task attachments, documents)
+server/storage/

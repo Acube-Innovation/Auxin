@@ -181,7 +181,11 @@ router.put('/:pcId', async (req, res) => {
       // Entering an actual time ends a manual vessel-status override (C6)
       if (actualChanged.length) update.vesselStatusOverride = { value: null, setBy: null, setAt: null };
       await Voyage.updateOne({ _id: voyage._id }, { $set: update }, { session });
-      return afterChange(voyage, session, req, revisions);
+      const result = await afterChange(voyage, session, req, revisions);
+      // D9: tasks linked to the dates just entered complete themselves
+      result.autoCompleted = await taskEngine.autoCompleteLinked(voyage._id,
+        revisions.filter((r) => r.to).map((r) => ({ field: `portCall.${r.field}`, portCall: pc._id, portType: pc.type })), { session, user: req.user });
+      return result;
     });
     emitDatesChanged(req, voyage._id, out);
     emitVoyageUpdated(req, voyage._id, 'port-call');
@@ -190,6 +194,7 @@ router.put('/:pcId', async (req, res) => {
       portCalls: await listFor(voyage._id),
       movedTasks: out.movedTasks,
       dueSoon: out.dueSoon,
+      autoCompleted: out.autoCompleted || 0,
     });
   } catch (err) { sendError(res, err, 'Error updating port call'); }
 });

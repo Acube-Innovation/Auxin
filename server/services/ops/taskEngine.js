@@ -281,6 +281,47 @@ async function cancelPortCallTasks(portCallId, { session, user }) {
   return res.modifiedCount;
 }
 
+// D9: tasks whose linked field was just entered and that complete themselves (autoCompleteOnField).
+// changes: [{ field: 'portCall.actual.ata' | 'delivery.actual' | …, portCall: id|null, portType: 'LOADING'|… }]
+async function autoCompleteLinked(voyageId, changes, { session, user }) {
+  if (!changes || !changes.length) return 0;
+  const today = engine.todayIn();
+  const ors = [];
+  for (const c of changes) {
+    if (c.field.startsWith('portCall.')) {
+      const rest = c.field.slice('portCall.'.length); // e.g. actual.ata
+      ors.push({ linkedField: c.field, portCall: c.portCall });
+      if (c.portType) ors.push({ linkedField: `portCall.${c.portType}.${rest}` });
+    } else {
+      ors.push({ linkedField: c.field });
+    }
+  }
+  const tasks = await VoyageTask.find({ voyage: voyageId, status: { $in: OPEN }, autoCompleteOnField: true, $or: ors }).session(session || null);
+  for (const t of tasks) {
+    t.status = 'DONE';
+    t.completedDate = today;
+    if (!t.startDate) t.startDate = today;
+    t.history.push({ at: new Date(), by: user ? user._id : null, field: 'status', from: 'NOT_STARTED', to: 'DONE', note: 'Completed automatically when the linked date was entered' });
+    await t.save({ session });
+  }
+  return tasks.length;
+}
+
+// ------------------------------------------------------------------ ad-hoc task on an active voyage (D7)
+async function addAdhocTask(voyageId, input, user) {
+  return withTransaction(async (session) => {
+    const { voyage, portCalls } = await loadContext(voyageId, session);
+    if (voyage.status !== 'ACTIVE') throw badRequest('Tasks can be added to an active voyage only');
+    const stagesById = new Map((await OpsStage.find().session(session).lean()).map((s) => [idOf(s), s]));
+    const doc = buildAdhocTask(input, voyage, portCalls.filter((pc) => pc.status !== 'CANCELLED'), stagesById, user);
+    doc.history[0].note = 'Ad-hoc task added';
+    if (Array.isArray(input.assignedTo) && input.assignedTo.length) doc.assignedTo = [...new Set(input.assignedTo.map(String))];
+    if (input.remarks) doc.remarks = String(input.remarks);
+    const [created] = await VoyageTask.create([doc], { session });
+    return created;
+  });
+}
+
 async function refreshVesselStatus(voyageId, { session }) {
   const { voyage, portCalls } = await loadContext(voyageId, session);
   const status = deriveVesselStatus(voyage, portCalls);
@@ -292,5 +333,5 @@ async function refreshVesselStatus(voyageId, { session }) {
 }
 
 module.exports = {
-  withTransaction, preview, activate, recalculate, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, OPEN,
+  withTransaction, preview, activate, recalculate, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, autoCompleteLinked, addAdhocTask, OPEN,
 };
