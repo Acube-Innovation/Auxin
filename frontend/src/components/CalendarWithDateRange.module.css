@@ -1,0 +1,150 @@
+/* CalendarWithDateRange.module.css */
+
+.calendarContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  font-family: Inter;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E5E7EB;
+  background-color: #FAFBFC;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.analytics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eventCount {
+  font-size: 14px;
+  color: #6B7280;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dateRangeButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dateRangeButton:hover {
+  background-color: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.dateRangeButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #3B82F6;
+}
+
+.calendarIcon,
+.chevronIcon {
+  width: 16px;
+  height: 16px;
+  color: #6B7280;
+}
+
+.dateRangeText {
+  color: #111827;
+  font-weight: 500;
+}
+
+.calendarWrapper {
+  flex: 1;
+  padding: 24px;
+  background-color: #fff;
+  overflow: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 20px;
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dateRangeButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .calendarWrapper {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 16px;
+  }
+
+  .title {
+    font-size: 16px;
+  }
+
+  .analytics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .calendarWrapper {
+    padding: 12px 16px;
+  }
+
+  .dateRangeButton {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}

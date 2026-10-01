@@ -1,0 +1,368 @@
+.conversionDataContainer {
+  width: 100%;
+  max-width: 1017px;
+  height: 483px;
+  border-radius: 18px;
+  border: 1.513px solid #E4E4E4;
+  position: relative;
+  margin: 0 auto;
+  background-color: #FFF;
+}
+
+.backgroundGlow {
+  width: 492px;
+  height: 242px;
+  opacity: 0.4;
+  position: absolute;
+  left: 528px;
+  top: 13px;
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  width: 959px;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: absolute;
+  left: 29px;
+  top: 33px;
+  height: 88px;
+}
+
+.headerContent {
+  display: flex;
+  width: 573px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28.976px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.title {
+  color: #161616;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 116%;
+  margin: 0;
+}
+
+.subtitle {
+  width: 415px;
+  color: #161616;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 144%;
+  letter-spacing: 0.236px;
+  margin: 0;
+}
+
+.actionButton {
+  display: flex;
+  width: 61px;
+  height: 61px;
+  padding: 18.158px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 12.106px;
+  border: 1.513px solid #E4E4E4;
+  background-color: #FFF;
+  cursor: pointer;
+}
+
+.actionButton img {
+  width: 36.317px;
+  height: 36.317px;
+}
+
+.yAxisLabels {
+  display: flex;
+  width: 35px;
+  height: 249px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  position: absolute;
+  left: 29px;
+  top: 195px;
+}
+
+.yAxisLabel {
+  color: #767676;
+  text-align: right;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.gridLine {
+  width: 893px;
+  height: 0px;
+  opacity: 0.5;
+  position: absolute;
+  left: 94px;
+  background-color: #DEDEDE;
+  border-top: 1px solid #DEDEDE;
+}
+
+.chartBackground {
+  width: 821px;
+  height: 152px;
+  position: absolute;
+  left: 129px;
+  top: 290px;
+}
+
+.chartLine {
+  width: 821px;
+  height: 82px;
+  stroke-width: 2.415px;
+  stroke: #334AFA;
+  position: absolute;
+  left: 129px;
+  top: 290px;
+}
+
+.chartPoint1 {
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  left: 124px;
+  top: 300px;
+}
+
+.chartPoint2 {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 325px;
+  top: 323px;
+}
+
+.chartPoint3 {
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  left: 227px;
+  top: 349px;
+}
+
+.chartPointMain {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 424px;
+  top: 366px;
+}
+
+.chartPoint4 {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 531px;
+  top: 303px;
+}
+
+.chartPointHighlight {
+  width: 35px;
+  height: 35px;
+  position: absolute;
+  left: 624px;
+  top: 273px;
+}
+
+.chartPointHighlightCenter {
+  width: 13px;
+  height: 13px;
+  position: absolute;
+  left: 635px;
+  top: 284px;
+}
+
+.chartPoint5 {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 741px;
+  top: 323px;
+}
+
+.chartPoint6 {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 838px;
+  top: 313px;
+}
+
+.chartPoint7 {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 941px;
+  top: 295px;
+}
+
+.fadeOverlay {
+  width: 346px;
+  height: 187px;
+  background: linear-gradient(270deg, #FFF 89.99%, rgba(255, 255, 255, 0.00) 99.6%);
+  position: absolute;
+  left: 645px;
+  top: 256px;
+}
+
+.conversionTooltip {
+  width: 244px;
+  height: 65px;
+  border-radius: 8px;
+  border: 0.8px solid #334AFA;
+  background: #FFF;
+  position: absolute;
+  left: 645px;
+  top: 187px;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  gap: 13px;
+}
+
+.tooltipIcon {
+  width: 39px;
+  height: 39px;
+  flex-shrink: 0;
+}
+
+.tooltipIcon img {
+  width: 100%;
+  height: 100%;
+}
+
+.tooltipContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.tooltipPercentage {
+  color: #334AFA;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.tooltipDate {
+  color: #767676;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+/* Responsive styles */
+@media (max-width: 991px) {
+  .conversionDataContainer {
+    width: 100%;
+    max-width: 800px;
+    height: 400px;
+  }
+  
+  .header {
+    width: calc(100% - 58px);
+    flex-direction: column;
+    gap: 20px;
+    height: auto;
+  }
+  
+  .yAxisLabels {
+    height: 200px;
+    top: 160px;
+  }
+  
+  .gridLine {
+    width: calc(100% - 120px);
+  }
+  
+  .conversionTooltip {
+    right: 20px;
+    left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .conversionDataContainer {
+    height: 350px;
+    border-radius: 12px;
+  }
+ 
+  .chartBackground,
+  .chartLine,
+  .chartPoint1,
+  .chartPoint2,
+  .chartPoint3,
+  .chartPoint4,
+  .chartPoint5,
+  .chartPoint6,
+  .chartPoint7 {
+  display: none;
+  
+}
+  .header {
+    left: 20px;
+    top: 20px;
+    width: calc(100% - 40px);
+    flex-direction: row;
+  }
+
+  .fadeOverlay {
+  width: 346px;
+  height: 17px;
+  background: linear-gradient(270deg, #FFF 89.99%, rgba(255, 255, 255, 0.00) 99.6%);
+  position: absolute;
+  left: 645px;
+  top: 256px;
+}
+  
+  .title {
+    font-size: 18px;
+  }
+  
+  .subtitle {
+    width: 100%;
+  }
+  
+  .yAxisLabels {
+    height: 150px;
+    top: 130px;
+    left: 20px;
+  }
+  
+  .gridLine {
+    width: calc(100% - 80px);
+    left: 60px;
+  }
+  
+  .conversionTooltip {
+    width: 200px;
+    height: 55px;
+    right: 10px;
+    top: 150px;
+  }
+  
+  .tooltipPercentage {
+    font-size: 16px;
+  }
+  
+  .fadeOverlay {
+    width: 250px;
+    left: calc(100% - 260px);
+    top: 200px;
+  }
+}

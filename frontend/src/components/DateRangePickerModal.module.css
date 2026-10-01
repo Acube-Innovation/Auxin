@@ -1,0 +1,486 @@
+/* DateRangePickerModal.module.css */
+
+.datePickerBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  font-family: Inter;
+}
+
+.datePickerMenu {
+  align-items: stretch;
+  border-radius: 12px;
+  box-shadow: 0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03);
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  background-color: var(--White, #FFF);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+/* Leading Content - Date Presets */
+.leadingContent {
+  color: var(--Gray-700, #414651);
+  width: 192px;
+  padding: 12px 16px;
+  font: 500 14px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.datePickerListItem {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  margin-top: 4px;
+  max-width: 100%;
+  width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  justify-content: flex-start;
+  background-color: var(--White, #FFF);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.datePickerListItem:first-child {
+  margin-top: 0;
+}
+
+.datePickerListItem:hover {
+  background-color: var(--Gray-50, #F9FAFB);
+}
+
+.datePickerListItem.selected {
+  color: var(--Brand-700, #6941C6);
+  background-color: var(--Brand-50, #F9F5FF);
+}
+
+.text {
+  color: inherit;
+  align-self: stretch;
+  margin: auto 0;
+}
+
+/* Divider */
+.divider {
+  background-color: rgba(233, 234, 235, 1);
+  display: flex;
+  width: 1px;
+  flex-shrink: 0;
+  height: 469px;
+  fill: var(--Gray-200, #E9EAEB);
+}
+
+/* Trailing Content - Calendars */
+.trailingContent {
+  align-self: flex-start;
+  min-width: 240px;
+  width: 657px;
+}
+
+.datePickers {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+/* Calendar Pickers */
+.leftPicker,
+.rightPicker {
+  min-width: 240px;
+  overflow: hidden;
+  width: 328px;
+}
+
+.content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 20px 24px;
+}
+
+.calendar {
+  width: 100%;
+}
+
+/* Calendar Month Header */
+.calendarMonth {
+  display: flex;
+  width: 100%;
+  max-width: 280px;
+  align-items: center;
+  gap: 40px 46px;
+  justify-content: space-between;
+}
+
+.navButton {
+  border-radius: 8px;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 40px;
+  margin: auto 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.navButton:hover {
+  background-color: var(--Gray-50, #F9FAFB);
+}
+
+.buttonBase {
+  border-radius: 8px;
+  display: flex;
+  width: 40px;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  justify-content: center;
+  padding: 10px;
+}
+
+.navIcon {
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
+  width: 20px;
+  align-self: stretch;
+  margin: auto 0;
+}
+
+.monthText {
+  color: var(--Gray-700, #414651);
+  text-align: center;
+  align-self: stretch;
+  margin: auto 0;
+  font: 600 16px Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Calendar Dates */
+.calendarDates {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 280px;
+  color: var(--Gray-700, #414651);
+  white-space: nowrap;
+  text-align: center;
+  font: 400 14px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.dayHeaders {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  font-weight: 500;
+  justify-content: flex-start;
+}
+
+.dayHeader {
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 40px;
+  padding: 10px 11px;
+}
+
+.dayHeaderText {
+  color: var(--Gray-700, #414651);
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px 0;
+  margin-top: 4px;
+}
+
+.calendarCell {
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.calendarCell:hover {
+  background-color: var(--Gray-50, #F9FAFB);
+}
+
+.calendarCell.selected {
+  background-color: var(--Foundation-Blue-blue-500, #007AFF) !important;
+  color: #FFF !important;
+  font-weight: 500;
+}
+
+.calendarCell.selected:hover {
+  background-color: var(--Foundation-Blue-blue-500, #007AFF) !important;
+  color: #FFF !important;
+}
+
+.calendarCell.today {
+  background-color: rgba(245, 245, 245, 1);
+  font-weight: 500;
+}
+
+.calendarCell.today.selected {
+  background-color: var(--Foundation-Blue-blue-500, #007AFF) !important;
+  color: #FFF !important;
+}
+
+.calendarCell.inRange {
+  background-color: var(--Brand-50, #F9F5FF);
+  color: var(--Brand-700, #007AFF);
+}
+
+.calendarCell.inRange.selected {
+  background-color: var(--Foundation-Blue-blue-500, #007AFF) !important;
+  color: #FFF !important;
+}
+
+.calendarCell.previousMonth,
+.calendarCell.nextMonth {
+  color: var(--Gray-500, #717680);
+}
+
+.calendarDay {
+  color: inherit;
+}
+
+/* Calendar Divider */
+.calendarDivider {
+  background-color: rgba(233, 234, 235, 1);
+  align-self: stretch;
+  display: flex;
+  width: 1px;
+  flex-shrink: 0;
+  height: 396px;
+  fill: var(--Gray-200, #E9EAEB);
+}
+
+/* Bottom Panel */
+.bottomDivider {
+  background-color: rgba(233, 234, 235, 1);
+  display: flex;
+  min-height: 1px;
+  width: 100%;
+  fill: var(--Gray-200, #E9EAEB);
+}
+
+.bottomPanel {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  gap: 40px 87px;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+}
+
+/* Input Fields */
+.inputFields {
+  display: flex;
+  min-width: 240px;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  color: var(--Gray-900, #181D27);
+  font-weight: 400;
+  justify-content: flex-start;
+  height: 100%;
+}
+
+.inputField {
+  align-self: stretch;
+  width: 128px;
+  margin: auto 0;
+}
+
+.inputFieldBase {
+  width: 100%;
+}
+
+.inputWithLabel {
+  width: 100%;
+}
+
+.input {
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--Gray-300, #D5D7DA);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  overflow: hidden;
+  justify-content: flex-start;
+  background-color: var(--White, #FFF);
+  padding: 8px 10px;
+}
+
+.inputContent {
+  align-self: stretch;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  flex: 1;
+  margin: auto 0;
+}
+
+.inputText {
+  color: var(--Gray-900, #181D27);
+  align-self: stretch;
+  flex: 1;
+  margin: auto 0;
+}
+
+.separatorText {
+  color: var(--Gray-500, #717680);
+  align-self: stretch;
+  margin: auto 0;
+}
+
+/* Actions */
+.actions {
+  align-self: flex-start;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  font-size: 14px;
+  white-space: nowrap;
+  line-height: 1;
+  justify-content: flex-start;
+}
+
+.cancelButton {
+ display: flex;
+width: 6.875rem;
+padding: 0.625rem 1rem;
+justify-content: center;
+align-items: center;
+gap: 0.5rem;
+border-radius: 0.5rem;
+border: 1px solid var(--Gray-300, #D5D7DA);
+background: var(--White, #FFF);
+/* Shadow/xs */
+box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+.cancelButtonText{
+  color: var(--Gray-700, #414651);
+/* Text sm/Semibold */
+font-family: Inter;
+font-size: 0.875rem;
+font-style: normal;
+font-weight: 600;
+line-height: 1.25rem; /* 142.857% */
+}
+
+.cancelButtonBase:hover {
+  background-color: var(--Gray-50, #F9FAFB);
+}
+
+.cancelText {
+  color: var(--Gray-700, #414651);
+  align-self: stretch;
+  margin: auto 0;
+}
+
+.applyButton {
+ display: flex;
+width: 6.875rem;
+padding: var(--Button-vertical-padding, 0.5rem) var(--Button-horizontal-padding, 1rem);
+justify-content: center;
+align-items: center;
+gap: var(--Button-gap, 0.75rem);
+align-self: stretch;
+border-radius: var(--Button-corner-radius, 0.5rem);
+background: var(--Button-normal, #007AFF);
+backdrop-filter: blur(10px);
+}
+
+.applyButton:hover {
+  background-color: var(--Button-hover, #0056CC);
+}
+
+.applyText {
+ color: var(--Background-primary, #FFF);
+
+/* Footnote/Medium */
+font-family: Inter;
+font-size: 0.875rem;
+font-style: normal;
+font-weight: 500;
+line-height: 1.25rem; /* 142.857% */
+}
+
+/* Media Queries */
+@media (max-width: 991px) {
+  .datePickerMenu {
+    max-width: 95vw;
+  }
+
+  .leadingContent,
+  .datePickerListItem {
+    white-space: initial;
+  }
+
+  .datePickers {
+    max-width: 100%;
+  }
+
+  .content {
+    padding: 0 20px;
+  }
+
+  .calendarDates {
+    white-space: initial;
+  }
+
+  .dayHeaders {
+    white-space: initial;
+  }
+
+  .calendarCell {
+    white-space: initial;
+  }
+
+  .bottomPanel {
+    max-width: 100%;
+    padding: 0 20px;
+  }
+
+  .actions {
+    white-space: initial;
+  }
+
+  .cancelButtonBase {
+    white-space: initial;
+  }
+
+  .applyButton {
+    white-space: initial;
+  }
+}

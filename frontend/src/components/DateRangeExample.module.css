@@ -1,0 +1,287 @@
+/* DateRangeExample.module.css */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.description {
+  font-size: 16px;
+  color: #6B7280;
+  margin: 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Date Selector */
+.dateSelector {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #F9FAFB;
+  border-radius: 8px;
+  margin-bottom: 32px;
+  border: 1px solid #E5E7EB;
+}
+
+.currentRange h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.rangeInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dateText {
+  font-size: 14px;
+  color: #374151;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.presetBadge {
+  background-color: #EEF2FF;
+  color: #3730A3;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.selectButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.selectButton:hover {
+  background-color: #2563EB;
+}
+
+.selectButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Analytics */
+.analytics {
+  margin-bottom: 32px;
+}
+
+.analytics h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: #6B7280;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Data Section */
+.dataSection {
+  margin-bottom: 32px;
+}
+
+.dataSection h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.dataTable {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 1fr;
+  background-color: #F9FAFB;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  border-bottom: 1px solid #E5E7EB;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 1fr;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 14px;
+  align-items: center;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.tableRow:hover {
+  background-color: #F9FAFB;
+}
+
+.dateCell {
+  color: #6B7280;
+}
+
+.valueCell {
+  font-weight: 600;
+  color: #059669;
+}
+
+.typeBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.typeBadge.meeting {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.typeBadge.call {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.typeBadge.presentation {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.noData {
+  padding: 40px 16px;
+  text-align: center;
+  color: #6B7280;
+  font-style: italic;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.showMore {
+  padding: 12px 16px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 14px;
+  background-color: #F9FAFB;
+  border-top: 1px solid #E5E7EB;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .dateSelector {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .tableHeader div:nth-child(3),
+  .tableHeader div:nth-child(4),
+  .tableRow div:nth-child(3),
+  .tableRow div:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 24px;
+  }
+  
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .selectButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

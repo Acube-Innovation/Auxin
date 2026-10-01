@@ -1,0 +1,1332 @@
+.dashboardOverview {
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: #fafbfb;
+}
+
+/* Header Row */
+.headerRow {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 24px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+/* Welcome Card */
+.welcomeCard {
+  /* border-radius: 18px;
+  background-color: #FFF4E4;
+  border: 1px solid #E4E4E4;
+  padding: 18px 10px 17px 23px;
+  min-width: 240px;
+  flex-grow: 1;
+  flex-shrink: 1;
+  width: 386px; */
+  width: 30.18313rem;
+  height: 8.26344rem;
+  border-radius: 1.125rem;
+  border: 1.066px solid #e4e4e4;
+  background: #fff4e4;
+  padding: 15px 10px 17px 23px;
+}
+
+.welcomeContent {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.welcomeText {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  line-height: 1;
+  width: 58%;
+}
+
+.greeting {
+  color: #161616;
+  font-family: Inter;
+  font-size: 1.375rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 116%; /* 1.595rem */
+}
+
+.date {
+  color: rgba(22, 22, 22, 0.5);
+  font-family: "Inter Tight";
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 116%; /* 1.16rem */
+  letter-spacing: 0.00975rem;
+}
+
+.welcomeImage {
+  width: 42%;
+  margin-left: 20px;
+}
+
+.imagePlaceholder {
+  aspect-ratio: 1.56;
+  width: 180px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+  border-radius: 12px;
+}
+
+/* Metrics Row */
+.metricsRow {
+  display: flex;
+  min-width: 240px;
+  align-items: center;
+  gap: 19px;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  flex-grow: 1;
+  flex-shrink: 1;
+  width: 920px;
+}
+
+.metricCard {
+  border-radius: 18px;
+  background-color: #fff;
+  align-self: stretch;
+  display: flex;
+  min-width: 240px;
+  align-items: center;
+  gap: 40px 65px;
+  justify-content: flex-start;
+  margin: auto 0;
+  padding: 25px;
+  border: 1px solid #e4e4e4;
+}
+
+.profitCard {
+  background-color: #334afa;
+  color: #fff;
+}
+
+.metricContent {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-weight: 500;
+  justify-content: flex-start;
+  width: 132px;
+  margin: auto 0;
+}
+
+.metricLabel {
+  /* color: #161616;
+  font-size: 17px;
+  line-height: 1;
+  text-align: center;
+  align-self: flex-start; */
+  color: rgba(22, 22, 22, 0.5);
+  /* text-align: center; */
+  font-family: "Inter Tight";
+  font-size: 1.05813rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.19038rem; /* 112.5% */
+}
+
+.profitCard .metricLabel {
+  color: #fff;
+}
+
+.metricValue {
+  color: #161616;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -1.06px;
+  margin-top: 13px;
+}
+
+.profitCard .metricValue {
+  color: #fff;
+}
+
+.metricDetails {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 15px;
+  color: #147129;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1;
+  justify-content: flex-start;
+  width: 78px;
+  margin: auto 0;
+}
+
+.trendIcon {
+  aspect-ratio: 0.96;
+  object-fit: contain;
+  object-position: center;
+  width: 25px;
+}
+
+.changeChip {
+  border-radius: 246px;
+  background-color: #eafdee;
+  display: flex;
+  margin-top: 30px;
+  align-items: flex-start;
+  gap: 2px;
+  justify-content: flex-start;
+  padding: 5px 9px;
+  color: #147129;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.profitCard .changeChip {
+  border: 1px solid #eafdee;
+  background-color: transparent;
+  color: #fff;
+}
+
+.grow {
+  border-radius: 15.38669rem;
+  background: #eafdee;
+  color: #147129;
+}
+.changeIcon {
+  width: 20px;
+  flex-shrink: 0;
+  color: #147129;
+}
+
+/* Content Row */
+.contentRow {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  gap: 24px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+/* Lead Conversion Card */
+.leadConversionCard {
+  border-radius: 18px;
+  background-color: #fff;
+  min-width: 240px;
+  flex-grow: 1;
+  flex-shrink: 1;
+  width: 386px;
+  padding: 22px 24px;
+  border: 2px solid #e4e4e4;
+}
+
+.cardHeader {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 40px 100px;
+  justify-content: space-between;
+  /* padding: 0 10px; */
+}
+
+.cardHeaderCalendar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 40px 100px;
+  justify-content: space-between;
+  padding: 0 30px 0 30px;
+}
+
+.cardHeaderCalendar h3,
+.cardHeader h3 {
+  color: #161616;
+  leading-trim: both;
+  text-edge: cap;
+  font-family: "Inter Tight";
+  font-size: 1.5rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 116%; /* 1.74rem */
+}
+
+.actionButton {
+  border-radius: 12px;
+  background-color: #fff;
+  display: flex;
+  min-height: 61px;
+  align-items: center;
+  overflow: hidden;
+  justify-content: center;
+  width: 61px;
+  height: 61px;
+  padding: 0 12px;
+  border: 2px solid #e4e4e4;
+  cursor: pointer;
+  /* margin: 10px; */
+}
+
+.actionButton img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
+  width: 37px;
+}
+
+.conversionStats {
+  margin-top: 24px;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+}
+
+.percentageValue {
+  color: #161616;
+  font-size: 43px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -1.21px;
+}
+
+.description {
+  color: rgba(22, 22, 22, 0.6);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.24px;
+  margin-top: 24px;
+  font-family: "Inter Tight";
+}
+
+.progressSection {
+  margin-top: 39px;
+  width: 100%;
+}
+
+.progressBar {
+  border-radius: 136px;
+  background-color: #eceef2;
+  display: flex;
+  min-height: 11px;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.progressFill {
+  border-radius: 136px;
+  background-color: #334afa;
+  display: flex;
+  min-height: 11px;
+  width: 55%;
+  max-width: 100%;
+}
+
+.progressLabels {
+  display: flex;
+  margin-top: 14px;
+  width: 100%;
+  align-items: flex-start;
+  gap: 40px 100px;
+  color: rgba(22, 22, 22, 0.5);
+  letter-spacing: 0.24px;
+  justify-content: space-between;
+  font: 400 17px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.progressLabels span {
+  color: rgba(22, 22, 22, 0.5);
+}
+
+.progressLabels span strong {
+  color: #334afa;
+}
+
+.activitySection {
+  margin-top: 39px;
+}
+
+.activitySection h4 {
+  color: #161616;
+  letter-spacing: 0.24px;
+  margin: 0 0 24px 0;
+  font: 500 17px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.activityGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activityRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  justify-content: space-between;
+}
+
+.activityCell {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.activityEmpty {
+  background-color: #ebebeb;
+}
+
+.activityLow {
+  background-color: #facd8d;
+}
+
+.activityMedium {
+  background-color: #8593fe;
+}
+
+.activityHigh {
+  background-color: #ff801f;
+}
+
+/* Chart Card */
+
+/* Add to your existing module.css file */
+
+/* .conversionCard {
+  width: 63.53538rem;
+  height: 30.18306rem;
+  border-radius: 1.125rem;
+  border: 1.513px solid #E4E4E4;
+  background: #FFF;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
+} */
+.conversionCard {
+  width: 63.53538rem;
+  height: 30.18306rem;
+  border-radius: 1.125rem;
+  border: 1.513px solid #e4e4e4;
+  background: #fff;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.conversionCardHeader {
+  margin-bottom: 2rem;
+  display: flex;
+  width: 35.79963rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.811rem;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  color: #161616;
+  leading-trim: both;
+  text-edge: cap;
+  font-family: "Inter Tight";
+  font-size: 1.5rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 116%; /* 1.74rem */
+}
+.conver {
+  display: flex;
+  width: 59.91344rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.cardSubtitle {
+  color: #161616;
+  leading-trim: both;
+  text-edge: cap;
+  font-family: "Inter Tight";
+  font-size: 1.20731rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 144%; /* 1.73856rem */
+  letter-spacing: 0.01475rem;
+}
+
+.conversionGraph {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 50px;
+}
+
+.percentageLabels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  z-index: 2;
+}
+
+.percentageLabel {
+  color: #767676;
+  text-align: right;
+  font-family: "Inter Tight";
+  font-size: 1.175rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+}
+
+.dividerLine {
+  opacity: 0.5;
+  background: #dedede;
+}
+
+.graphContainer {
+  position: relative;
+  flex: 1;
+  margin-left: 3rem;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.graphSvg {
+  width: 100%;
+  height: auto;
+}
+
+.conversionRate {
+  position: absolute;
+  top: 10%;
+  left: 78%;
+  transform: translate(-50%, -50%);
+  color: #4c6ef5;
+  /* font-size: 1.75rem;
+  font-weight: 700;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1); */
+  width: 15.24731rem;
+  height: 4.08438rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  border: 0.8px solid #334afa;
+  background: #fff;
+  display: flex;
+  font-weight: 700;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.dateLabel {
+  text-align: center;
+  color: #718096;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  font-weight: 500;
+}
+
+/* Bottom Row */
+.bottomRow {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;      /* align start so items line up */
+  gap: 24px;
+  justify-content: space-between;
+  flex-wrap: nowrap;            /* keep calendar + tasks on same row by default */
+}
+
+/* Make the calendar card flexible and the tasks card a narrower fixed column */
+.calendarCard {
+  border-radius: 18px;
+  background-color: #fff;
+  min-width: 240px;
+  padding-top: 21px;
+  overflow: hidden;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex: 1 1 66%;               /* grow/shrink; target ~66% of row */
+  min-width: 420px;            /* allow layout to wrap only when space is too small */
+  max-width: calc(100% - 280px);
+  border: 2px solid #e4e4e4;
+}
+
+/* Tasks column stays a narrower column, but allowed to shrink on smaller laptops */
+.tasksCard {
+  border-radius: 18px;
+  background-color: #fff;
+  min-width: 240px;
+  overflow: hidden;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex: 0 0 320px;             /* keep a narrow column */
+  min-width: 280px;
+  margin: auto 0;
+  padding: 21px 28px 0;
+  border: 2px solid #e4e4e4;
+  /* display: flex;
+width: 30.18306rem;
+padding: 1.32406rem 1.7775rem 0 1.73556rem;
+flex-direction: column;
+justify-content: flex-end;
+align-items: flex-start;
+gap: 1.54831rem;
+flex-shrink: 0;
+border-radius: 1.125rem;
+border: 1.513px solid #E4E4E4;
+background: #FFF; */
+}
+
+.tasksList {
+  margin-top: 25px;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.taskItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.taskInfo h4 {
+  color: #161616;
+  font-family: "Inter Tight";
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 130%; /* 1.625rem */
+  align-self: stretch;
+}
+
+.taskInfo p {
+  color: #818181;
+  font-family: "Inter Tight";
+  font-size: 1.06481rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.taskAvatar {
+  width: 41px;
+  height: 41px;
+  border-radius: 50%;
+  background-color: #ff801f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.taskAvatar1 {
+  width: 41px;
+  height: 41px;
+  border-radius: 50%;
+  background-color: #20d668;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.taskDivider {
+  min-height: 1px;
+  margin: 14px 0;
+  width: 100%;
+  border: 2px solid #d0d0d0;
+}
+
+.taskMeta {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 40px 100px;
+  font-size: 17px;
+  color: #818181;
+  justify-content: space-between;
+  margin-bottom: 33px;
+}
+
+.avatarStack {
+  display: flex;
+  gap: -13px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #334afa;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: -8px;
+  border: 2px solid #fff;
+}
+
+.avatar:first-child {
+  margin-left: 0;
+}
+
+.taskTime {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.today {
+  font-weight: 500;
+}
+
+.timeRange {
+  font-weight: 400;
+}
+
+
+/* Responsive Design */
+
+/* Large Laptops (1366px - 1440px) */
+@media (max-width: 1440px) {
+  .dashboardOverview {
+    padding: 20px;
+    gap: 20px;
+  }
+
+
+  .headerRow {
+    gap: 20px !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .welcomeCard {
+    width: 19rem !important;
+    min-width: 19rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .metricsRow {
+    display: flex !important;
+    gap: 16px !important;
+    width: auto !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .metricCard {
+    width: auto !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .greeting {
+    font-size: 1.05rem !important;
+  }
+
+  .date {
+    font-size: 0.9rem;
+  }
+
+  
+
+  
+
+  .metricLabel {
+    font-size: 1rem;
+  }
+
+  .metricValue {
+    font-size: 34px;
+    margin-top: 10px;
+  }
+
+  .cardHeader h3,
+  .cardHeaderCalendar h3 {
+    font-size: 1.35rem;
+  }
+
+  .actionButton {
+    min-height: 55px;
+    width: 55px;
+    height: 55px;
+  }
+
+  .actionButton img {
+    width: 32px;
+  }
+
+  .conversionCard {
+    width: 100%;
+    height: auto;
+    min-height: 28rem;
+    padding: 2rem;
+  }
+
+  .calendarCard {
+    width: 100%;
+  }
+
+  .tasksCard {
+    width: 100%;
+  }
+}
+
+/* Standard Laptops (1200px - 1366px) */
+@media (max-width: 1366px) {
+  .dashboardOverview {
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .headerRow {
+    gap: 18px;
+  }
+
+  .welcomeCard {
+    width: 26rem;
+    padding: 12px 10px 14px 18px;
+  }
+
+  .greeting {
+    font-size: 1.2rem;
+  }
+
+  .date {
+    font-size: 0.85rem;
+  }
+
+  .imagePlaceholder {
+    width: 150px;
+  }
+
+  .metricsRow {
+    gap: 14px;
+  }
+
+  .metricCard {
+    padding: 18px;
+    gap: 25px 45px;
+  }
+
+  .metricLabel {
+    font-size: 0.95rem;
+  }
+
+  .metricValue {
+    font-size: 32px;
+  }
+
+  .changeChip {
+    margin-top: 25px;
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+
+  .conversionCard {
+    padding: 1.8rem;
+  }
+
+  .cardTitle {
+    font-size: 1.3rem;
+  }
+
+  .cardSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .percentageLabel {
+    font-size: 1.05rem;
+  }
+
+  .conversionRate {
+    width: 14rem;
+    height: 3.8rem;
+  }
+}
+
+/* Slightly smaller laptops / large tablets */
+@media (max-width: 1200px) {
+  .dashboardOverview {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .headerRow {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .welcomeCard {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 16px;
+  }
+
+  .welcomeContent {
+    gap: 16px;
+  }
+
+  .greeting {
+    font-size: 1.15rem;
+  }
+
+  .date {
+    font-size: 0.85rem;
+  }
+
+  .imagePlaceholder {
+    width: 130px;
+  }
+
+  .metricsRow {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .metricCard {
+    flex: 1 1 calc(33.333% - 12px);
+    min-width: 220px;
+    padding: 16px;
+    gap: 20px 40px;
+  }
+
+  .metricContent {
+    width: 120px;
+  }
+
+  .metricLabel {
+    font-size: 0.9rem;
+  }
+
+  .metricValue {
+    font-size: 30px;
+    margin-top: 8px;
+  }
+
+  .metricDetails {
+    width: 70px;
+  }
+
+  .changeChip {
+    margin-top: 20px;
+    padding: 4px 7px;
+    font-size: 13px;
+  }
+
+  .contentRow {
+    gap: 16px;
+  }
+
+  .leadConversionCard {
+    width: 100%;
+    padding: 18px 20px;
+  }
+
+  .conversionCard {
+    width: 100%;
+    height: auto;
+    padding: 1.5rem;
+  }
+
+  .cardHeader h3,
+  .cardHeaderCalendar h3 {
+    font-size: 1.25rem;
+  }
+
+  .actionButton {
+    min-height: 50px;
+    width: 50px;
+    height: 50px;
+    padding: 0 10px;
+  }
+
+  .actionButton img {
+    width: 30px;
+  }
+
+  .percentageValue {
+    font-size: 38px;
+  }
+
+  .description {
+    font-size: 14px;
+    margin-top: 20px;
+  }
+
+  .bottomRow {
+    gap: 16px;
+  }
+  
+  .calendarCard {
+    width: 100%;
+    padding: 18px 24px;
+  }
+
+  .tasksCard {
+    width: 100%;
+    padding: 18px 24px 0;
+  }
+
+  .taskInfo h4 {
+    font-size: 1.15rem;
+  }
+
+  .taskInfo p {
+    font-size: 1rem;
+  }
+
+  .taskAvatar,
+  .taskAvatar1 {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .taskMeta {
+    font-size: 16px;
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 991px) {
+  .dashboardOverview {
+    padding: 20px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .welcomeCard {
+    padding: 16px 20px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .metricsRow {
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .metricCard {
+    padding: 20px;
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .contentRow {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .leadConversionCard {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .bottomRow {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .calendarCard {
+    padding: 16px 18px;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .tasksCard {
+    padding: 16px 20px 0;
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
+/* Mobile Specific Styles */
+@media (max-width: 768px) {
+  .dashboardOverview {
+    padding: 0;
+    margin-top: 20px;
+    padding-left: 20px;
+  }
+
+  .headerRow {
+    display: block; /* Hide welcome card on mobile - shown in header */
+  }
+
+  /* .dashboardOverview{
+    overflow: visible !important;
+  } */
+   
+
+  .metricsRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-start;
+    flex-direction: row;
+    width: calc(100% - 20px);
+    overflow-x: visible;
+    padding-bottom: 10px;
+    margin-top: 10px;
+
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+    -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+  }
+
+  .metricsRow::-webkit-scrollbar {
+    display: none;
+  }
+
+  .metricCard {
+    border-radius: 18px;
+    background-color: #fff;
+    align-self: stretch;
+    display: flex;
+    min-width: 240px;
+    align-items: center;
+    /* gap: 40px 65px; */
+    justify-content: space-between;
+    margin: auto 0;
+    padding: 25px;
+    border: 1px solid #e4e4e4;
+
+    flex: 0 0 auto; /* Prevent cards from shrinking */
+    scroll-snap-align: start; /* Snap to start of each card */
+    flex-direction: column;
+  }
+
+  .metricsRow {
+    scroll-snap-type: x mandatory;
+  }
+
+  .profitCard {
+    background-color: #334afa;
+    color: #fff;
+  }
+
+  .metricsContainer {
+    position: relative;
+  }
+
+  .scrollIndicator {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 18px;
+    z-index: 2;
+  }
+
+  .metricContent {
+    width: auto;
+    min-width: 97px;
+  }
+
+  .metricLabel {
+    color: #161616;
+    font-size: 14px;
+    line-height: 1;
+    text-align: left;
+    font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+    font-weight: 500;
+  }
+
+  .metricValue {
+    color: #161616;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: -0.78px;
+    margin-top: 9px;
+    font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+    font-weight: 500;
+  }
+
+  .metricDetails {
+    width: 58px;
+    align-items: flex-end;
+  }
+
+  .changeChip {
+    border-radius: 181px;
+    background-color: #eafdee;
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    justify-content: flex-start;
+    padding: 4px 7px;
+    margin-top: 22px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .leadConversionCard {
+    border-radius: 13px;
+    background-color: #fff;
+    width: calc(100% - 20px);
+    padding: 16px 18px;
+    border: 1px solid #e4e4e4;
+    margin-top: 20px;
+  }
+
+  .cardHeader h3 {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .actionButton {
+    border-radius: 7px;
+    background-color: #fff;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+    padding: 0 7px;
+    border: 1px solid #e4e4e4;
+  }
+
+  .actionButton img {
+    width: 22px;
+  }
+
+  .percentageValue {
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.88px;
+  }
+
+  .description {
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.17px;
+    margin-top: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .welcomeContent {
+    /* flex-direction: column; */
+    text-align: start;
+  }
+.greeting{
+  font-size: 1rem;
+}
+  .date {
+  font-family: "Inter Tight";
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 500;
+  
+}
+  .welcomeText {
+    width: 100%;
+  }
+
+  .welcomeImage {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 16px;
+  }
+
+  .imagePlaceholder {
+    width: 100%;
+    max-width: 132px;
+    margin: 0 auto;
+    height: auto;
+  }
+
+  .timeGrid {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .event {
+    position: static;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+
+  .calendarCard {
+    border-radius: 18px;
+    background-color: #fff;
+    width: calc(100% - 20px);
+    padding: 16px 18px 36px;
+    border: 2px solid #e4e4e4;
+    margin-top: 20px;
+  }
+
+  .tasksCard {
+    border-radius: 13px;
+    background-color: #fff;
+    width: calc(100% - 20px);
+    padding: 16px 20px 0;
+    border: 1px solid #e4e4e4;
+    margin-top: 20px;
+  }
+
+  .activityGrid {
+    gap: 8px;
+  }
+
+  .activityRow {
+    gap: 8px;
+  }
+
+  .activityCell {
+    width: 11px;
+    height: 11px;
+  }
+}

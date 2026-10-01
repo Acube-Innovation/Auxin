@@ -1,0 +1,739 @@
+/* Main Container */
+.clientsTableContainer {
+  display: flex;
+  width: 100%;
+  max-width: clamp(64rem, 90vw, 96.25rem);
+  padding: clamp(1.5rem, 2vw, 2rem) 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(1rem, 1.64vw, 1.6448rem);
+  border-radius: 1.125rem;
+  border: 0.094rem solid #e4e4e4;
+  margin: 0 auto;
+  background-color: #fff;
+}
+
+/* Header Section */
+.tableHeaderSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.tableTitleSection {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: clamp(1rem, 2vw, 1.787rem);
+  width: 100%;
+}
+
+/* Title */
+.tableTitle {
+  color: #161616;
+  letter-spacing: 0.015rem;
+  padding: 0 clamp(1rem, 1.34vw, 1.34rem);
+  font: 600 clamp(1.25rem, 1.5vw, 1.5rem)/1.16 "Inter Tight", sans-serif;
+  margin: 0;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(1rem, 1.625vw, 1.625rem);
+  padding: 0 clamp(1rem, 1.34vw, 1.34rem);
+}
+
+.primaryButton {
+  display: flex;
+  padding: 0.625rem 1.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  background-color: #007aff;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font: 500 clamp(0.875rem, 1vw, 1rem)/1.5 Inter, sans-serif;
+  white-space: nowrap;
+}
+
+.secondaryButton {
+  display: flex;
+  padding: 0.625rem 1.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  border: 0.063rem solid #007aff;
+  cursor: pointer;
+  background: transparent;
+  color: #007aff;
+  font: 500 clamp(0.875rem, 1vw, 1rem)/1.5 Inter, sans-serif;
+  white-space: nowrap;
+}
+
+.primaryButton:hover,
+.secondaryButton:hover {
+  opacity: 0.9;
+}
+
+/* Controls Section */
+.controlsSection {
+  display: flex;
+  padding: 0 clamp(1rem, 1.5vw, 1.5rem);
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* Segmented Control */
+.segmentedControl {
+  display: flex;
+  padding: 0.156rem;
+  align-items: center;
+  gap: 0.156rem;
+  border-radius: 7.734rem;
+  border: 0.078rem solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.toggleButton {
+  display: flex;
+  padding: 0.625rem 1.25rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 7.734rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #000;
+  font: 500 clamp(0.75rem, 0.813vw, 0.813rem)/1.5 Inter, sans-serif;
+  white-space: nowrap;
+}
+
+.toggleButton.active {
+  background-color: #007aff;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.toggleButton.activeAll {
+  background-color: #007aff;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.toggleButton:hover {
+  opacity: 0.8;
+}
+
+/* Search and Filter */
+.searchAndFilter {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 1.787vw, 1.787rem);
+}
+
+.searchContainer {
+  display: flex;
+  width: clamp(12rem, 16.125vw, 16.125rem);
+  height: 2.5rem;
+  padding: 0.625rem 1rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 6.188rem;
+  border: 0.063rem solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(0.625rem);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.searchInput {
+  flex: 1 0 0;
+  color: #b3b9c4;
+  letter-spacing: -0.008rem;
+  font: 500 clamp(0.75rem, 0.813vw, 0.813rem)/1.5 Inter, sans-serif;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.searchInput::placeholder {
+  color: #b3b9c4;
+}
+
+.filterButton {
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filterButton:hover {
+  opacity: 0.7;
+}
+
+/* Table Section */
+.tableSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.745rem;
+  width: 100%;
+}
+
+.tableWrapper {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tableColumns {
+  display: flex;
+  width: 100%;
+  min-width: 100%;
+}
+
+/* Column Definitions */
+.tableColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.checkboxColumn {
+  display: flex;
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  flex: 0 0 clamp(2.5rem, 3.125vw, 3.125rem);
+  flex-direction: column;
+  align-items: center;
+}
+
+.sNoColumn {
+  display: flex;
+  width: clamp(3rem, 3.75vw, 3.75rem);
+  flex: 0 0 clamp(3rem, 3.75vw, 3.75rem);
+  flex-direction: column;
+  align-items: center;
+}
+
+.companyColumn {
+  display: flex;
+  width: clamp(14rem, 20vw, 20rem);
+  flex: 2 0 clamp(14rem, 20vw, 20rem);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.typeColumn {
+  display: flex;
+  width: clamp(6rem, 8.625vw, 8.625rem);
+  flex: 0.8 0 clamp(6rem, 8.625vw, 8.625rem);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.assignedColumn {
+  display: flex;
+  width: clamp(12rem, 17.438vw, 17.438rem);
+  flex: 1.5 0 clamp(12rem, 17.438vw, 17.438rem);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.categoriesColumn {
+  display: flex;
+  width: clamp(9rem, 12.75vw, 12.75rem);
+  flex: 1 0 clamp(9rem, 12.75vw, 12.75rem);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.phoneColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  min-width: clamp(9rem, 12vw, 12rem);
+}
+
+.editActionsColumn,
+.deleteActionsColumn {
+  display: flex;
+  width: clamp(3.5rem, 4.75vw, 4.75rem);
+  flex: 0 0 clamp(3.5rem, 4.75vw, 4.75rem);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Table Header */
+.tableHeader {
+  display: flex;
+  height: clamp(3rem, 3.625vw, 3.625rem);
+  align-items: center;
+  width: 100%;
+  background-color: #fafbfb;
+}
+
+.tableHeaderCell {
+  display: flex;
+  padding: clamp(0.5rem, 0.89vw, 0.894rem) clamp(0.75rem, 1.34vw, 1.34rem);
+  align-items: center;
+  gap: 0.819rem;
+  flex: 1 0 0;
+  height: 100%;
+  border-bottom: 0.074rem solid #e4e4e4;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.headerContentCenter {
+  justify-content: center;
+}
+
+.headerText {
+  color: #161616;
+  font: 500 clamp(0.75rem, 0.875vw, 0.875rem)/1.5 "Inter Tight", sans-serif;
+  white-space: nowrap;
+}
+
+/* Table Cells */
+.tableCell {
+  display: flex;
+  height: clamp(4.5rem, 5.625vw, 5.625rem);
+  padding: clamp(0.75rem, 1.25vw, 1.25rem);
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  border-bottom: 0.125rem solid #e4e4e4;
+  box-sizing: border-box;
+}
+
+/* Cell Specific Styles */
+.checkboxCell, .sNoCell {
+  justify-content: center;
+  padding: clamp(0.75rem, 1.25vw, 1.25rem) 0;
+}
+
+.companyCell, .typeCell, .assignedCell, .categoriesCell, .phoneCell {
+  padding: clamp(0.75rem, 1.25vw, 1.25rem);
+  gap: 1rem;
+}
+
+.editActionsCell, .deleteActionsCell {
+  padding: clamp(0.75rem, 1.25vw, 1.25rem);
+  justify-content: center;
+}
+
+/* Avatar */
+.avatar {
+  width: clamp(2.5rem, 3vw, 3rem);
+  height: clamp(2.5rem, 3vw, 3rem);
+  border-radius: 50%;
+  background-color: #606060;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.clientProfileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.defaultAvatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: clamp(1rem, 1.125vw, 1.125rem);
+  color: white;
+  background-color: #606060;
+}
+
+.companyinfo, .assignedInfo, .categoryInfo, .phoneInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.15rem;
+  overflow: hidden;
+}
+
+.companyName, .assignedName, .categoryText, .phoneText {
+  color: #161616;
+  font: 500 clamp(0.9rem, 1.063vw, 1.063rem)/1.2 "Inter Tight", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.companyEmail, .assignedRole {
+  color: #8c8e90;
+  font: 500 clamp(0.8rem, 1.063vw, 1.063rem)/1.2 "Inter Tight", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Type Chip */
+.typeChip {
+  display: flex;
+  width: clamp(4rem, 4.75vw, 4.75rem);
+  padding: 0.6rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  border-radius: 1.875rem;
+}
+
+.typeChip.client { background-color: #ebf9ee; }
+.typeChip.lead { background-color: #eaf2fd; }
+.typeChip.active { background-color: #ebf9ee; }
+.typeChip.prospect { background-color: #eaf2fd; }
+
+.chipText {
+  text-align: center;
+  font: 500 clamp(0.75rem, 0.875vw, 0.875rem)/1.35 "Inter Tight", sans-serif;
+}
+
+.typeChip.client .chipText { color: #258d3f; }
+.typeChip.lead .chipText { color: #006fe8; }
+.typeChip.active .chipText { color: #258d3f; }
+.typeChip.prospect .chipText { color: #006fe8; }
+
+/* Action Button */
+.actionButton {
+  display: flex;
+  width: clamp(2rem, 2.25vw, 2.25rem);
+  height: clamp(2rem, 2.25vw, 2.25rem);
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* .actionButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+} */
+
+
+.actionButton:hover { background-color: #f5f5f5; }
+
+/* Pagination Section */
+.paginationSection {
+  display: flex;
+  padding: clamp(0.5rem, 0.89vw, 0.894rem) clamp(1rem, 1.5vw, 1.5rem);
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border-top: 0.063rem solid #e4e4e4;
+}
+
+.paginationButton {
+  display: flex;
+  padding: 0.5rem 0.875rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 0.063rem solid #d0d5dd;
+  background: #fff;
+  box-shadow: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  cursor: pointer;
+  color: #344054;
+  font: 500 0.875rem/1.4 Inter, sans-serif;
+}
+
+.paginationButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginationButton:hover:not(:disabled) { background-color: #f9fafb; }
+
+.pageInfo {
+  color: #344054;
+  font: 500 0.875rem/1.4 Inter, sans-serif;
+}
+
+/* Custom Checkbox Styles */
+.checkboxLabel {
+  display: block;
+  position: relative;
+  padding-left: 1.25rem;
+  cursor: pointer;
+  font-size: 1.375rem;
+  user-select: none;
+}
+
+.hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.customCheckbox {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1.25rem;
+  width: 1.25rem;
+  background-color: #fff;
+  border: 0.094rem solid #d0d5dd;
+  border-radius: 0.375rem;
+}
+
+.hiddenCheckbox:checked ~ .customCheckbox {
+  background-color: #007aff;
+  border-color: #007aff;
+}
+
+.customCheckbox:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.hiddenCheckbox:checked ~ .customCheckbox:after { display: block; }
+
+.checkboxLabel .customCheckbox:after {
+  left: 0.375rem;
+  top: 0.125rem;
+  width: 0.313rem;
+  height: 0.625rem;
+  border: solid white;
+  border-width: 0 0.125rem 0.125rem 0;
+  transform: rotate(45deg);
+}
+
+.noLinkStyle {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Icon Styles */
+.buttonIcon,
+.searchIcon,
+.filterIcon,
+.sortIcon,
+.editIcon,
+.deleteIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.filterIcon { width: 2rem; height: 2rem; }
+.editIcon, .deleteIcon { width: 1.787rem; height: 1.787rem; }
+.sortIcon { width: 1.191rem; height: 1.191rem; }
+
+/* Loading and Error States */
+.loadingState, .errorState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  font-size: 1.125rem;
+  color: #161616;
+}
+
+.errorState { flex-direction: column; gap: 1rem; }
+.errorState button {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  background-color: #007aff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.errorState button:hover { opacity: 0.9; }
+
+/* Bulk Delete Button Style */
+.bulkDeleteButton {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: 0.063rem solid #fecaca !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   LAPTOP RESPONSIVE STYLES
+   ======================================== */
+
+/* 1536px Breakpoint */
+@media (max-width: 1536px) {
+  .tableTitle {
+    font-size: calc(clamp(1.25rem, 1.5vw, 1.5rem) * 0.90);
+    padding: 0 calc(clamp(1rem, 1.34vw, 1.34rem) * 0.90);
+    letter-spacing: calc(0.015rem * 0.90);
+  }
+
+  .primaryButton, .secondaryButton, .bulkDeleteButton {
+    /* padding: calc(0.625rem * 0.90) calc(1.25rem * 0.90);
+    font-size: calc(clamp(0.875rem, 1vw, 1rem) * 0.90);
+    gap: calc(0.75rem * 0.90); */
+
+    padding: calc(0.625rem * 0.85) calc(1.25rem * 0.85);
+    gap: calc(0.75rem * 0.85);
+
+    /* Full font override — required for correct scaling */
+    font: 500 calc(clamp(0.875rem, 1vw, 1rem) * 0.85)/1.5 Inter, sans-serif;
+  }
+
+  
+.editIcon,
+.deleteIcon {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex-shrink: 0;
+}
+ 
+.buttonIcon,
+.searchIcon,
+.filterIcon,
+.sortIcon{
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+
+  .controlsSection { padding: 0 calc(clamp(1rem, 1.5vw, 1.5rem) * 0.90); }
+  .segmentedControl { padding: calc(0.156rem * 0.90); gap: calc(0.156rem * 0.90); }
+  .toggleButton {
+    padding: calc(0.625rem * 0.90) calc(1.25rem * 0.90);
+    font-size: calc(clamp(0.75rem, 0.813vw, 0.813rem) * 0.90);
+  }
+
+  .searchAndFilter { gap: calc(clamp(1rem, 1.787vw, 1.787rem) * 0.90); }
+  .searchContainer {
+    width: calc(clamp(12rem, 16.125vw, 16.125rem) * 0.90);
+    height: calc(2.5rem * 0.90);
+    padding: calc(0.625rem * 0.90) calc(1rem * 0.90);
+    gap: calc(0.75rem * 0.90);
+  }
+  .searchInput {
+    font-size: calc(clamp(0.75rem, 0.813vw, 0.813rem) * 0.90);
+    letter-spacing: calc(-0.008rem * 0.90);
+  }
+
+  .checkboxColumn, .sNoColumn, .companyColumn, .typeColumn, .assignedColumn, .categoriesColumn, .phoneColumn, .editActionsColumn, .deleteActionsColumn {
+    width: calc(100% * 0.90);
+  }
+
+  .tableHeader { height: calc(clamp(3rem, 3.625vw, 3.625rem) * 0.90); }
+  .tableHeaderCell {
+    padding: calc(clamp(0.5rem, 0.89vw, 0.894rem) * 0.90) calc(clamp(0.75rem, 1.34vw, 1.34rem) * 0.90);
+    gap: calc(0.819rem * 0.90);
+  }
+  .headerText { font-size: calc(clamp(0.75rem, 0.875vw, 0.875rem) * 0.90); }
+
+  .tableCell {
+    height: calc(clamp(4.5rem, 5.625vw, 5.625rem) * 0.90);
+    padding: calc(clamp(0.75rem, 1.25vw, 1.25rem) * 0.90);
+    gap: calc(1rem * 0.90);
+  }
+}
+
+/* 1366px Breakpoint */
+@media (max-width: 1366px) {
+  .clientsTableContainer { padding: 1rem 0; }
+  .tableHeaderCell { padding: 0.75rem 1rem; }
+  .tableCell { padding: 0.75rem 1rem; }
+
+  .companyColumn { width: 15rem; flex: 2 0 15rem; }
+  .assignedColumn { width: 13rem; flex: 1.5 0 13rem; }
+  .phoneColumn { min-width: 10rem; }
+
+  .avatar { width: 2.5rem; height: 2.5rem; }
+  .actionButton { width: 2rem; height: 2rem; }
+}
+
+/* 1280px Breakpoint */
+@media (max-width: 1280px) {
+  .clientsTableContainer {
+    max-width: 100%;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .tableTitle { font-size: 1.25rem; }
+
+  .companyColumn { width: 14rem; flex: 2 0 14rem; }
+  .assignedColumn { width: 12rem; flex: 1.5 0 12rem; }
+  .categoriesColumn { width: 9rem; flex: 1 0 9rem; }
+
+  .tableCell { height: 4.5rem; padding: 0.75rem; }
+  .companyName, .assignedName { font-size: 0.9rem; }
+  .companyEmail, .assignedRole { font-size: 0.85rem; }
+}
+
+/* Tablet and Mobile */
+@media (max-width: 991px) {
+  .clientsTableContainer { padding: 1.5rem 1rem; gap: 1.25rem; }
+  .tableWrapper { overflow-x: auto; }
+  .tableColumns { min-width: 62.5rem; }
+  .actionButtons { flex-wrap: wrap; }
+  .controlsSection { flex-direction: column; align-items: stretch; gap: 1rem; }
+  .searchAndFilter { justify-content: space-between; }
+  .segmentedControl{
+    width: fit-content;
+  }
+}
+
+@media (max-width: 768px) {
+  .clientsTableContainer { padding: 1.25rem 0.75rem; gap: 1rem; }
+  .tableTitle { font-size: 1.125rem; padding: 0 0.75rem; }
+  .actionButtons { padding: 0 0.75rem; gap: 0.75rem; }
+  .controlsSection { padding: 0 0.75rem; }
+  .searchContainer { width: 100%; }
+}

@@ -1,0 +1,294 @@
+/* Base layout matching Reports/SalesAndLeads structure */
+.dashboard-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  background-color: #FAFBFB;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.dashboard-header {
+  display: flex;
+  width: 100%;
+  padding: clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border-bottom: 0.075rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.dashboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
+}
+
+.dashboard-title {
+  color: #161616;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1.5rem, 1.8vw, 1.875rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  letter-spacing: -0.075rem;
+}
+
+.dashboard-profile {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.profile-info {
+  display: flex;
+  height: 3.125rem;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9375rem;
+}
+
+.profile-picture {
+  border-radius: 3.90625rem;
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  height: clamp(2.5rem, 3.125vw, 3.125rem);
+}
+
+.profile-column {
+  display: flex;
+  height: 3.04688rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.profile-name {
+  color: #161616;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(0.9rem, 1.125vw, 1.125rem);
+  font-weight: 550;
+  line-height: 116%;
+  letter-spacing: 0.00888rem;
+  white-space: nowrap;
+}
+
+.profile-type {
+  color: rgba(22, 22, 22, 0.8);
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(0.75rem, 0.875vw, 0.875rem);
+  font-weight: 400;
+  line-height: 116%;
+  letter-spacing: 0.00888rem;
+  white-space: nowrap;
+}
+
+.breadcrumb-section {
+  display: flex;
+  width: 100%;
+  padding: 0.625rem clamp(1.5rem, 2vw, 2rem);
+  align-items: center;
+  border-bottom: 0.0625rem solid #E4E4E4;
+  background: #FFF;
+  box-sizing: border-box;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breadcrumb-one {
+  color: #7a8699;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 1rem;
+  font-weight: 550;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.breadcrumb-two {
+  color: #007aff;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 1rem;
+  font-weight: 550;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.main-content {
+  display: flex;
+  width: 100%;
+  max-width: 96.25rem;
+  padding: clamp(1.5rem, 2vw, 2rem);
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(2rem, 4.5vw, 4.5rem);
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: #FFF;
+  margin: 1.5rem auto;
+  box-sizing: border-box;
+}
+
+/* Help & Support Specific Styles */
+.support-container {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.support-header {
+  display: flex;
+  padding: 0 0 2rem 0;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
+  border-bottom: 0.0625rem solid #E4E4E4;
+}
+
+.support-title {
+  color: #000;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.06rem;
+}
+
+.support-subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.support-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 50rem; /* Limit form width for readability */
+  box-sizing: border-box;
+}
+
+.form-row {
+  display: flex;
+  width: 100%;
+  gap: 1.5rem;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Textarea styling to match InputField look */
+.textarea-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.textarea-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.textarea {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #1a1a1a;
+  background-color: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.error-input {
+  border-color: #e53e3e;
+}
+
+.error-text {
+  font-size: 0.8rem;
+  color: #e53e3e;
+  margin-top: 0.25rem;
+}
+
+.submit-button {
+  display: flex;
+  padding: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #007AFF;
+  border: none;
+  color: #FFF;
+  font: 600 1rem Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.submit-button:hover {
+  background-color: #0056cc;
+}
+
+.submit-button:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1536px) {
+  .dashboard-header { padding: 1rem 1.5rem; }
+  .main-content { padding: 1.5rem; gap: 3rem; }
+}
+
+@media (max-width: 1366px) {
+  .main-content { padding: 1rem; gap: 2rem; margin: 1rem auto; }
+}
+
+@media (max-width: 991px) {
+  .main-content { padding: 1rem; margin: 0; border-radius: 0; }
+  .form-row { flex-direction: column; gap: 1.5rem; }
+}
+
+@media (max-width: 640px) {
+  .dashboard-header { padding: 1rem; }
+  .breadcrumb-section { padding: 0.5rem 1rem; }
+  .support-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+}

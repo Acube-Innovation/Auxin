@@ -1,0 +1,255 @@
+/* DatePickerMenu Demo Section */
+.date-picker-demo-section {
+	margin-bottom: 40px;
+	padding: 20px;
+	border: 1px solid #E9EAEB;
+	border-radius: 12px;
+	background-color: #F8F9FA;
+}
+
+.box {
+	width: 36px;
+	height: 36px;
+}
+.box2 {
+	width: 28px;
+	height: 1px;
+	background: #B3B9C4;
+	margin-right: 16px;
+}
+.button {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	background: none;
+	border-radius: 8px;
+	border: 1px solid #007AFF;
+	padding: 10px 43px;
+	text-align: left;
+}
+.button2 {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	background: #007AFF;
+	border-radius: 8px;
+	border: 1px solid #FFFFFF0D;
+	padding: 10px 42px;
+	text-align: left;
+}
+.button-row-view {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	background: none;
+	border-radius: 8px;
+	border: 1px solid #007AFF;
+	padding: 4px 12px;
+	gap: 11px;
+	text-align: left;
+}
+.button-row-view2 {
+	align-self: stretch;
+	display: flex;
+	align-items: center;
+	background: #FFFFFF;
+	border-radius: 4px;
+	border: 1px solid #C2C7D0;
+	padding: 2px 16px;
+	text-align: left;
+}
+.column {
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 51px;
+	margin-left: 154px;
+	margin-right: 154px;
+	gap: 36px;
+}
+.column2 {
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+.column3 {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+.column4 {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+}
+.contain {
+	display: flex;
+	flex-direction: column;
+	background: #FFFFFF;
+}
+.image {
+	width: 72px;
+	height: 72px;
+	object-fit: fill;
+}
+.image2 {
+	border-radius: 8px;
+	width: 16px;
+	height: 16px;
+	object-fit: fill;
+}
+.image3 {
+	border-radius: 4px;
+	width: 16px;
+	height: 16px;
+	object-fit: fill;
+}
+.input {
+	color: #B3B9C4;
+	font-size: 16px;
+	align-self: stretch;
+	background: #FFFFFF;
+	border-radius: 4px;
+	border: 1px solid #C2C7D0;
+	padding: 14px 16px;
+}
+.input2 {
+	color: #7A8699;
+	font-size: 16px;
+	align-self: stretch;
+	background: #FFFFFF;
+	border-radius: 4px;
+	border: 1px solid #000000;
+	padding: 14px 16px;
+}
+.row-view {
+	align-self: stretch;
+	display: flex;
+	align-items: center;
+	padding: 32px 56px;
+	margin-bottom: 40px;
+    border-bottom: 1px solid var(--Container-divider, rgba(0, 0, 0, 0.10));
+}
+.row-view2 {
+	align-self: stretch;
+	display: flex;
+	align-items: center;
+	margin-bottom: 40px;
+	margin-left: 352px;
+	margin-right: 352px;
+}
+.row-view3 {
+	align-self: stretch;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: #F5F6F7;
+	border-radius: 12px;
+	padding: 24px;
+}
+.row-view4 {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	padding-right: 4px;
+	gap: 14px;
+}
+.row-view5 {
+	align-self: stretch;
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+.row-view6 {
+	display: flex;
+	align-items: flex-start;
+	margin-bottom: 64px;
+	gap: 26px;
+}
+.scroll-view {
+	height: 850px;
+    width: 1200px;
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	background: #FFFFFF;
+	border-radius: 16px;
+}
+.text {
+	color: #161616;
+	font-size: 23px;
+	font-weight: bold;
+	flex: 1;
+}
+.text2 {
+	color: #007AFF;
+	font-size: 16px;
+	font-weight: bold;
+	margin-right: 17px;
+}
+.text3 {
+	color: #B3B9C4;
+	font-size: 16px;
+	font-weight: bold;
+	margin-right: 18px;
+}
+.text4 {
+	color: #B3B9C4;
+	font-size: 16px;
+	font-weight: bold;
+}
+.text5 {
+	color: #212121;
+	font-size: 18px;
+	font-weight: bold;
+}
+.text6 {
+	color: #007AFF;
+	font-size: 13px;
+	font-weight: bold;
+}
+.text7 {
+	color: #7A8699;
+	font-size: 14px;
+	margin: 3px 1px 11px 1px;
+}
+.text8 {
+	color: #7A8699;
+	font-size: 14px;
+}
+.text9 {
+	color: #B3B9C4;
+	font-size: 16px;
+	margin-top: 12px;
+	margin-bottom: 12px;
+}
+.text10 {
+	color: #6B788E;
+	font-size: 16px;
+	margin-top: 12px;
+	margin-bottom: 12px;
+}
+.text11 {
+	color: #007AFF;
+	font-size: 16px;
+	font-weight: bold;
+}
+.text12 {
+	color: #FFFFFF;
+	font-size: 16px;
+	font-weight: bold;
+}
+.view {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding-top: 3px;
+	padding-bottom: 3px;
+}

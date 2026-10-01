@@ -1,0 +1,605 @@
+.dashboard-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  /* overflow-x: hidden; */
+  position: relative;
+  background-color: #fafbfb;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Header Styles */
+.dashboard-header {
+  display: flex;
+  width: 100%;
+  padding: clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border-bottom: 0.075rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.dashboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
+}
+
+.dashboard-title {
+  color: #161616;
+  font-family: Inter;
+  font-size: clamp(1.5rem, 1.8vw, 1.875rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  letter-spacing: -0.075rem;
+}
+
+.dashboard-profile {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.belldot-icon {
+  display: flex;
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  height: clamp(2.5rem, 3.125vw, 3.125rem);
+  padding: 0rem 0.89288rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.89288rem;
+  border-radius: 0.5rem;
+  border: 0.08931rem solid #e4e4e4;
+  background: #fff;
+}
+
+.profile-info {
+  display: flex;
+  height: 3.125rem;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+  cursor: pointer;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9375rem;
+}
+
+.profile-picture {
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  height: clamp(2.5rem, 3.125vw, 3.125rem);
+  border-radius: 3.90625rem;
+}
+
+.profile-column {
+  display: flex;
+  height: 3.0625rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.profile-name {
+  color: #161616;
+  letter-spacing: 0.00888rem;
+  font: 500 clamp(0.9rem, 1.125vw, 1.125rem)/116% "Inter Tight";
+  white-space: nowrap;
+}
+
+.profile-type {
+  color: rgba(22, 22, 22, 0.8);
+  letter-spacing: 0.00888rem;
+  font: 400 clamp(0.75rem, 0.875vw, 0.875rem)/116% "Inter Tight";
+  white-space: nowrap;
+}
+
+/* Breadcrumb Styles */
+.breadcrumb-section {
+  display: flex;
+  width: 100%;
+  padding: 0.625rem clamp(1.5rem, 2vw, 2rem);
+  align-items: center;
+  border-bottom: 0.0625rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto;
+}
+
+.breadcrumb-home {
+  color: var(--Button-normal, #007aff);
+  font-family: Inter;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.breadcrumb-active {
+  color: var(--Foundation-Neutral-N100, #7a8699);
+  font-family: Inter;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.main-content {
+  flex: 1;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+  background-color: RGB(250 251 251);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Stats Cards Section */
+.stats-container {
+  display: flex;
+  gap: clamp(1rem, 1.27vw, 1.27rem);
+  width: 97%;
+  margin: 0.9rem 0.9rem 0 1.1rem;
+  flex-wrap: wrap;
+}
+
+/* Attendance Card */
+.attendance-card {
+  display: flex;
+  flex: 1.5;
+  min-width: 300px;
+  height: auto;
+  min-height: 14.4375rem;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  border-radius: 1rem;
+  border: 0.09375rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* Stats Card */
+.stats-card {
+  display: flex;
+  flex: 1;
+  min-width: 240px;
+  height: auto;
+  min-height: 14.4375rem;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  border-radius: 1rem;
+  border: 0.09375rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.cardbox {
+  display: flex;
+  flex: 1;
+  min-width: 240px;
+  height: auto;
+  min-height: 14.4375rem;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  border-radius: 1rem;
+  border: 0.09375rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.cardheader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.cardboxcontent {
+  justify-content: space-between;
+  align-items: flex-start;
+  align-self: stretch;
+  width: 100%;
+}
+
+.cardbox h4 {
+  color: rgba(22, 22, 22, 0.5);
+  font-family: Inter;
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.0625rem;
+}
+
+.cardbox h2 {
+  color: #161616;
+  font-family: Inter;
+  font-size: clamp(2rem, 2.5vw, 2.5rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.09375rem;
+}
+
+.cardbox p span {
+  color: rgba(22, 22, 22, 0.5);
+  font-family: Inter;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.iconlink {
+  display: flex;
+  width: clamp(2.5rem, 2.88vw, 2.88rem);
+  height: clamp(2.5rem, 2.88vw, 2.88rem);
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.57613rem;
+  border: 0.072rem solid #e4e4e4;
+  background: #fff;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.card-title-section {
+  display: flex;
+  width: auto;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.card-title {
+  color: rgba(22, 22, 22, 0.5);
+  letter-spacing: -0.0625rem;
+  width: 100%;
+  font: 500 clamp(0.875rem, 1vw, 1rem)/1.2 Inter;
+}
+
+.card-main-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.percentage {
+  color: #161616;
+  font: 500 clamp(1.5rem, 2vw, 2rem)/1.2 "Inter Tight";
+}
+
+.card-value {
+  color: #161616;
+  letter-spacing: -0.09375rem;
+  width: 100%;
+  font: 500 clamp(2rem, 2.5vw, 2.5rem)/1.2 Inter;
+}
+
+.card-subtitle {
+  color: rgba(22, 22, 22, 0.5);
+  letter-spacing: -0.03125rem;
+  font: 500 clamp(1rem, 1.25vw, 1.25rem)/1.2 Inter;
+}
+
+.success-text {
+  color: var(--Foundation-Green-green-400, #5dd27a);
+  font-family: Inter;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.error-text span,
+.success-text span {
+  color: rgba(22, 22, 22, 0.5);
+  font-family: Inter;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.error-text {
+  color: var(--Foundation-Red-red-400, #ed5e56);
+  font-family: Inter;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.growth-chip {
+  display: flex;
+  padding: 0.30775rem 0.61544rem;
+  align-items: flex-start;
+  gap: 0.15388rem;
+  border-radius: 15.38669rem;
+  background: #eafdee;
+}
+
+.growth-chip span {
+  color: #147129;
+  text-align: center;
+  font: 600 0.875rem/1.25rem "Inter Tight";
+}
+
+/* Attendance Chart */
+.attendance-chart {
+  display: flex;
+  width: 100%;
+  height: 7.125rem;
+  align-items: flex-end;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.chart-bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1875rem;
+}
+
+.bar {
+  align-self: stretch;
+  border-radius: 0.42006rem;
+  width: 100%;
+}
+
+.day-label {
+  color: #9ca1a0;
+  text-align: center;
+  letter-spacing: 0.02488rem;
+  font: 400 0.875rem/116% "Inter Tight";
+}
+
+/* Team Table Section */
+.team-table-section {
+  display: flex;
+  width: 100%;
+  padding: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  border-radius: 1.125rem 1.125rem 0 0;
+  position: relative;
+  left: auto;
+  top: auto;
+  height: auto;
+  background: transparent;
+  margin-top: 1.5rem;
+}
+
+/* Table Header Section */
+.table-header-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.table-title-row {
+  display: flex;
+  padding: 0 1.34031rem;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.table-title {
+  color: #161616;
+  letter-spacing: 0.01456rem;
+  font: 600 clamp(1.25rem, 1.5vw, 1.5rem)/116% "Inter Tight";
+  margin: 0;
+}
+
+/* ========================================
+   LAPTOP RESPONSIVE STYLES (Aggressive Scaling)
+   ======================================== */
+
+/* 1536px Breakpoint */
+@media (max-width: 1536px) {
+  .dashboard-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+  
+  .stats-container {
+    gap: 1rem;
+    margin: 0.5rem  0.5rem 0  0.9rem;
+    width: 97%;
+  }
+  
+  .attendance-card, .stats-card, .cardbox {
+    padding: 1.25rem;
+    min-height: 12rem;
+    gap: 1rem;
+  }
+  
+  .cardbox h2, .card-value {
+    font-size: 2rem;
+  }
+  
+  .cardbox h4, .card-subtitle {
+    font-size: 1.25rem;
+  }
+  
+  .attendance-chart {
+    height: 6rem;
+  }
+  
+  .chart-bar {
+    gap: 0.75rem;
+  }
+}
+
+/* 1440px Breakpoint */
+@media (max-width: 1440px) {
+  .dashboard-header {
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.35rem;
+  }
+  
+  .attendance-card, .stats-card, .cardbox {
+    padding: 1rem;
+    min-height: 11rem;
+    gap: 0.75rem;
+  }
+  
+  .cardbox h2, .card-value {
+    font-size: 1.75rem;
+  }
+  
+  .cardbox h4, .card-subtitle {
+    font-size: 1.125rem;
+  }
+  
+  .attendance-chart {
+    height: 5.5rem;
+  }
+}
+
+/* 1366px Breakpoint */
+@media (max-width: 1366px) {
+  .main-content {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .attendance-card, .stats-card, .cardbox {
+    padding: 0.875rem;
+    min-height: 10rem;
+  }
+  
+  .cardbox h2, .card-value {
+    font-size: 1.5rem;
+  }
+  
+  .cardbox h4, .card-subtitle {
+    font-size: 1rem;
+  }
+  
+  .percentage {
+    font-size: 1.5rem;
+  }
+  
+  .attendance-chart {
+    height: 5rem;
+  }
+}
+
+/* 1280px Breakpoint */
+@media (max-width: 1280px) {
+  .dashboard-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.25rem;
+  }
+  
+  .attendance-card, .stats-card, .cardbox {
+    padding: 0.75rem;
+    min-height: 9rem;
+  }
+  
+  .cardbox h2, .card-value {
+    font-size: 1.35rem;
+  }
+  
+  .cardbox h4, .card-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .attendance-chart {
+    height: 4.5rem;
+  }
+}
+
+/* Tablet and Mobile */
+@media (max-width: 991px) {
+  .stats-container {
+    flex-direction: column;
+  }
+  
+  .attendance-card, .stats-card, .cardbox {
+    width: 100%;
+    min-width: 100%;
+    min-height: auto;
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    max-width: 100%;
+  }
+  
+  .desktop-sidebar {
+    display: none;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.25rem;
+  }
+  
+  .stats-container {
+    padding: 1rem;
+  }
+}

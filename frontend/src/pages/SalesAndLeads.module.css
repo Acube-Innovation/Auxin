@@ -1,0 +1,565 @@
+/* Desktop Layout */
+.dashboard-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  /* overflow-x: hidden; */
+  position: relative;
+  background-color: #FAFBFB;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.dashboard-header {
+  display: flex;
+  width: 100%;
+  padding: clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border-bottom: 0.075rem solid #e4e4e4;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.dashboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
+}
+
+.dashboard-title {
+  color: #161616;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1.5rem, 1.8vw, 1.875rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  letter-spacing: -0.075rem;
+}
+
+.dashboard-profile {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.belldot-icon {
+  display: flex;
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  height: clamp(2.5rem, 3.125vw, 3.125rem);
+  padding: 0rem 0.89288rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.89288rem;
+  border-radius: 0.5rem;
+  border: 0.089rem solid #e4e4e4;
+  background: #fff;
+}
+
+.dashboard-profile .profile-info {
+  display: flex;
+  height: 3.125rem;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9375rem;
+}
+
+.profile-picture {
+  border-radius: 3.90625rem;
+  width: clamp(2.5rem, 3.125vw, 3.125rem);
+  height: clamp(2.5rem, 3.125vw, 3.125rem);
+}
+
+.profile-column {
+  display: flex;
+  height: 3.04688rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.profile-name {
+  color: #161616;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(0.9rem, 1.125vw, 1.125rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 116%;
+  letter-spacing: 0.00888rem;
+  white-space: nowrap;
+}
+
+.profile-type {
+  color: rgba(22, 22, 22, 0.8);
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(0.75rem, 0.875vw, 0.875rem);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 116%;
+  letter-spacing: 0.00888rem;
+  white-space: nowrap;
+}
+
+.breadcrumb-section {
+  display: flex;
+  width: 100%;
+  padding: 0.625rem clamp(1.5rem, 2vw, 2rem);
+  align-items: center;
+  border-bottom: 0.0625rem solid #E4E4E4;
+  background: #FFF;
+  box-sizing: border-box;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breadcrumb-one {
+  color: var(--Foundation-Neutral-N100, #7a8699);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.breadcrumb-two {
+  color: var(--Button-normal, #007aff);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.19038rem;
+  letter-spacing: -0.0625rem;
+}
+
+.main-content {
+  flex: 1;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+  background-color: #FAFBFB;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Card Container Section */
+.cardcontainer {
+  display: flex;
+  gap: clamp(1rem, 1.27vw, 1.27rem);
+  width: 97%;
+  margin: 0.9rem 0.9rem 0 1.1rem;
+  flex-wrap: wrap;
+}
+
+/* Common card styles */
+.cardbox {
+  display: flex;
+  flex: 1;
+  min-width: 240px;
+  height: auto;
+  min-height: 14.4375rem;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  border: 0.09375rem solid #E4E4E4;
+  background: #FFF;
+  box-sizing: border-box;
+}
+
+.cardboxcontent {
+  justify-content: space-between;
+  align-items: flex-start;
+  align-self: stretch;
+  width: 100%;
+}
+
+/* Third (larger) card */
+.large {
+  display: flex;
+  flex: 1.5;
+  min-width: 300px;
+  height: auto;
+  min-height: 14.4375rem;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.64481rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  border: 0.09375rem solid #E4E4E4;
+  background: #FFF;
+  box-sizing: border-box;
+}
+
+/* Text styles */
+.cardbox h4 {
+  color: rgba(22, 22, 22, 0.50);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.0625rem;
+}
+
+.cardbox h2 {
+  color: #161616;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(2rem, 2.5vw, 2.5rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.09375rem;
+}
+
+.cardbox p span {
+  color: rgba(22, 22, 22, 0.50);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.cardheader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.cardamount {
+  display: flex;
+  align-items: center;
+}
+
+.cardbox.large .cardheader .cardname {
+  color: rgba(22, 22, 22, 0.50);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(0.875rem, 1vw, 1rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.0625rem;
+}
+
+.cardbox.large .cardamountvalue {
+  color: #161616;
+  text-align: right;
+  font-family: "Inter Tight", -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1.75rem, 2vw, 2rem);
+  font-style: normal;
+  font-weight: 550;
+  line-height: 1.2;
+}
+
+.iconlink {
+  display: flex;
+  width: clamp(2.5rem, 2.88vw, 2.88rem);
+  height: clamp(2.5rem, 2.88vw, 2.88rem);
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.57613rem;
+  border: 0.072rem solid #E4E4E4;
+  background: #FFF;
+}
+
+.cardbox.large .iconlink {
+  display: flex;
+  width: clamp(3rem, 3.78vw, 3.78rem);
+  height: clamp(3rem, 3.78vw, 3.78rem);
+  padding: 1.13488rem;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.75663rem;
+  border: 0.09456rem solid #E4E4E4;
+  background: #FFF;
+}
+
+.iconlink:hover {
+  color: #4a53cf;
+}
+
+.cardsuccess {
+  color: rgba(93, 210, 122, 1);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.cardfail {
+  color: var(--Foundation-Red-red-400, #ED5E56);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: clamp(1rem, 1.25vw, 1.25rem);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03125rem;
+}
+
+.cardneutral {
+  color: #147129;
+  font-size: 0.625rem;
+  background-color: #e6f4ea;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.125rem;
+  display: inline-block;
+}
+
+.barchart {
+  display: flex;
+  height: 6.4375rem;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-shrink: 0;
+  align-self: stretch;
+  justify-content: space-between;
+}
+
+/* ========================================
+   LAPTOP RESPONSIVE STYLES (Aggressive Scaling)
+   ======================================== */
+
+/* 1536px Breakpoint */
+@media (max-width: 1536px) {
+  .dashboard-header {
+    padding: 1rem 1.5rem;
+  }
+
+/* modified code for all pages */
+  .dashboard-title {
+    font-size: 1.3rem !important;
+  }
+  .profile-picture {
+    width: 2rem;
+    height: 2rem;
+  }
+  .profile-name{
+   font-size: 0.8rem;
+  }
+  .profile-column{
+   font-size: 0.1rem !important;
+  }
+ .breadcrumb-section {
+  padding: 0.5rem 0.5rem 0.5rem 0.625rem ; 
+  }
+  .breadcrumb-one, .breadcrumb-two {
+    font-size: 0.9rem;
+    font-weight: 550;
+  }
+
+  /* modified code for all pages */
+
+   .cardcontainer {
+    width: 97%;
+    margin: 0.5rem  0.5rem 0  0.9rem;
+  }
+  .cardbox, .large {
+    padding: 1.25rem;
+    min-height: 12rem;
+    gap: 1rem;
+  }
+  
+  .cardbox h2 {
+    font-size: 2rem;
+  }
+  
+  .cardbox h4 {
+    font-size: 1.25rem;
+  }
+  
+  .cardbox.large .cardamountvalue {
+    font-size: 1.75rem;
+  }
+  
+  .barchart {
+    height: 5rem;
+  }
+  
+  .barchart svg {
+    transform: scale(0.8);
+    transform-origin: bottom;
+  }
+}
+
+/* 1440px Breakpoint */
+@media (max-width: 1440px) {
+  .dashboard-header {
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.35rem;
+  }
+  
+  .cardbox, .large {
+    padding: 1rem;
+    min-height: 11rem;
+    gap: 0.75rem;
+  }
+  
+  .cardbox h2 {
+    font-size: 1.75rem;
+  }
+  
+  .cardbox h4 {
+    font-size: 1.125rem;
+  }
+  
+  .cardbox.large .cardamountvalue {
+    font-size: 1.5rem;
+  }
+  
+  .barchart svg {
+    transform: scale(0.75);
+  }
+}
+
+/* 1366px Breakpoint */
+@media (max-width: 1366px) {
+  .main-content {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .cardbox, .large {
+    padding: 0.875rem;
+    min-height: 10rem;
+  }
+  
+  .cardbox h2 {
+    font-size: 1.5rem;
+  }
+  
+  .cardbox h4 {
+    font-size: 1rem;
+  }
+  
+  .cardbox.large .cardamountvalue {
+    font-size: 1.35rem;
+  }
+  
+  .cardsuccess, .cardfail, .cardbox p span {
+    font-size: 0.875rem;
+  }
+  
+  .barchart {
+    height: 4.5rem;
+  }
+  
+  .barchart svg {
+    transform: scale(0.7);
+  }
+}
+
+/* 1280px Breakpoint */
+@media (max-width: 1280px) {
+  .dashboard-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.25rem;
+  }
+  
+  .cardbox, .large {
+    padding: 0.75rem;
+    min-height: 9rem;
+  }
+  
+  .cardbox h2 {
+    font-size: 1.35rem;
+  }
+  
+  .cardbox h4 {
+    font-size: 0.9rem;
+  }
+  
+  .cardbox.large .cardamountvalue {
+    font-size: 1.25rem;
+  }
+  
+  .barchart {
+    height: 4rem;
+  }
+  
+  .barchart svg {
+    transform: scale(0.65);
+  }
+}
+
+/* Tablet and Mobile */
+@media (max-width: 991px) {
+  .cardcontainer {
+    flex-direction: column;
+  }
+  
+  .cardbox, .large {
+    width: 100%;
+    min-width: 100%;
+    min-height: auto;
+    padding: 1.25rem;
+  }
+  
+  .barchart svg {
+    transform: none;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    max-width: 100%;
+  }
+  
+  .desktop-sidebar {
+    display: none;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.25rem;
+  }
+  
+  .cardcontainer {
+    padding: 1rem;
+  }
+  
+  .cardbox, .large {
+    padding: 1rem;
+  }
+}

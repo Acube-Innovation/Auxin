@@ -1,0 +1,30 @@
+/* .documents-table-section {
+  flex: 1;
+  background-color: RGB(255 255 255);
+  position: relative;
+  left: -29px;
+  top: -20px;
+} */
+
+
+.documents-table-section {
+  flex: 1;
+  background-color: RGB(255, 255, 255);
+  position: relative;
+  /* Removed negative positioning to fit layout naturally */
+  margin-top: clamp(1rem, 1.25vw, 1.25rem);
+  width: 100%;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1536px) {
+  .documents-table-section {
+    width: 100%;
+  }
+}
+
+@media (max-width: 30rem) {
+  .documents-table-section {
+    margin-bottom: 0.625rem;
+  }
+}

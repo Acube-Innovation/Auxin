@@ -1,0 +1,567 @@
+/* SalesLeadsDualGraph.module.css */
+.conversionDataContainer {
+  width: 100%;
+  max-width: 1017px;
+  /* height: auto; Remove fixed height */
+  min-height: 600px;
+  border-radius: 18px;
+  border: 1.513px solid #E4E4E4;
+  position: relative;
+  background-color: #FFF;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.backgroundGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 33px 43px;
+  position: relative;
+  z-index: 20;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  color: #000;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  color: #333;
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #E4E4E4;
+  background: #FFF;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+}
+
+.actionButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #E4E4E4;
+  background: #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.percentageIndicators {
+  display: flex;
+  gap: 40px;
+  padding: 0 43px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 20;
+}
+
+.percentageItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.indicatorValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #000;
+}
+
+.indicatorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.indicatorTitle {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.indicatorSubtitle {
+  color: #929292;
+  font-size: 12px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trendPositive {
+  color: #22C55E;
+  font-weight: 600;
+}
+
+.trendNegative {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+.chartSectionWrapper {
+  position: relative;
+  flex: 1;
+  min-height: 300px; /* Ensure space for chart */
+  width: 100%;
+}
+
+.yAxisLabels {
+  position: absolute;
+  left: 43px;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #333;
+  font-size: 14px;
+  font-weight: 400;
+  z-index: 10;
+}
+
+.gridLine {
+  position: absolute;
+  height: 1px;
+  background: #F3F3F3;
+  z-index: 5;
+}
+
+.chartContainer {
+  position: relative;
+  z-index: 10;
+}
+
+.fadeOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.00) 0%, #FFF 100%);
+  pointer-events: none;
+  z-index: 15;
+}
+
+.legend {
+  display: flex;
+  gap: 24px;
+  padding: 20px 0;
+  position: relative;
+  z-index: 20;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.legendDotA {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #334AFA;
+}
+
+.legendDotB {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #06b6d4;
+}
+
+.conversionTooltip {
+  position: absolute;
+  top: 20%;
+  right: 43px;
+  display: flex;
+  padding: 10px;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  border: 0.756px solid #334AFA;
+  background: #FFF;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 30;
+  min-width: 160px;
+}
+
+/* .tooltipIcon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #334AFA;
+} */
+
+.tooltipContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipPercentage {
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tooltipDate {
+  color: #929292;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.footer {
+  padding: 20px;
+  text-align: center;
+  z-index: 20;
+  margin-top: auto;
+}
+
+.footerText {
+  color: #929292;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Responsive styles */
+
+/* Large Laptops (1366px - 1440px) */
+@media (max-width: 1440px) {
+  .conversionDataContainer {
+    max-width: 950px;
+    min-height: 550px;
+  }
+
+  .header {
+    padding: 30px 38px;
+  }
+
+  .title {
+    font-size: 19px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .percentageIndicators {
+    gap: 35px;
+    padding: 0 38px;
+    margin-bottom: 18px;
+  }
+
+  .indicatorValue {
+    font-size: 30px;
+  }
+
+  .indicatorTitle {
+    font-size: 13px;
+  }
+
+  .indicatorSubtitle {
+    font-size: 11px;
+  }
+
+  .yAxisLabels {
+    left: 38px;
+    font-size: 13px;
+  }
+
+  .conversionTooltip {
+    right: 38px;
+    min-width: 150px;
+  }
+
+  .footer {
+    padding: 18px;
+  }
+}
+
+/* Standard Laptops (1200px - 1366px) */
+@media (max-width: 1366px) {
+  .conversionDataContainer {
+    /* max-width: 900px; */
+    max-width: 700px;
+    min-height: 520px;
+  }
+
+  .header {
+    padding: 28px 35px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .select {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+
+  .actionButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .percentageIndicators {
+    gap: 32px;
+    padding: 0 35px;
+    margin-bottom: 16px;
+  }
+
+  .indicatorValue {
+    font-size: 28px;
+  }
+
+  .indicatorTitle {
+    font-size: 13px;
+  }
+
+  .indicatorSubtitle {
+    font-size: 11px;
+  }
+
+  .yAxisLabels {
+    left: 35px;
+    font-size: 13px;
+  }
+
+  .conversionTooltip {
+    right: 35px;
+    padding: 9px;
+    min-width: 145px;
+  }
+
+  .tooltipPercentage {
+    font-size: 13px;
+  }
+
+  .tooltipDate {
+    font-size: 11px;
+  }
+
+  .footer {
+    padding: 16px;
+  }
+
+  .footerText {
+    font-size: 11px;
+  }
+}
+
+/* Smaller Laptops (1024px - 1200px) */
+@media (max-width: 1200px) {
+  .conversionDataContainer {
+    max-width: 100%;
+    min-height: 500px;
+  }
+
+  .header {
+    padding: 24px 30px;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 17px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+  }
+
+  .headerRight {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .select {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .actionButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .percentageIndicators {
+    gap: 28px;
+    padding: 0 30px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .percentageItem {
+    gap: 10px;
+  }
+
+  .indicatorValue {
+    font-size: 26px;
+  }
+
+  .indicatorTitle {
+    font-size: 12px;
+  }
+
+  .indicatorSubtitle {
+    font-size: 10px;
+  }
+
+  .chartSectionWrapper {
+    min-height: 280px;
+  }
+
+  .yAxisLabels {
+    left: 30px;
+    font-size: 12px;
+  }
+
+  .legend {
+    gap: 20px;
+    padding: 16px 0;
+  }
+
+  .legendItem {
+    font-size: 13px;
+  }
+
+  .conversionTooltip {
+    top: 18%;
+    right: 30px;
+    padding: 8px;
+    min-width: 140px;
+  }
+
+  .tooltipIcon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .tooltipPercentage {
+    font-size: 12px;
+  }
+
+  .tooltipDate {
+    font-size: 10px;
+  }
+
+  .footer {
+    padding: 14px;
+  }
+
+  .footerText {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 991px) {
+  .header {
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+  }
+  
+  .headerRight {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .percentageIndicators {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 24px;
+  }
+  
+  .conversionTooltip {
+    right: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .conversionDataContainer {
+    min-height: auto;
+  }
+
+  .header {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .percentageIndicators {
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 20px;
+  }
+
+  .yAxisLabels {
+    left: 10px;
+    font-size: 10px;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 10px 0;
+  }
+
+  .conversionTooltip {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin: 10px 20px;
+    width: calc(100% - 40px);
+  }
+  
+  .chartSectionWrapper {
+    margin-top: 20px;
+  }
+}

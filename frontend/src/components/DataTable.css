@@ -1,0 +1,587 @@
+.data-table-container {
+  display: flex;
+  width: 96.25rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.74463rem;
+  flex: 1 0 0;
+  position: relative;
+}
+
+.table-wrapper {
+  display: flex;
+  align-items: flex-start;
+  align-self: stretch;
+  position: relative;
+}
+
+.table-columns {
+  display: flex;
+  width: 100%;
+}
+
+/* File Name Column */
+.file-name-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  position: relative;
+}
+
+/* Type Column */
+.type-column {
+  display: flex;
+  width: 12.75rem;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Uploaded By Column */
+.uploaded-by-column {
+  display: flex;
+  width: 22.1875rem;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Filetype Column */
+.filetype-column {
+  display: flex;
+  width: 12.75rem;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Uploaded Date Column */
+.uploaded-date-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  position: relative;
+}
+
+/* Actions Column */
+.actions-column {
+  display: flex;
+  width: 7.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Table Header */
+.table-header {
+  display: flex;
+  height: 3.625rem;
+  align-items: center;
+  align-self: stretch;
+  position: relative;
+  background-color: #fafbfb;
+}
+
+.table-header-cell {
+  display: flex;
+  padding: 0.89356rem 1.34031rem;
+  align-items: center;
+  gap: 0.81906rem;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-bottom: 0.07444rem solid #e4e4e4;
+  position: relative;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.29788rem;
+  position: relative;
+}
+
+.header-text {
+  color: #161616;
+  position: relative;
+  font: 550 0.875rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+/* Table Cells */
+.table-cell {
+  display: flex;
+  height: 5.625rem;
+  align-items: center;
+  align-self: stretch;
+  border-bottom: 0.125rem solid #e4e4e4;
+  position: relative;
+}
+
+/* File Cell */
+.file-cell {
+  padding: 1.25rem;
+  gap: 1rem;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.14894rem;
+  position: relative;
+}
+
+.file-name {
+  color: #161616;
+  text-align: center;
+  position: relative;
+  font: 500 1.0625rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+.file-size {
+  color: #8c8e90;
+  text-align: center;
+  position: relative;
+  font: 500 0.75rem "Inter Tight", sans-serif;
+}
+
+/* Type Cell */
+.type-cell {
+  padding: 1.63819rem 1.34031rem;
+  gap: 0.81906rem;
+}
+
+/* Uploaded By Cell */
+.uploaded-by-cell {
+  padding: 1.41481rem 1.34031rem;
+  gap: 0.81906rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.14894rem;
+  position: relative;
+}
+
+.user-name {
+  color: #161616;
+  text-align: center;
+  position: relative;
+  font: 500 1.0625rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+.user-role {
+  color: #8c8e90;
+  text-align: center;
+  position: relative;
+  font: 500 1.0625rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+/* Filetype Cell */
+.filetype-cell {
+  padding: 1.41481rem 1.34031rem;
+  gap: 0.81906rem;
+}
+
+.filetype-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.14894rem;
+  position: relative;
+}
+
+.filetype-text {
+  color: #161616;
+  text-align: center;
+  position: relative;
+  font: 500 1.0625rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+/* Uploaded Date Cell */
+.uploaded-date-cell {
+  padding: 1.41481rem 1.34031rem;
+  gap: 0.81906rem;
+}
+
+.date-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.14894rem;
+  position: relative;
+}
+
+.date-text {
+  color: #161616;
+  text-align: center;
+  position: relative;
+  font: 500 1.0625rem/1.3125rem "Inter Tight", sans-serif;
+}
+
+/* Actions Cell */
+.actions-cell {
+  padding: 1.93606rem 1.34031rem;
+  justify-content: center;
+  gap: 0.81906rem;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.delete-button:hover {
+  opacity: 0.7;
+}
+
+.delete-button:focus {
+  outline: 0.125rem solid #006fe8;
+  outline-offset: 0.125rem;
+  border-radius: 0.25rem;
+}
+
+/* Icon Wrappers */
+.file-icon-wrapper,
+.sort-icon-wrapper,
+.trash-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== RESPONSIVE BREAKPOINTS ========== */
+
+/* 991px Breakpoint - Tablet Landscape */
+@media (max-width: 61.9375rem) { /* 991px */
+  .data-table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .table-wrapper {
+    min-width: 75rem;
+  }
+
+  .file-name-column {
+    min-width: 18.75rem;
+  }
+
+  .type-column {
+    min-width: 9.375rem;
+    width: 9.375rem;
+  }
+
+  .uploaded-by-column {
+    min-width: 15.625rem;
+    width: 15.625rem;
+  }
+
+  .filetype-column {
+    min-width: 9.375rem;
+    width: 9.375rem;
+  }
+
+  .uploaded-date-column {
+    min-width: 9.375rem;
+  }
+
+  .actions-column {
+    min-width: 6.25rem;
+    width: 6.25rem;
+  }
+
+  .header-text {
+    font-size: 0.8125rem;
+  }
+
+  .file-name,
+  .user-name,
+  .filetype-text,
+  .date-text {
+    font-size: 0.9375rem;
+  }
+
+  .user-role {
+    font-size: 0.875rem;
+  }
+
+  .file-size {
+    font-size: 0.6875rem;
+  }
+}
+
+/* 768px Breakpoint - Tablet Portrait */
+@media (max-width: 48rem) { /* 768px */
+  .table-wrapper {
+    min-width: 60rem;
+  }
+
+  .file-name-column {
+    min-width: 15rem;
+  }
+
+  .type-column {
+    min-width: 8rem;
+    width: 8rem;
+  }
+
+  .uploaded-by-column {
+    min-width: 12rem;
+    width: 12rem;
+  }
+
+  .filetype-column {
+    min-width: 8rem;
+    width: 8rem;
+  }
+
+  .uploaded-date-column {
+    min-width: 8rem;
+  }
+
+  .actions-column {
+    min-width: 5rem;
+    width: 5rem;
+  }
+
+  .table-cell {
+    height: 4.5rem;
+  }
+
+  .file-cell {
+    padding: 1rem 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .type-cell,
+  .uploaded-by-cell,
+  .filetype-cell,
+  .uploaded-date-cell {
+    padding: 1rem 0.75rem;
+  }
+
+  .actions-cell {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .header-text {
+    font-size: 0.75rem;
+  }
+
+  .file-name,
+  .user-name,
+  .filetype-text,
+  .date-text {
+    font-size: 0.875rem;
+  }
+
+  .user-role {
+    font-size: 0.8125rem;
+  }
+}
+
+/* 640px Breakpoint - Large Mobile */
+@media (max-width: 40rem) { /* 640px */
+  .data-table-container {
+    overflow-x: auto;
+    border: 0.0625rem solid #e4e4e4;
+    border-radius: 0.5rem;
+    margin-left: 30px;
+  }
+
+  .table-wrapper {
+    min-width: 50rem;
+  }
+
+  .file-name-column {
+    min-width: 12rem;
+  }
+
+  .type-column {
+    min-width: 6rem;
+    width: 6rem;
+  }
+
+  .uploaded-by-column {
+    min-width: 10rem;
+    width: 10rem;
+  }
+
+  .filetype-column {
+    min-width: 6rem;
+    width: 6rem;
+  }
+
+  .uploaded-date-column {
+    min-width: 7rem;
+  }
+
+  .actions-column {
+    min-width: 4rem;
+    width: 4rem;
+  }
+
+  .table-header-cell {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .header-text {
+    font-size: 0.6875rem;
+  }
+
+  .file-name,
+  .user-name,
+  .filetype-text,
+  .date-text {
+    font-size: 0.8125rem;
+  }
+
+  .user-role,
+  .file-size {
+    font-size: 0.75rem;
+  }
+}
+
+/* 480px Breakpoint - Small Mobile (Stacked Mobile Layout) */
+@media (max-width: 30rem) { /* 480px */
+  .data-table-container {
+    overflow-x: visible;
+    width: 100%;
+    margin-left: 30px;
+  }
+
+  .table-wrapper {
+    min-width: 100%;
+    overflow-x: visible;
+  }
+
+
+  .table-columns {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  /* Show only essential columns on mobile */
+  .type-column,
+  .uploaded-by-column,
+  .filetype-column,
+  .uploaded-date-column {
+    display: none;
+  }
+
+  .file-name-column,
+  .actions-column {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  /* Convert to card layout */
+  .table-header {
+    display: none;
+  }
+
+  .table-cell {
+    height: auto;
+    min-height: 4rem;
+    border-bottom: 0.0625rem solid #e4e4e4;
+    padding: 0.75rem;
+  }
+
+  .file-cell {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .file-info {
+    flex: 1;
+    gap: 0.25rem;
+  }
+
+  .file-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .file-size {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: left;
+  }
+
+  .actions-cell {
+    padding: 0;
+    justify-content: flex-end;
+    border-bottom: none;
+  }
+
+  .delete-button {
+    padding: 0.5rem;
+  }
+
+  /* Mobile card layout for each row */
+  .table-columns > div {
+    border-bottom: 0.125rem solid #f0f0f0;
+  }
+
+  .table-columns > div:last-child {
+    border-bottom: none;
+  }
+}
+
+/* 360px Breakpoint - Extra Small Mobile */
+@media (max-width: 22.5rem) { /* 360px */
+  .file-cell {
+    padding: 0.75rem 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .file-name {
+    font-size: 0.8125rem;
+  }
+
+  .file-size {
+    font-size: 0.6875rem;
+  }
+
+  .file-info {
+    gap: 0.125rem;
+  }
+
+  .actions-cell {
+    min-width: 2.5rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .data-table-container {
+    overflow-x: visible;
+    width: 100%;
+  }
+
+  .table-wrapper {
+    min-width: 100%;
+  }
+
+  .delete-button {
+    display: none;
+  }
+}

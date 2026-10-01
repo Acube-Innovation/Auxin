@@ -1,0 +1,62 @@
+.type-badge {
+  /* display: flex;
+  padding: 9.531px;
+  justify-content: center;
+  align-items: center;
+  gap: 2.383px;
+  border-radius: 30px;
+  position: relative; */
+  display: flex;
+width: 6.125rem;
+padding: 0.59569rem;
+justify-content: center;
+align-items: center;
+gap: 0.14894rem;
+border-radius: 1.875rem;
+
+}
+
+@media (max-width: 640px) {
+  .type-badge {
+    padding: 8px;
+  }
+}
+
+.badge-text {
+  text-align: center;
+  position: relative;
+  font:
+    500 14px/19px "Inter Tight",
+    sans-serif;
+    
+}
+
+
+@media (max-width: 991px) {
+  .badge-text {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .badge-text {
+    font-size: 12px;
+  }
+}
+
+.type-badge.important .badge-text {
+  color: #258d3f;
+  
+}
+
+.type-badge.extra .badge-text {
+  color: #006fe8;
+}
+
+.type-badge.important {
+background-color: rgb(235 249 238);
+}
+
+.type-badge.extra {
+  background-color:  rgb(234 242 253);
+}

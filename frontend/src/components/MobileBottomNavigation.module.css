@@ -1,0 +1,80 @@
+.bottomNavigation {
+  background-color: #fff;
+  border-top: 1px solid #d3d3d3;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  justify-content: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 0;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex: 1;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconContainer {
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  align-self: center;
+  display: flex;
+  width: 56px;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+}
+
+.active .iconContainer {
+  background-color: #e8def8;
+}
+
+.stateLayer {
+  display: flex;
+  min-height: 32px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #49454f;
+  transition: color 0.2s ease;
+}
+
+.active .stateLayer {
+  color: #625b71;
+}
+
+.labelText {
+  color: #49454f;
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  font-family: Roboto, -apple-system, "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  transition: color 0.2s ease;
+}
+
+.active .labelText {
+  color: #625b71;
+}
+
+/* Hide on desktop */
+@media (min-width: 768px) {
+  .bottomNavigation {
+    display: none;
+  }
+}

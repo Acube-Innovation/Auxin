@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* Backdrop */
+.date-picker-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+}
+
+/* Main container */
+.date-picker-menu {
+  align-items: flex-start;
+  border-radius: 12px;
+  box-shadow: 0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03);
+  display: flex;
+  justify-content: flex-start;
+  background-color: var(--White, #FFF);
+}
+
+.calendar-cell.range-start,
+.calendar-cell.range-end {
+  background: var(--Foundation-Blue-blue-500, #007AFF);
+  color: #fff;
+  border-radius: 1.25rem;
+  font-weight: 500;
+}
+
+.trailing-content {
+  width: 328px;
+}
+
+.date-pickers {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.right-picker {
+  width: 328px;
+  overflow: hidden;
+}
+
+.picker-content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 20px 24px;
+}
+
+.calendar {
+  width: 100%;
+}
+
+/* Month navigation */
+.calendar-month {
+  display: flex;
+  width: 100%;
+  max-width: 280px;
+  align-items: center;
+  gap: 40px 42px;
+  justify-content: space-between;
+}
+
+.date-nav-button {
+  border-radius: 8px;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 40px;
+  margin: auto 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.date-nav-button:hover {
+  background-color: #f5f5f5;
+}
+
+.button-base {
+  border-radius: 8px;
+  display: flex;
+  width: 40px;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  justify-content: center;
+  padding: 10px;
+}
+
+.nav-icon {
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
+  width: 20px;
+  align-self: stretch;
+  margin: auto 0;
+}
+
+.month-text {
+  color: var(--Gray-700, #414651);
+  text-align: center;
+  align-self: stretch;
+  margin: auto 0;
+  font: 600 16px Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Calendar dates */
+.calendar-dates {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 280px;
+  color: var(--Gray-700, #414651);
+  white-space: nowrap;
+  text-align: center;
+  font: 400 14px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+/* Day headers */
+.day-headers {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  font-weight: 500;
+  justify-content: flex-start;
+}
+
+.day-header {
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 40px;
+  padding: 10px 11px;
+}
+
+.day-header-text {
+  color: var(--Gray-700, #414651);
+}
+
+/* Calendar grid */
+.calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.calendar-row {
+  border-radius: 20px;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  justify-content: flex-start;
+}
+
+.calendar-cell {
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.calendar-cell:first-child {
+  margin-left: 0;
+}
+
+.calendar-cell:hover:not(.selected) {
+  background-color: var(--Gray-100, #F5F5F5);
+}
+
+.calendar-cell.selected {
+  background-color: var(--Foundation-Blue-blue-500, #007AFF);
+  color: var(--White, #FFF);
+  font-weight: 500;
+}
+
+.calendar-cell.today:not(.selected) {
+  background-color: var(--Gray-100, #F5F5F5);
+  font-weight: 500;
+}
+
+.calendar-cell.previous-month,
+.calendar-cell.next-month {
+  color: var(--Gray-500, #717680);
+}
+
+.calendar-day {
+  color: inherit;
+}
+
+.calendar-cell.selected .calendar-day {
+  color: var(--White, #FFF);
+}
+
+/* Grid layout using CSS Grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 40px);
+  grid-template-rows: repeat(6, 40px);
+  gap: 0;
+  margin-top: 4px;
+  justify-content: center;
+}
+
+/* Divider */
+.divider {
+  background-color: rgba(233, 234, 235, 1);
+  display: flex;
+  min-height: 1px;
+  width: 100%;
+  fill: var(--Gray-200, #E9EAEB);
+}
+
+/* Bottom panel */
+.bottom-panel {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  white-space: nowrap;
+  justify-content: center;
+  padding: 16px 24px;
+  font: 14px/1 Inter, -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+.actions {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  justify-content: flex-start;
+}
+
+/* Buttons */
+.cancel-btn {
+  border-radius: 8px;
+  align-self: flex-start;
+  display: flex;
+  align-items: flex-start;
+  color: var(--Gray-700, #414651);
+  font-weight: 600;
+  justify-content: flex-start;
+  width: 110px;
+}
+
+.cancel-btn-base {
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--Gray-300, #D5D7DA);
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  display: flex;
+  width: 110px;
+  gap: 8px;
+  overflow: hidden;
+  background-color: var(--White, #FFF);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-btn-base:hover {
+  background-color: #f8f9fa;
+}
+
+.cancel-text {
+  color: var(--Gray-700, #414651);
+  align-self: stretch;
+  margin: auto 0;
+}
+
+.apply-btn {
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--Button-corner-radius, 8px);
+  backdrop-filter: blur(10px);
+  display: flex;
+  gap: var(--Button-gap, 12px);
+  color: var(--Background-primary, #FFF);
+  font-weight: 500;
+  height: 100%;
+  width: 110px;
+  padding: var(--Button-vertical-padding, 8px) var(--Button-horizontal-padding, 16px);
+  background-color: var(--Button-normal, #007AFF);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+.apply-btn:hover {
+  background-color: #0056CC;
+}
+
+.apply-text {
+  color: var(--Background-primary, #FFF);
+  align-self: stretch;
+  margin: auto 0;
+}
+
+/* Focus states */
+.date-nav-button:focus,
+.cancel-btn-base:focus,
+.apply-btn:focus {
+  outline: 2px solid #006fe8;
+  outline-offset: 2px;
+}
+
+.calendar-cell:focus {
+  outline: 2px solid #006fe8;
+  outline-offset: 1px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .date-picker-menu {
+    width: 95%;
+    max-width: 320px;
+  }
+
+  .trailing-content {
+    width: 100%;
+  }
+
+  .right-picker {
+    width: 100%;
+  }
+
+  .picker-content {
+    padding: 16px 20px;
+  }
+
+  .calendar-month {
+    max-width: 100%; 
+    gap: 20px;
+  }
+
+  .calendar-dates {
+    max-width: 100%;
+  }
+
+  .month-text {
+    font-size: 14px;
+  }
+
+  .calendar-cell {
+    width: 36px;
+    height: 36px;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, 36px);
+    grid-template-rows: repeat(6, 36px);
+  }
+
+  .day-header {
+    width: 36px;
+    padding: 8px 9px;
+  }
+
+  .bottom-panel {
+    padding: 12px 20px;
+  }
+
+  .cancel-btn,
+  .apply-btn {
+    width: 90px;
+  }
+
+  .cancel-btn-base,
+  .apply-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+.calendar-cell.in-range {
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 0;
+}
+
+.calendar-cell.in-range:hover {
+  background: rgba(0, 122, 255, 0.2);
+}
+
+/* If you want the range to span the full height of the cell */
+.calendar-cell.in-range .calendar-day {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* For the first cell in the range */
+.calendar-cell.range-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* For the last cell in the range */
+.calendar-cell.range-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* For cells between start and end */
+.calendar-cell.in-range:not(.range-start):not(.range-end) {
+  background: rgba(0, 122, 255, 0.1);
+}

@@ -1,0 +1,363 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+/* Modal Backdrop */
+.create-event-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal Container */
+.create-event-modal {
+  display: flex;
+  width: clamp(26rem, 25vw, 30rem); /* 416px - 480px */
+  padding: clamp(1.25rem, 1.5vw, 1.5rem); /* 20px - 24px */
+  flex-direction: column;
+  align-items: center;
+  border-radius: 0.75rem; /* 12px */
+  box-shadow:
+    0 1.25rem 1.5rem -0.25rem rgba(10, 13, 18, 0.08),
+    0 0.5rem 0.5rem -0.25rem rgba(10, 13, 18, 0.03);
+  margin: 0 auto;
+  max-width: 95%;
+  box-sizing: border-box;
+  background-color: #fff;
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+/* Modal Content */
+.modal-event-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(1rem, 1.25vw, 1.25rem); /* 16px - 20px */
+  align-self: stretch;
+  position: relative;
+}
+
+/* Modal Header */
+.modal-event-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem; /* 8px */
+  align-self: stretch;
+  position: relative;
+}
+
+.modal-title {
+  align-self: stretch;
+  color: #181d27;
+  position: relative;
+  font: 700 clamp(1rem, 1.125vw, 1.125rem)/1.5 Inter, -apple-system, Roboto, Helvetica, sans-serif; /* 16px - 18px */
+  margin: 0;
+}
+
+.modal-subtitle {
+  align-self: stretch;
+  color: #535862;
+  position: relative;
+  font: 400 clamp(0.75rem, 0.875vw, 0.875rem)/1.4 Inter, -apple-system, Roboto, Helvetica, sans-serif; /* 12px - 14px */
+  margin: 0;
+}
+
+/* Form Fields */
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.875rem, 1vw, 1rem); /* 14px - 16px */
+  align-self: stretch;
+  position: relative;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem; /* 8px */
+  align-self: stretch;
+  position: relative;
+  width: auto;
+}
+
+.field-label {
+  color: #7a8699;
+  position: relative;
+  font: 400 clamp(0.75rem, 0.875vw, 0.875rem)/1.3 Inter, -apple-system, Roboto, Helvetica, sans-serif; /* 12px - 14px */
+}
+
+/* Input Wrappers */
+.input-wrapper,
+.select-wrapper,
+.date-wrapper,
+.time-wrapper {
+  display: flex;
+  height: clamp(2.25rem, 2.5vw, 2.5rem); /* 36px - 40px */
+  min-width: 15.75rem; /* 252px */
+  padding: 0 1rem; /* 16px */
+  align-items: center;
+  align-self: stretch;
+  border-radius: 0.25rem;
+  border: 0.063rem solid var(--Foundation-Neutral-N50, #c2c7d0);
+  position: relative;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.select-wrapper,
+.date-wrapper,
+.time-wrapper {
+  justify-content: space-between;
+}
+
+/* Form Inputs */
+.form-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #000;
+  font: 400 clamp(0.875rem, 1vw, 1rem)/1.5 Inter, -apple-system, Roboto, Helvetica, sans-serif; /* 14px - 16px */
+  box-sizing: border-box;
+}
+
+.form-input::placeholder {
+  color: #b3b9c4;
+}
+
+.form-input.has-icon {
+  padding-right: 1.5rem; /* 24px */
+}
+
+.form-select {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #000;
+  font: 400 clamp(0.875rem, 1vw, 1rem)/1.5 Inter, -apple-system, Roboto, Helvetica, sans-serif; /* 14px - 16px */
+  cursor: pointer;
+  appearance: none;
+}
+
+.form-select:focus {
+  color: #000;
+}
+
+.form-select option {
+  color: #000;
+}
+
+/* Icons */
+.select-icon,
+.input-icon {
+  position: absolute;
+  right: 1rem; /* 16px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.input-icon {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  border-radius: 0.25rem;
+  padding: 0.125rem;
+}
+
+.input-icon:hover {
+  opacity: 0.7;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.input-icon img {
+  filter: brightness(0) saturate(100%) invert(60%) sepia(9%) saturate(1173%)
+    hue-rotate(200deg) brightness(95%) contrast(88%);
+}
+
+/* Color Selector */
+.color-selector {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem; /* 12px */
+  position: relative;
+  width: auto;
+  height: 1.5rem; /* 24px */
+  margin-top: 0.5rem;
+}
+
+.color-options-container {
+  display: flex;
+  gap: 0.75rem; /* 12px */
+  margin-top: 0.5rem; /* 8px */
+}
+
+.color-option-label {
+  display: inline-block;
+  width: 1.5rem; /* 24px */
+  height: 1.5rem; /* 24px */
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.color-option-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem; /* 12px */
+  align-self: stretch;
+  position: relative;
+  margin-top: 1.25rem;
+}
+
+/* Buttons */
+.event-cancel-button,
+.event-attach-button {
+  display: flex;
+  padding: 0.625rem 1.125rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 0 0;
+  border-radius: 0.5rem;
+  border: 0.063rem solid var(--Foundation-Blue-blue-500, #007aff);
+  background: var(--Foundation-Blue-blue-500, #007aff);
+  box-shadow: 0 0.063rem 0.125rem 0 rgba(10, 13, 18, 0.05);
+  transition: background-color 0.2s ease;
+  font-size: clamp(0.875rem, 1vw, 1rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.event-cancel-button {
+  background-color: #fff;
+  border: 0.063rem solid #d5d7da;
+  color: #414651;
+}
+
+.event-cancel-button:hover {
+  background-color: #f8f9fa;
+}
+
+.event-attach-button {
+  background-color: #007aff;
+  color: #fff;
+}
+
+.event-attach-button:hover {
+  background-color: #0056cc;
+}
+
+/* Focus states */
+.event-cancel-button:focus,
+.event-attach-button:focus {
+  outline: 0.125rem solid #006fe8;
+  outline-offset: 0.125rem;
+}
+
+/* ========================================
+   LAPTOP RESPONSIVE STYLES
+   ======================================== */
+
+/* 1536px Breakpoint */
+@media (max-width: 1536px) {
+  .create-event-modal {
+    width: calc(30rem * 0.9); /* ~432px */
+    padding: calc(1.5rem * 0.9);
+  }
+  .modal-title { font-size: calc(1.125rem * 0.9); }
+  .modal-subtitle { font-size: calc(0.875rem * 0.9); }
+  .field-label { font-size: calc(0.875rem * 0.9); }
+  .form-input, .form-select { font-size: calc(1rem * 0.9); }
+  .input-wrapper, .select-wrapper, .date-wrapper, .time-wrapper {
+    height: calc(2.5rem * 0.9);
+    min-height: calc(2.5rem * 0.9);
+  }
+  .event-cancel-button, .event-attach-button {
+    padding: calc(0.625rem * 0.9) calc(1.125rem * 0.9);
+    font-size: calc(1rem * 0.9);
+  }
+}
+
+/* 1440px Breakpoint */
+@media (max-width: 1440px) {
+  .create-event-modal {
+    width: calc(30rem * 0.85); /* ~408px */
+    padding: calc(1.5rem * 0.85);
+  }
+}
+
+/* 1366px Breakpoint */
+@media (max-width: 1366px) {
+  .create-event-modal {
+    width: calc(30rem * 0.8); /* ~384px */
+    padding: calc(1.5rem * 0.8);
+  }
+  .modal-event-content { gap: 1rem; }
+  .form-fields { gap: 0.875rem; }
+}
+
+/* 1280px Breakpoint */
+@media (max-width: 1280px) {
+  .create-event-modal {
+    width: calc(30rem * 0.75); /* ~360px */
+    padding: 1rem;
+  }
+  .modal-title { font-size: 0.95rem; }
+  .modal-subtitle { font-size: 0.75rem; }
+  .field-label { font-size: 0.75rem; }
+  .form-input, .form-select { font-size: 0.85rem; }
+}
+
+/* Tablet and Mobile */
+@media (max-width: 991px) {
+  .create-event-modal {
+    width: 90%;
+    max-width: 30rem;
+    padding: 1.25rem;
+  }
+  .input-wrapper, .select-wrapper, .date-wrapper, .time-wrapper {
+    min-width: auto;
+    padding: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .create-event-modal {
+    width: 95%;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    max-height: 80vh;
+  }
+  .modal-actions {
+    flex-direction: row;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+  .event-cancel-button, .event-attach-button {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+}
