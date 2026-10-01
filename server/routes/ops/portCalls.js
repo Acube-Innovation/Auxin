@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const Voyage = require('../../models/ops/Voyage');
 const PortCall = require('../../models/ops/PortCall');
 const DateRevision = require('../../models/ops/DateRevision');
+const VoyageLog = require('../../models/ops/VoyageLog');
+const Port = require('../../models/ops/Port');
 const access = require('../../services/ops/accessScope');
 const taskEngine = require('../../services/ops/taskEngine');
 const { applySuggestions, manualFlagsFromInput } = require('../../services/ops/suggestions');
@@ -63,6 +65,13 @@ function emitDatesChanged(req, voyageId, result) {
   }
 }
 
+function emitVoyageUpdated(req, voyageId, what) {
+  const io = req.app.get('io');
+  if (io) io.to(`voyage-${voyageId}`).emit('ops-voyage-updated', { voyageId: String(voyageId), what, by: String(req.user._id), byName: req.user.username });
+}
+const TYPE_WORD = { LOADING: 'load', DISCHARGING: 'discharge', BUNKERING: 'bunkering' };
+const portName = async (id) => ((await Port.findById(id).select('name').lean()) || {}).name || 'port';
+
 router.get('/', async (req, res) => {
   try {
     const voyage = await loadVoyage(req, false);
@@ -93,6 +102,10 @@ router.post('/', async (req, res) => {
       return { id: created._id, tasksCreated, ...recalc };
     });
     emitDatesChanged(req, voyage._id, out);
+    emitVoyageUpdated(req, voyage._id, 'port-call');
+    if (voyage.status === 'ACTIVE') {
+      await VoyageLog.write(voyage._id, req.user, 'PORT_CALL_ADDED', `${await portName(data.port)} (${TYPE_WORD[data.type]}) added to the rotation; ${out.tasksCreated} tasks created`);
+    }
     res.status(201).json({
       portCall: await PortCall.findById(out.id).populate(POPULATE).lean(),
       portCalls: await listFor(voyage._id),
@@ -118,6 +131,11 @@ router.put('/reorder', async (req, res) => {
       return afterChange(voyage, session, req);
     });
     emitDatesChanged(req, voyage._id, out);
+    emitVoyageUpdated(req, voyage._id, 'port-call');
+    if (voyage.status === 'ACTIVE') {
+      const names = (await listFor(voyage._id)).filter((p) => p.status !== 'CANCELLED').map((p) => p.port?.name);
+      await VoyageLog.write(voyage._id, req.user, 'ROTATION_REORDERED', `Rotation re-ordered: ${names.join(' → ')}`);
+    }
     res.json(await listFor(voyage._id));
   } catch (err) { sendError(res, err, 'Error re-ordering port calls'); }
 });
@@ -166,6 +184,7 @@ router.put('/:pcId', async (req, res) => {
       return afterChange(voyage, session, req, revisions);
     });
     emitDatesChanged(req, voyage._id, out);
+    emitVoyageUpdated(req, voyage._id, 'port-call');
     res.json({
       portCall: await PortCall.findById(pc._id).populate(POPULATE).lean(),
       portCalls: await listFor(voyage._id),
@@ -202,6 +221,10 @@ router.delete('/:pcId', async (req, res) => {
       return { tasksCancelled, ...(await afterChange(voyage, session, req)) };
     });
     emitDatesChanged(req, voyage._id, out);
+    emitVoyageUpdated(req, voyage._id, 'port-call');
+    if (voyage.status === 'ACTIVE') {
+      await VoyageLog.write(voyage._id, req.user, 'PORT_CALL_CANCELLED', `${await portName(pc.port)} (${TYPE_WORD[pc.type]}) cancelled; ${out.tasksCancelled} open task(s) marked Not applicable${req.body && req.body.reason ? ` — ${req.body.reason}` : ''}`);
+    }
     res.json({
       message: voyage.status === 'DRAFT' ? 'Port call removed' : `Port call cancelled; ${out.tasksCancelled} open task(s) marked Not applicable`,
       portCalls: await listFor(voyage._id),

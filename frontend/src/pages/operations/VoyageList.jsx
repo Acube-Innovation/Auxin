@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import OpsLayout from "../../components/operations/OpsLayout";
-import VoyageSummaryModal from "../../components/operations/VoyageSummaryModal";
 import DeleteModal from "../../components/delete-modal/DeleteModal";
 import OpsVoyageService from "../../services/OpsVoyageService";
 import OpsMasterService from "../../services/OpsMasterService";
@@ -26,7 +25,7 @@ const PAGE_SIZE = 20;
 function VoyageList() {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState("ALL");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -38,7 +37,6 @@ function VoyageList() {
   const [vessels, setVessels] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [officeTz, setOfficeTz] = useState("Asia/Kolkata");
-  const [viewId, setViewId] = useState(null);
   const [toDelete, setToDelete] = useState(null);
 
   useEffect(() => {
@@ -47,13 +45,11 @@ function VoyageList() {
     EmployeeService.getEmployees().then((list) => setEmployees(Array.isArray(list) ? list : [])).catch(() => {});
   }, []);
 
+  // Old links with ?open=<id> go straight to the workspace
   useEffect(() => {
     const open = searchParams.get("open");
-    if (open) {
-      setViewId(open);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
+    if (open) navigate(`/operations/voyages/${open}`, { replace: true });
+  }, [searchParams, navigate]);
 
   // Wait until typing pauses before searching
   useEffect(() => {
@@ -134,7 +130,7 @@ function VoyageList() {
                 {loading && <tr><td colSpan={8} className={styles.empty}>Loading…</td></tr>}
                 {!loading && data.items.length === 0 && <tr><td colSpan={8} className={styles.empty}>No voyages here</td></tr>}
                 {!loading && data.items.map((v) => (
-                  <tr key={v._id} className={styles.clickable} onClick={() => setViewId(v._id)}>
+                  <tr key={v._id} className={styles.clickable} onClick={() => navigate(`/operations/voyages/${v._id}`)}>
                     <td className={styles.mono} style={{ whiteSpace: "nowrap" }}><b>{v.voyageNo}</b><div className={styles.note} style={{ fontFamily: "Inter, sans-serif" }}>Updated {formatInstantDate(v.updatedAt, officeTz)}</div></td>
                     <td style={{ whiteSpace: "nowrap" }}>{v.vessel?.name}</td>
                     <td>{v.charterers?.companyName || "—"}</td>
@@ -166,7 +162,7 @@ function VoyageList() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                      <button className={styles.btnLink} onClick={() => setViewId(v._id)}>View</button>
+                      <button className={styles.btnLink} onClick={() => navigate(`/operations/voyages/${v._id}`)}>View</button>
                       {v.status === "DRAFT" && v.permissions?.canEdit && <button className={styles.btnLink} onClick={() => navigate(`/operations/voyages/${v._id}/edit`)}>Edit</button>}
                       {v.permissions?.canCopy && <button className={styles.btnLink} onClick={() => copy(v)}>Copy</button>}
                       {v.permissions?.canDelete && <button className={styles.btnLink} style={{ color: "#d92d20" }} onClick={() => setToDelete(v)}>Delete</button>}
@@ -189,7 +185,6 @@ function VoyageList() {
         </div>
       </div>
 
-      <VoyageSummaryModal voyageId={viewId} officeTz={officeTz} onClose={() => setViewId(null)} onChanged={load} />
       <DeleteModal
         isOpen={Boolean(toDelete)}
         onClose={() => setToDelete(null)}

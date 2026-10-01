@@ -164,7 +164,7 @@ function buildAdhocTask(input, voyage, portCalls, stagesById, user) {
     priority,
     reminderProfile: priority,
     assignedTo: (voyage.operators || []).map(idOf),
-    history: [{ at: new Date(), by: user._id, field: 'created', note: 'Ad-hoc task added at voyage creation' }],
+    history: [{ at: new Date(), by: user._id, field: 'created', note: 'Ad-hoc task added at voyage creation', auto: true }],
     createdBy: user._id,
   };
 }
@@ -189,7 +189,7 @@ async function activate(voyageId, { excluded = [], adhocTasks = [] } = {}, user)
     const now = new Date();
     const docs = tasks.map(({ _stage, _portCall, ...t }) => ({
       ...t,
-      history: [{ at: now, by: user._id, field: 'created', note: t.status === 'NA' ? `Generated as Not applicable: ${t.naReason}` : 'Generated at voyage activation' }],
+      history: [{ at: now, by: user._id, field: 'created', note: t.status === 'NA' ? `Generated as Not applicable: ${t.naReason}` : 'Generated at voyage activation', auto: true }],
       createdBy: user._id,
     }));
     const stagesById = new Map((await OpsStage.find().session(session).lean()).map((s) => [idOf(s), s]));
@@ -242,7 +242,7 @@ async function recalculate(voyageId, { session, user = null, reason = '' } = {})
         update.dueDate = next;
         update.reminderSent = [];
         moved.push({ id: t._id, code: t.code, name: t.name, from: t.dueDate, to: next });
-        ops.push({ updateOne: { filter: { _id: t._id }, update: { $set: update, $push: { history: { at: now, by: user ? user._id : null, field: 'dueDate', from: t.dueDate, to: next, note: reason || 'Recalculated after a key date changed' } } } } });
+        ops.push({ updateOne: { filter: { _id: t._id }, update: { $set: update, $push: { history: { at: now, by: user ? user._id : null, field: 'dueDate', from: t.dueDate, to: next, note: reason || 'Recalculated after a key date changed', auto: true } } } } });
         continue;
       }
     }
@@ -264,7 +264,7 @@ async function addPortCallTasks(voyageId, portCallId, { session, user }) {
   const tasks = await buildTemplateTasks(voyage, portCalls, { session, onlyPortCall: pc });
   const now = new Date();
   const docs = tasks.map(({ _stage, _portCall, ...t }) => ({
-    ...t, history: [{ at: now, by: user._id, field: 'created', note: 'Generated when the port call was added' }], createdBy: user._id,
+    ...t, history: [{ at: now, by: user._id, field: 'created', note: 'Generated when the port call was added', auto: true }], createdBy: user._id,
   }));
   if (docs.length) await VoyageTask.insertMany(docs, { session });
   pc.original = { eta: pc.planned.eta, etb: pc.planned.etb, etc: pc.planned.etc, ets: pc.planned.ets };
@@ -275,7 +275,7 @@ async function addPortCallTasks(voyageId, portCallId, { session, user }) {
 async function cancelPortCallTasks(portCallId, { session, user }) {
   const res = await VoyageTask.updateMany(
     { portCall: portCallId, status: { $in: OPEN } },
-    { $set: { status: 'NA', naReason: 'Port call cancelled' }, $push: { history: { at: new Date(), by: user._id, field: 'status', to: 'NA', note: 'Port call cancelled' } } },
+    { $set: { status: 'NA', naReason: 'Port call cancelled' }, $push: { history: { at: new Date(), by: user._id, field: 'status', to: 'NA', note: 'Port call cancelled', auto: true } } },
     { session },
   );
   return res.modifiedCount;

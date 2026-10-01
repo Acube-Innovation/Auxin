@@ -14,10 +14,11 @@ const OpsVoyageService = {
   setVesselStatus: (id, value) => opsRequest(`/voyages/${id}/vessel-status`, { method: "PUT", body: { value } }),
   getTasks: (id, params) => opsRequest(`/voyages/${id}/tasks`, { params }),
   getRevisions: (id) => opsRequest(`/voyages/${id}/revisions`),
+  getActivity: (id) => opsRequest(`/voyages/${id}/activity`),
 
   addPortCall: (id, data) => opsRequest(`/voyages/${id}/port-calls`, { method: "POST", body: data }),
   updatePortCall: (id, pcId, data) => opsRequest(`/voyages/${id}/port-calls/${pcId}`, { method: "PUT", body: data }),
-  removePortCall: (id, pcId) => opsRequest(`/voyages/${id}/port-calls/${pcId}`, { method: "DELETE" }),
+  removePortCall: (id, pcId, reason) => opsRequest(`/voyages/${id}/port-calls/${pcId}`, { method: "DELETE", body: reason ? { reason } : undefined }),
   reorderPortCalls: (id, order) => opsRequest(`/voyages/${id}/port-calls/reorder`, { method: "PUT", body: { order } }),
 };
 

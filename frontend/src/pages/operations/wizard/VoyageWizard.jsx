@@ -227,7 +227,7 @@ function VoyageWizard() {
       const res = await OpsVoyageService.activate(voyageId, { excluded: ex, adhocTasks: adhoc.map(({ name, dueDate, priority }) => ({ name, dueDate, priority })) });
       showToast(`${res.voyageNo} is active: ${res.activation.created} tasks created`, "success");
       setDirty(false);
-      navigate(`/operations/voyages?open=${res._id}`);
+      navigate(`/operations/voyages/${res._id}`);
     } catch (e) {
       setError(e.message);
     } finally {

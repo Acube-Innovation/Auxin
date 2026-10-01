@@ -16,10 +16,11 @@ function BucketChip({ bucket }) {
 }
 
 // Read-only task list of an active voyage with due dates and colour buckets (editing arrives in step 7)
-function VoyageTaskList({ voyageId, refreshKey }) {
+function VoyageTaskList({ voyageId, refreshKey, initialBucket = "" }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [bucket, setBucket] = useState("");
+  const [bucket, setBucket] = useState(initialBucket);
+  useEffect(() => { setBucket(initialBucket); }, [initialBucket]);
 
   const load = useCallback(() => {
     OpsVoyageService.getTasks(voyageId).then(setData).catch((e) => setError(e.message));

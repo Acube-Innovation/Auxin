@@ -9,6 +9,7 @@ const Vessel = require('../../models/ops/Vessel');
 const Counter = require('../../models/ops/Counter');
 const VoyageTask = require('../../models/ops/VoyageTask');
 const DateRevision = require('../../models/ops/DateRevision');
+const VoyageLog = require('../../models/ops/VoyageLog');
 const access = require('../../services/ops/accessScope');
 const taskEngine = require('../../services/ops/taskEngine');
 const engine = require('../../services/ops/dueDateEngine');
@@ -129,6 +130,14 @@ function emitDatesChanged(req, voyageId, result) {
   }
 }
 
+// Tell open workspaces that the voyage changed (they refetch; the author's own page ignores it)
+function emitVoyageUpdated(req, voyageId, what) {
+  const io = req.app.get('io');
+  if (io) io.to(`voyage-${voyageId}`).emit('ops-voyage-updated', { voyageId: String(voyageId), what, by: String(req.user._id), byName: req.user.username });
+}
+
+const STATUS_WORD = { DRAFT: 'draft', ACTIVE: 'active', COMPLETED: 'completed', CANCELLED: 'cancelled' };
+
 // ------------------------------------------------------------------ list
 router.get('/', async (req, res) => {
   try {
@@ -234,6 +243,7 @@ router.post('/', async (req, res) => {
       voyage.bunker.portCall = created[bunkerIndex]._id;
       await voyage.save();
     }
+    await VoyageLog.write(voyage._id, req.user, 'CREATED', `Draft ${voyage.voyageNo} created`);
     res.status(201).json(await populatedVoyage(voyage._id, req.user));
   } catch (err) {
     if (voyage) {
@@ -293,7 +303,11 @@ router.put('/:id', async (req, res) => {
       }
       return recalc;
     });
+    if (wantsStatus) {
+      await VoyageLog.write(current._id, req.user, 'STATUS', `Voyage ${STATUS_WORD[current.status]} → ${STATUS_WORD[req.body.status]}${req.body.reason ? ` (${req.body.reason})` : ''}`);
+    }
     emitDatesChanged(req, current._id, result);
+    emitVoyageUpdated(req, current._id, wantsStatus ? 'status' : 'voyage');
     res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon });
   } catch (err) { sendError(res, err, 'Error updating voyage'); }
 });
@@ -357,6 +371,7 @@ router.post('/:id/clone', async (req, res) => {
         await copy.save();
       }
     }
+    await VoyageLog.write(copy._id, req.user, 'CREATED', `Draft ${copy.voyageNo} created as a copy of ${source.voyageNo}`);
     res.status(201).json(await populatedVoyage(copy._id, req.user));
   } catch (err) {
     if (copy) {
@@ -393,6 +408,9 @@ router.post('/:id/activate', async (req, res) => {
       excluded: Array.isArray(req.body.excluded) ? req.body.excluded : [],
       adhocTasks: Array.isArray(req.body.adhocTasks) ? req.body.adhocTasks : [],
     }, req.user);
+    await VoyageLog.write(voyage._id, req.user, 'ACTIVATED',
+      `Voyage activated: ${result.created} tasks created (${result.notApplicable} not applicable${result.adhoc ? `, ${result.adhoc} one-off` : ''}); original plan frozen`, result);
+    emitVoyageUpdated(req, voyage._id, 'activated');
     res.json({ ...(await populatedVoyage(voyage._id, req.user)), activation: result });
   } catch (err) { sendError(res, err, 'Error activating voyage'); }
 });
@@ -407,6 +425,9 @@ router.put('/:id/vessel-status', async (req, res) => {
     voyage.vesselStatusOverride = value ? { value, setBy: req.user._id, setAt: new Date() } : { value: null, setBy: null, setAt: null };
     voyage.updatedBy = req.user._id;
     await voyage.save();
+    const label = (v) => (require('../../services/ops/constants').VESSEL_STATUSES.find((x) => x.value === v) || {}).label || v;
+    await VoyageLog.write(voyage._id, req.user, 'VESSEL_STATUS', value ? `Vessel status set by hand to ${label(value)}` : 'Vessel status back to automatic (from actual times)');
+    emitVoyageUpdated(req, voyage._id, 'vessel-status');
     res.json(await populatedVoyage(voyage._id, req.user));
   } catch (err) { sendError(res, err, 'Error setting vessel status'); }
 });
@@ -446,6 +467,39 @@ router.get('/:id/revisions', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error fetching date revisions'); }
 });
 
+// Activity timeline (feature D10): voyage log, key-date revisions and changes people made to tasks.
+// System-written task entries (generation, recalculation) are left out — the date revision that caused them says how many moved.
+router.get('/:id/activity', async (req, res) => {
+  try {
+    const voyage = await loadVisible(req, req.params.id);
+    const limit = Math.min(500, parseInt(req.query.limit, 10) || 300);
+    const [logs, revisions, tasks] = await Promise.all([
+      VoyageLog.find({ voyage: voyage._id }).populate('by', 'username').sort({ at: -1 }).limit(limit).lean(),
+      DateRevision.find({ voyage: voyage._id }).populate('by', 'username')
+        .populate({ path: 'portCall', select: 'seq type timeZone port', populate: { path: 'port', select: 'name' } }).sort({ at: -1 }).limit(limit).lean(),
+      VoyageTask.find({ voyage: voyage._id, history: { $elemMatch: { auto: { $ne: true }, field: { $ne: 'created' } } } })
+        .select('name code history').populate('history.by', 'username').lean(),
+    ]);
+    const zoneOf = (r) => {
+      if (r.portCall) return r.portCall.timeZone;
+      if (r.field.startsWith('delivery.')) return voyage.delivery?.timeZone || OFFICE_TZ;
+      if (r.field.startsWith('redelivery.')) return voyage.redelivery?.timeZone || OFFICE_TZ;
+      return OFFICE_TZ;
+    };
+    const items = [
+      ...logs.map((l) => ({ kind: 'voyage', at: l.at, by: l.by?.username || 'system', type: l.type, text: l.text })),
+      ...revisions.map((r) => ({
+        kind: 'date', at: r.at, by: r.by?.username || 'system', field: r.field, port: r.portCall?.port?.name || null,
+        from: r.from, to: r.to, zone: zoneOf(r), reason: r.reason, tasksMoved: r.tasksMoved,
+      })),
+      ...tasks.flatMap((t) => t.history.filter((h) => !h.auto && h.field !== 'created').map((h) => ({
+        kind: 'task', at: h.at, by: h.by?.username || 'system', task: t.name, code: t.code, field: h.field, from: h.from, to: h.to, note: h.note,
+      }))),
+    ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, limit);
+    res.json({ items });
+  } catch (err) { sendError(res, err, 'Error fetching activity'); }
+});
+
 router.use('/:id/port-calls', require('./portCalls'));
 
 module.exports = router;
@@ -453,3 +507,4 @@ module.exports.loadVisible = loadVisible;
 module.exports.loadEditable = loadEditable;
 module.exports.populatedVoyage = populatedVoyage;
 module.exports.emitDatesChanged = emitDatesChanged;
+module.exports.emitVoyageUpdated = emitVoyageUpdated;

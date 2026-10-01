@@ -229,3 +229,18 @@ test('voyage-level date change (re-delivery) recalculates the notices and is log
   const revisions = (await call('GET', `/ops/voyages/${ctx.voyage._id}/revisions`)).data;
   assert.ok(revisions.some((r) => r.field === 'redelivery.estimated' && r.reason === 'Slower discharge'));
 });
+
+test('activity feed: activation and key-date changes with reasons, without the automatic task entries', async () => {
+  const { status, data } = await call('GET', `/ops/voyages/${ctx.voyage._id}/activity`);
+  assert.equal(status, 200);
+  const items = data.items;
+  assert.ok(items.some((i) => i.kind === 'voyage' && /Voyage activated: 128 tasks created/.test(i.text)));
+  assert.ok(items.some((i) => i.kind === 'voyage' && /Djibouti \(load\) added to the rotation; 32 tasks created/.test(i.text)));
+  assert.ok(items.some((i) => i.kind === 'voyage' && /Djibouti \(load\) cancelled; 32 open task/.test(i.text)));
+  const eta = items.find((i) => i.kind === 'date' && i.field === 'planned.eta' && i.port === 'Salalah');
+  assert.equal(eta.reason, 'Delay at previous port');
+  assert.equal(eta.zone, 'Asia/Muscat');
+  assert.ok(!items.some((i) => i.kind === 'task'), 'generation / recalculation entries are not listed one by one');
+  const sorted = [...items].sort((a, b) => new Date(b.at) - new Date(a.at));
+  assert.deepEqual(items.map((i) => i.at), sorted.map((i) => i.at), 'newest first');
+});

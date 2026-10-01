@@ -120,3 +120,26 @@ export function allTimeZones() {
   }
   return ["UTC", "Asia/Kolkata", "Asia/Dubai", "Asia/Muscat", "Asia/Singapore", "Africa/Djibouti", "Europe/London"];
 }
+
+// Difference b − a as "+1d 04h" / "−6h" / "0h" (for planned vs actual, C4). Returns null if either is missing.
+export function formatDelay(aIso, bIso) {
+  if (!aIso || !bIso) return null;
+  const mins = Math.round((new Date(bIso) - new Date(aIso)) / 60000);
+  if (mins === 0) return { text: "on time", minutes: 0 };
+  const abs = Math.abs(mins);
+  const d = Math.floor(abs / 1440);
+  const h = Math.floor((abs % 1440) / 60);
+  const m = abs % 60;
+  const parts = d ? `${d}d ${String(h).padStart(2, "0")}h` : h ? `${h}h${m ? ` ${String(m).padStart(2, "0")}m` : ""}` : `${m}m`;
+  return { text: `${mins > 0 ? "+" : "−"}${parts}`, minutes: mins };
+}
+
+export const DATE_FIELD_LABEL = {
+  "planned.eta": "ETA", "planned.etb": "ETB", "planned.etc": "ETC", "planned.ets": "ETS",
+  "actual.ata": "ATA", "actual.norTendered": "NOR tendered", "actual.pob": "Pilot on board", "actual.atb": "ATB",
+  "actual.commenced": "Operations commenced", "actual.completed": "Operations completed", "actual.atd": "ATD",
+  "fixture.cargoFixedAt": "Cargo fixed", "fixture.vesselFixedAt": "Vessel fixed",
+  "delivery.estimated": "Delivery (estimated)", "delivery.actual": "Delivery (actual)",
+  "redelivery.estimated": "Re-delivery (estimated)", "redelivery.actual": "Re-delivery (actual)",
+  "bunker.bookedOn": "Bunker booked on", "bunker.bunkeringDate": "Bunkering date",
+};

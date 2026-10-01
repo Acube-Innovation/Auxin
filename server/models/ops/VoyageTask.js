@@ -58,6 +58,7 @@ const voyageTaskSchema = new mongoose.Schema({
     from: mongoose.Schema.Types.Mixed,
     to: mongoose.Schema.Types.Mixed,
     note: String,
+    auto: { type: Boolean, default: false },   // written by the system (generation, recalculation)
   }],
   createdBy: { type: ObjectId, ref: 'User' },
 }, { timestamps: true });
