@@ -4,6 +4,7 @@ const Client = require('../models/Client');
 const Employee = require('../models/Employee');
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
+const { clientUsage } = require('../services/ops/references');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require("nodemailer");
@@ -154,6 +155,12 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
     }
 
     console.log(`Bulk deleting clients: ${ids.length} IDs provided`);
+
+    // Vessel Operations: refuse while a voyage / vessel / port uses any of these clients
+    const usage = await clientUsage(ids);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. Nothing was deleted.` });
+    }
 
     // 1. Delete related Documents
     // We need to require the Document model if not already imported
@@ -477,6 +484,12 @@ router.put('/:id', authMiddleware, // keep sales_executive also admin separately
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const clientId = req.params.id;
+
+    // Vessel Operations: refuse while a voyage / vessel / port uses this client
+    const usage = await clientUsage(clientId);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. It cannot be deleted.` });
+    }
 
     // 1. Delete related Documents
     const Document = require('../models/Documents');

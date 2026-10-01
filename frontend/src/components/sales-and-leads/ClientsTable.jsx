@@ -227,8 +227,10 @@ function ClientsTable() {
       setClientToDelete(null);
     } catch (err) {
       console.error("Error deleting client:", err);
-      setError(err.message || "Failed to delete client");
-      showToast("Failed to delete client.", 'error');
+      // Show the reason as a toast and keep the table (setError would replace the whole table)
+      showToast(err.message || "Failed to delete client.", 'error');
+      setIsDeleteModalOpen(false);
+      setClientToDelete(null);
     }
   };
 

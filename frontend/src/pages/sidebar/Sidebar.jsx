@@ -9,12 +9,13 @@ import {
   FaQuestionCircle,
   FaSignOutAlt,
   FaCogs,
+  FaShip,
 } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Sidebar.module.css";
 import DateRangePickerModal from "../../components/DateRangePickerModal";
 import useDateRange from "../../hooks/useDateRange";
-import { OPS_MASTERS_ROLES } from "../../config/opsRoles";
+import { OPS_MASTERS_ROLES, ALL_OPS_ROLES } from "../../config/opsRoles";
 
 import auxin_logo from "../../assets/auxin_logo.png";
 import users from "../../assets/dashboard/users.svg";
@@ -36,6 +37,8 @@ import userplus from "../../assets/dashboard/user-plus.svg";
 import addcontact from "../../assets/dashboard/add-contact.png";
 import logout from "../../assets/dashboard/log-out.svg";
 import offbutton from "../../assets/dashboard/off-button.png";
+
+const opsIconStyle = { width: "1.25rem", height: "1.25rem", color: "#3E4C63", flexShrink: 0 };
 
 function Sidebar() {
   const [isDateRangeModalOpen, setIsDateRangeModalOpen] = useState(false);
@@ -193,16 +196,24 @@ function Sidebar() {
           </div>
 
           {/* Vessel Operations (Phase 2) — items appear as their screens are built */}
-          {OPS_MASTERS_ROLES.includes(userRole) && (
+          {ALL_OPS_ROLES.includes(userRole) && (
             <div className={styles["menu-section-one"]}>
               <p className={styles["section-title"]}>VESSEL OPERATIONS</p>
               <ul>
-                <li className={isActive("/operations/masters") ? styles.active : ""}>
-                  <Link to="/operations/masters/vessels" className={styles["sidebar-link"]}>
-                    <FaCogs className={styles.icon} style={{ width: "1.25rem", height: "1.25rem", color: "#3E4C63", flexShrink: 0 }} aria-hidden="true" />
-                    Ops Masters
+                <li className={isActive("/operations/voyages") ? styles.active : ""}>
+                  <Link to="/operations/voyages" className={styles["sidebar-link"]}>
+                    <FaShip className={styles.icon} style={opsIconStyle} aria-hidden="true" />
+                    Voyages
                   </Link>
                 </li>
+                {OPS_MASTERS_ROLES.includes(userRole) && (
+                  <li className={isActive("/operations/masters") ? styles.active : ""}>
+                    <Link to="/operations/masters/vessels" className={styles["sidebar-link"]}>
+                      <FaCogs className={styles.icon} style={opsIconStyle} aria-hidden="true" />
+                      Ops Masters
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
           )}

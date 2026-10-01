@@ -60,6 +60,32 @@ export function zoneNow(timeZone) {
   }
 }
 
+// Parts of an instant in a zone: { date: "05-Jul-2026", time: "11:30" }
+function partsIn(iso, timeZone) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const f = new Intl.DateTimeFormat("en-GB", { timeZone: timeZone || "UTC", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  const p = Object.fromEntries(f.formatToParts(d).map((x) => [x.type, x.value]));
+  return { date: `${p.day}-${p.month}-${p.year}`, time: `${p.hour === "24" ? "00" : p.hour}:${p.minute}` };
+}
+
+// UTC instant -> "05-Jul-2026 11:30 LT (07:30 UTC)" in the port's zone. withUtc=false drops the UTC part.
+export function formatInstant(iso, timeZone, { withUtc = true } = {}) {
+  if (!iso) return "";
+  const local = partsIn(iso, timeZone);
+  if (!local) return "";
+  if (!withUtc || !timeZone || timeZone === "UTC") return `${local.date} ${local.time}${timeZone === "UTC" ? " UTC" : " LT"}`;
+  const utc = partsIn(iso, "UTC");
+  const utcText = utc.date === local.date ? utc.time : `${utc.date} ${utc.time}`;
+  return `${local.date} ${local.time} LT (${utcText} UTC)`;
+}
+
+// UTC instant -> "05-Jul-2026" in a zone
+export function formatInstantDate(iso, timeZone) {
+  const p = iso ? partsIn(iso, timeZone) : null;
+  return p ? p.date : "";
+}
+
 // All IANA zone names the browser knows (falls back to a short list on very old browsers)
 export function allTimeZones() {
   try {

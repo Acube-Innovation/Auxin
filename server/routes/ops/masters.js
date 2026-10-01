@@ -5,12 +5,14 @@ const router = express.Router();
 const requireRole = require('../../middleware/requireRole');
 const { ADMIN, MANAGERS } = require('../../services/ops/roles');
 const constants = require('../../services/ops/constants');
+const { OFFICE_TZ } = require('../../services/ops/config');
 const Vessel = require('../../models/ops/Vessel');
 const Port = require('../../models/ops/Port');
 const OpsStage = require('../../models/ops/OpsStage');
 const TaskTemplate = require('../../models/ops/TaskTemplate');
 const DailyCheckTemplate = require('../../models/ops/DailyCheckTemplate');
 const { pick, sendError, escapeRegex, httpError } = require('./helpers');
+const { vesselUsage, portUsage } = require('../../services/ops/references');
 
 const adminOnly = requireRole(ADMIN);
 const templateEditors = requireRole([...ADMIN, ...MANAGERS]);
@@ -31,6 +33,8 @@ router.get('/meta', (req, res) => {
     vesselStatuses: constants.VESSEL_STATUSES,
     linkedFields: constants.LINKED_FIELDS,
     userRoles: require('../../models/User').schema.path('role').enumValues,
+    officeTimeZone: OFFICE_TZ,
+    voyageStatuses: require('../../models/ops/Voyage').VOYAGE_STATUSES,
     canEdit: {
       vessels: ADMIN.includes(req.user.role),
       ports: ADMIN.includes(req.user.role),
@@ -87,9 +91,11 @@ router.put('/vessels/:id', adminOnly, async (req, res) => {
   } catch (err) { sendError(res, err, 'Error updating vessel'); }
 });
 
-// Voyage reference check is added with the Voyage model (step 3); until then vessels can be deleted.
+// Refused while a (non-cancelled) voyage uses the vessel — deactivate it instead.
 router.delete('/vessels/:id', adminOnly, async (req, res) => {
   try {
+    const usage = await vesselUsage(req.params.id);
+    if (usage) throw httpError(400, `${usage}. Untick "Active" instead of deleting.`);
     const vessel = await Vessel.findByIdAndDelete(req.params.id);
     if (!vessel) return res.status(404).json({ message: 'Vessel not found' });
     res.json({ message: 'Vessel deleted' });
@@ -139,6 +145,8 @@ router.put('/ports/:id', adminOnly, async (req, res) => {
 
 router.delete('/ports/:id', adminOnly, async (req, res) => {
   try {
+    const usage = await portUsage(req.params.id);
+    if (usage) throw httpError(400, `${usage}. Untick "Active" instead of deleting.`);
     const port = await Port.findByIdAndDelete(req.params.id);
     if (!port) return res.status(404).json({ message: 'Port not found' });
     res.json({ message: 'Port deleted' });
