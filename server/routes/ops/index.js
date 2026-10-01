@@ -13,6 +13,7 @@ router.use('/', require('./masters'));
 router.use('/voyages', require('./voyages'));
 router.use('/tasks', require('./tasks'));
 router.use('/dashboard', require('./dashboard'));
+router.use('/reports', require('./reports'));
 router.use('/jobs', requireRole(ADMIN), require('./jobs'));
 
 module.exports = router;

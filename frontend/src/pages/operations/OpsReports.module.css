@@ -1,0 +1,164 @@
+.types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.type {
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.type:hover {
+  border-color: #84adff;
+}
+
+.typeActive {
+  border: 2px solid #1570ef;
+  background: #eff8ff;
+  padding: 11px 13px;
+}
+
+.typeTitle {
+  font-weight: 700;
+  color: #0b3a6f;
+}
+
+.typeText {
+  font-size: 0.8rem;
+  color: #667085;
+  margin-top: 3px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.stat {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background: #f2f4f7;
+}
+
+.stat b {
+  font-size: 1.05rem;
+}
+
+/* H4 voyage summary sheet */
+.sheet {
+  font-size: 0.82rem;
+  color: #101828;
+}
+
+.sheetHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid #0b3a6f;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.sheetTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0b3a6f;
+}
+
+.sheetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin-bottom: 10px;
+}
+
+.block h4 {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475467;
+  border-bottom: 1px solid #eaecf0;
+  padding-bottom: 2px;
+}
+
+.kv {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.kv span:first-child {
+  color: #667085;
+  min-width: 96px;
+}
+
+.sheetTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+
+.sheetTable th,
+.sheetTable td {
+  border: 1px solid #d0d5dd;
+  padding: 3px 5px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sheetTable th {
+  background: #f2f4f7;
+}
+
+.utc {
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .sheetGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media print {
+  :global(body) * {
+    visibility: hidden;
+  }
+  .printArea,
+  .printArea * {
+    visibility: visible;
+  }
+  .printArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .sheet {
+    font-size: 9pt;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}

@@ -615,3 +615,54 @@ test('fleet dashboard: cards, KPIs and tasks due today; scope by user, operator 
   assert.equal((await call('GET', `/ops/dashboard?operator=${ctx.e2}`)).data.voyages.length, 0, 'Test Op Two operates no voyage');
   assert.equal((await call('GET', '/ops/dashboard?operator=bad')).status, 400);
 });
+
+// ------------------------------------------------------------------ step 11: Ops Reports (H1–H4)
+test('H1 task status report: every task of the voyage, numbers as on screen; operators limited to their voyages', async () => {
+  const { status, data } = await call('GET', `/ops/reports/tasks?voyage=${ctx.voyage._id}`);
+  assert.equal(status, 200, JSON.stringify(data));
+  const ov = (await call('GET', `/ops/voyages/${ctx.voyage._id}/tasks`)).data;
+  assert.equal(data.rows.length, ov.total);
+  const t043 = data.rows.find((r) => r.code === 'T043');
+  const s043 = ov.tasks.find((t) => t.code === 'T043');
+  assert.equal(t043.dueDate, s043.dueDate);
+  assert.equal(t043.overdueDays, s043.overdueDays);
+  assert.equal(t043.voyageNo, ctx.voyage.voyageNo);
+  assert.equal(typeof t043.overdueDays, 'number');
+  assert.equal((await call('GET', '/ops/reports/tasks', null, 'ops2')).data.rows.length, 0, 'ops2 sees no voyage');
+  assert.equal((await call('GET', `/ops/reports/tasks?voyage=${ctx.voyage._id}`, null, 'ops2')).data.rows.length, 0, 'not even by asking for it');
+  assert.equal((await call('GET', '/ops/reports/tasks?voyage=bad')).status, 400);
+});
+
+test('H2 overdue / on-time: outcomes in the date range, per operator and voyage', async () => {
+  const { status, data } = await call('GET', '/ops/reports/overdue?from=2026-01-01&to=2026-12-31');
+  assert.equal(status, 200, JSON.stringify(data));
+  const r = (await call('GET', `/ops/voyages/${ctx.voyage._id}/report`)).data;
+  // every done task of this voyage has a due date in 2026, so done = on time + late
+  assert.equal(data.totals.ON_TIME + data.totals.LATE, r.totals.onTime + r.totals.late);
+  assert.equal(data.totals.ON_TIME, r.totals.onTime, 'on time = Report View');
+  assert.equal(data.totals.OVERDUE, r.totals.overdue, 'overdue = Report View overdue');
+  assert.equal(data.totals.ON_TIME, data.rows.filter((x) => x.outcome === 'ON_TIME').length);
+  assert.ok(data.rows.every((x) => x.status !== 'NA'));
+  assert.ok(data.byOperator.some((o) => o.operator === 'Test Op One'));
+  assert.equal(data.byVoyage[0].total, data.totals.total);
+  const narrow = (await call('GET', `/ops/reports/overdue?from=${data.rows[0].dueDate}&to=${data.rows[0].dueDate}`)).data;
+  assert.ok(narrow.rows.every((x) => x.dueDate === data.rows[0].dueDate));
+  assert.equal((await call('GET', '/ops/reports/overdue?from=2026-12-31&to=2026-01-01')).status, 400);
+});
+
+test('H3 port report and H4 summary: original / planned / actual with delays and ETA revisions', async () => {
+  const { status, data } = await call('GET', `/ops/reports/port-calls?voyage=${ctx.voyage._id}`);
+  assert.equal(status, 200, JSON.stringify(data));
+  const sal = data.rows.find((r) => r.port === 'Salalah');
+  assert.equal(sal.timeZone, 'Asia/Muscat');
+  assert.ok(sal.etaRevisions >= 1, 'the ETA was revised in earlier tests');
+  assert.equal(sal.arrivalDelayH, Math.round(((new Date(sal.arrivalActual) - new Date(sal.arrivalOriginal)) / 3600000) * 10) / 10);
+  assert.ok(!data.rows.some((r) => r.status === 'CANCELLED'), 'cancelled calls left out by default');
+  const all = (await call('GET', `/ops/reports/port-calls?voyage=${ctx.voyage._id}&includeCancelled=1`)).data;
+  assert.equal(all.rows.length, data.rows.length + 1, 'Djibouti (cancelled) included on request');
+  const sum = (await call('GET', `/ops/voyages/${ctx.voyage._id}/summary`)).data;
+  assert.equal(sum.voyage.voyageNo, ctx.voyage.voyageNo);
+  assert.ok(sum.voyage.portCalls.length >= 3);
+  assert.equal(sum.totals.counted + sum.totals.notApplicable, sum.totals.tasks);
+  assert.ok(sum.revisions > 0);
+});

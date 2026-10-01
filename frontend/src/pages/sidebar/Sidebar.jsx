@@ -12,6 +12,7 @@ import {
   FaShip,
   FaTasks,
   FaAnchor,
+  FaFileExcel,
 } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Sidebar.module.css";
@@ -222,6 +223,12 @@ function Sidebar() {
                     </Link>
                   </li>
                 )}
+                <li className={isActive("/operations/reports") ? styles.active : ""}>
+                  <Link to="/operations/reports" className={styles["sidebar-link"]}>
+                    <FaFileExcel className={styles.icon} style={opsIconStyle} aria-hidden="true" />
+                    Ops Reports
+                  </Link>
+                </li>
                 {OPS_MASTERS_ROLES.includes(userRole) && (
                   <li className={isActive("/operations/masters") ? styles.active : ""}>
                     <Link to="/operations/masters/vessels" className={styles["sidebar-link"]}>

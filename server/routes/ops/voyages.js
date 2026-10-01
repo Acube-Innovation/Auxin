@@ -478,6 +478,19 @@ router.post('/:id/tasks', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error adding task'); }
 });
 
+// Voyage summary sheet (H4): the voyage with parties, cargo, rotation and key dates, plus task totals
+router.get('/:id/summary', async (req, res) => {
+  try {
+    await loadVisible(req, req.params.id);
+    const [voyage, report, revisions] = await Promise.all([
+      populatedVoyage(req.params.id, req.user),
+      require('../../services/ops/reports').voyageReport(req.params.id),
+      DateRevision.countDocuments({ voyage: req.params.id }),
+    ]);
+    res.json({ voyage, totals: report.totals, byStage: report.byStage, today: report.today, revisions, officeTimeZone: OFFICE_TZ });
+  } catch (err) { sendError(res, err, 'Error building the voyage summary'); }
+});
+
 // Report View (G2): progress by stage, counts by status, % complete, on-time %, overdue list, port timeline
 router.get('/:id/report', async (req, res) => {
   try {
