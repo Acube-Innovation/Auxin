@@ -32,6 +32,31 @@ export const ANCHOR_SHORT = {
 
 export const PORT_TYPE_LABEL = { LOADING: "Load port", DISCHARGING: "Discharge port", BUNKERING: "Bunkering port" };
 
+export const VESSEL_STATUS_LABEL = {
+  AWAITING_DELIVERY: "Awaiting Delivery",
+  AWAITING_APS_DELIVERY: "Awaiting APS Delivery",
+  DELIVERY_TO_LOAD_PORT: "Delivery to Load Port",
+  ENROUTE_LOAD_PORT: "Enroute Load Port",
+  WAITING_FOR_BERTH: "Waiting for Berth",
+  AT_LOAD_PORT: "At Load Port",
+  ENROUTE_BUNKERING_PORT: "Enroute Bunkering Port",
+  AT_BUNKERING_PORT: "At Bunkering Port",
+  ENROUTE_DISCHARGE_PORT: "Enroute Discharge Port",
+  AT_DISCHARGE_PORT: "At Discharge Port",
+  REDELIVERED: "Re-delivered",
+};
+
+// Task time buckets (Development Scope 5.6) with the colour codes of the feature list
+export const BUCKETS = [
+  { key: "OVERDUE", label: "Overdue", color: "#b42318", bg: "#fee4e2" },
+  { key: "TODAY", label: "Due today", color: "#b54708", bg: "#fef0c7" },
+  { key: "NEXT_7", label: "Next 7 days", color: "#067647", bg: "#dcfae6" },
+  { key: "LATER", label: "Later", color: "#067647", bg: "#ecfdf3" },
+  { key: "AWAITING_DATE", label: "Awaiting date", color: "#475467", bg: "#ffffff", border: "#98a2b3" },
+  { key: "CLOSED", label: "Done / N/A", color: "#667085", bg: "#f2f4f7" },
+];
+export const BUCKET_BY_KEY = Object.fromEntries(BUCKETS.map((b) => [b.key, b]));
+
 // "Arrival − 5 days", "On Delivery", "Cargo Fixed + 1 day", "Delivery + 15 days, then every 15 days until Re-delivery"
 export function ruleText(anchorEvent, offsetDays, recurrence) {
   const name = ANCHOR_SHORT[anchorEvent] || anchorEvent || "?";

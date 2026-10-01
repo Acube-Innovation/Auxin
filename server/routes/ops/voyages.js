@@ -1,4 +1,4 @@
-// Voyages (features B1–B10). Port calls: routes/ops/portCalls.js
+// Voyages (features B1–B10, C3, C6, D3–D5). Port calls: routes/ops/portCalls.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -7,16 +7,23 @@ const Voyage = require('../../models/ops/Voyage');
 const PortCall = require('../../models/ops/PortCall');
 const Vessel = require('../../models/ops/Vessel');
 const Counter = require('../../models/ops/Counter');
+const VoyageTask = require('../../models/ops/VoyageTask');
+const DateRevision = require('../../models/ops/DateRevision');
 const access = require('../../services/ops/accessScope');
-const { normaliseVoyage, normalisePortCall, badRequest } = require('../../services/ops/voyageInput');
+const taskEngine = require('../../services/ops/taskEngine');
+const engine = require('../../services/ops/dueDateEngine');
+const { applySuggestions, manualFlagsFromInput } = require('../../services/ops/suggestions');
+const { effectiveVesselStatus } = require('../../services/ops/vesselStatus');
+const { normaliseVoyage, normalisePortCall, assertPortCallOrder, badRequest } = require('../../services/ops/voyageInput');
 const { OFFICE_TZ } = require('../../services/ops/config');
+const { VESSEL_STATUS_VALUES } = require('../../services/ops/constants');
 const { sendError, escapeRegex, httpError } = require('./helpers');
 const { VOYAGE_STATUSES } = Voyage;
 
 const CLIENT = 'companyName clientType email phone';
 const EMPLOYEE = 'employeeName emailId profilePhoto employeeStatus';
 
-// Status changes allowed through PUT. DRAFT → ACTIVE only through /activate (step 5).
+// Status changes allowed through PUT. DRAFT → ACTIVE only through /activate.
 const STATUS_MOVES = {
   DRAFT: ['CANCELLED'],
   ACTIVE: ['COMPLETED', 'CANCELLED'],
@@ -24,10 +31,23 @@ const STATUS_MOVES = {
   CANCELLED: ['DRAFT'],
 };
 
-// voyageFilter() returns strings (fine for find); aggregation needs real ObjectIds
-function aggregateScope(scope) {
-  if (scope._id === null) return { _id: null };
-  if (scope.operators) return { operators: new mongoose.Types.ObjectId(scope.operators) };
+// Voyage-level key dates that drive due dates; changes on an active voyage are logged (C3)
+const KEY_FIELDS = [
+  ['fixture', 'cargoFixedAt'], ['fixture', 'vesselFixedAt'],
+  ['delivery', 'estimated'], ['delivery', 'actual'],
+  ['redelivery', 'estimated'], ['redelivery', 'actual'],
+  ['bunker', 'bookedOn'], ['bunker', 'bunkeringDate'],
+];
+const timeOf = (d) => (d ? new Date(d).getTime() : null);
+
+// Mongo filters are fine with id strings; aggregation needs real ObjectIds
+function toObjectIds(filter) {
+  const conv = (v) => (typeof v === 'string' && mongoose.isValidObjectId(v) ? new mongoose.Types.ObjectId(v) : v);
+  if (filter._id === null) return { _id: null };
+  if (filter.$or) {
+    return { $or: filter.$or.map((c) => (c.operators ? { operators: conv(c.operators) } : { _id: { $in: c._id.$in.map(conv) } })) };
+  }
+  if (filter.operators) return { operators: conv(filter.operators) };
   return {};
 }
 
@@ -39,9 +59,29 @@ async function nextVoyageNo() {
 
 // Load a voyage the user may see (404 otherwise, so ids of hidden voyages are not revealed)
 async function loadVisible(req, id) {
+  if (!mongoose.isValidObjectId(id)) throw httpError(404, 'Voyage not found');
   const voyage = await Voyage.findById(id);
-  if (!voyage || !access.canView(req.user, voyage)) throw httpError(404, 'Voyage not found');
+  if (!voyage || !(await access.canView(req.user, voyage))) throw httpError(404, 'Voyage not found');
   return voyage;
+}
+
+async function loadEditable(req, id) {
+  const voyage = await loadVisible(req, id);
+  if (!(await access.canEdit(req.user, voyage))) throw httpError(403, 'You cannot edit this voyage');
+  return voyage;
+}
+
+// Counts of the voyage's tasks by bucket and status (for the details view and the report)
+async function taskSummary(voyageId) {
+  const tasks = await VoyageTask.find({ voyage: voyageId }).select('status dueDate startDate completedDate').lean();
+  const today = engine.todayIn();
+  const summary = { total: tasks.length, byStatus: {}, byBucket: {} };
+  for (const t of tasks) {
+    const d = engine.derive(t, today);
+    summary.byStatus[t.status] = (summary.byStatus[t.status] || 0) + 1;
+    summary.byBucket[d.bucket] = (summary.byBucket[d.bucket] || 0) + 1;
+  }
+  return summary;
 }
 
 async function populatedVoyage(id, user) {
@@ -62,10 +102,16 @@ async function populatedVoyage(id, user) {
     .populate('agent', CLIENT)
     .sort({ seq: 1 })
     .lean();
-  return { ...voyage, portCalls, permissions: access.permissionsFor(user, voyage) };
+  return {
+    ...voyage,
+    portCalls,
+    vesselStatusShown: effectiveVesselStatus(voyage, portCalls),
+    tasks: voyage.status === 'DRAFT' ? null : await taskSummary(id),
+    permissions: await access.permissionsFor(user, voyage),
+  };
 }
 
-// Who is creating: operators are always added to the operators list
+// Operators are always added to the operators of a voyage they create
 function withCreatorAsOperator(user, operators) {
   const emp = access.employeeIdOf(user);
   if (user.role === 'operations_executive' || user.role === 'executive_post_fixture') {
@@ -75,30 +121,38 @@ function withCreatorAsOperator(user, operators) {
   return operators || [];
 }
 
+// Tell open voyage workspaces that dates moved (step 6 listens for it)
+function emitDatesChanged(req, voyageId, result) {
+  const io = req.app.get('io');
+  if (io && result && result.movedTasks && result.movedTasks.length) {
+    io.to(`voyage-${voyageId}`).emit('ops-dates-changed', { voyageId: String(voyageId), moved: result.movedTasks.length, dueSoon: result.dueSoon.length });
+  }
+}
+
 // ------------------------------------------------------------------ list
 router.get('/', async (req, res) => {
   try {
-    const scope = access.voyageFilter(req.user);
-    const filter = { ...scope };
+    const scope = await access.voyageFilter(req.user);
+    const filter = { $and: [scope] };
     const { status, vesselStatus, vessel, operator, search } = req.query;
     if (status && status !== 'ALL') {
       if (!VOYAGE_STATUSES.includes(status)) throw badRequest(`status must be one of ${VOYAGE_STATUSES.join(', ')} or ALL`);
-      filter.status = status;
+      filter.$and.push({ status });
     }
-    if (vesselStatus) filter.vesselStatus = vesselStatus;
-    if (vessel) filter.vessel = vessel;
-    if (operator) filter.operators = scope.operators ? { $all: [scope.operators, operator] } : operator;
+    if (vesselStatus) filter.$and.push({ vesselStatus });
+    if (vessel) filter.$and.push({ vessel });
+    if (operator) filter.$and.push({ operators: operator });
     if (search) {
       const rx = { $regex: escapeRegex(search.trim()), $options: 'i' };
       const vesselIds = await Vessel.find({ name: rx }).distinct('_id');
-      filter.$or = [{ voyageNo: rx }, { vessel: { $in: vesselIds } }];
+      filter.$and.push({ $or: [{ voyageNo: rx }, { vessel: { $in: vesselIds } }] });
     }
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
 
     const [items, total, byStatus] = await Promise.all([
       Voyage.find(filter)
-        .select('voyageNo status voyageType vesselStatus vessel charterers operators delivery redelivery cargo updatedAt createdAt')
+        .select('voyageNo status voyageType vesselStatus vesselStatusOverride vessel charterers operators delivery redelivery updatedAt createdAt')
         .populate('vessel', 'name')
         .populate('charterers', 'companyName')
         .populate('operators', 'employeeName')
@@ -107,10 +161,11 @@ router.get('/', async (req, res) => {
         .limit(limit)
         .lean(),
       Voyage.countDocuments(filter),
-      Voyage.aggregate([{ $match: aggregateScope(scope) }, { $group: { _id: '$status', n: { $sum: 1 } } }]),
+      Voyage.aggregate([{ $match: toObjectIds(scope) }, { $group: { _id: '$status', n: { $sum: 1 } } }]),
     ]);
 
-    const calls = await PortCall.find({ voyage: { $in: items.map((v) => v._id) } })
+    const ids = items.map((v) => v._id);
+    const calls = await PortCall.find({ voyage: { $in: ids } })
       .select('voyage seq type status planned.eta actual.ata actual.atd timeZone port')
       .populate('port', 'name')
       .sort({ seq: 1 })
@@ -122,18 +177,29 @@ router.get('/', async (req, res) => {
       rotation.get(key).push({ _id: c._id, seq: c.seq, type: c.type, status: c.status, port: c.port?.name, eta: c.planned?.eta, ata: c.actual?.ata, atd: c.actual?.atd, timeZone: c.timeZone });
     }
 
+    // Open-task counts per voyage (overdue / due today) for active voyages
+    const today = engine.todayIn();
+    const taskCounts = await VoyageTask.aggregate([
+      { $match: { voyage: { $in: ids }, status: { $in: taskEngine.OPEN }, dueDate: { $ne: null, $lte: today } } },
+      { $group: { _id: '$voyage', overdue: { $sum: { $cond: [{ $lt: ['$dueDate', today] }, 1, 0] } }, today: { $sum: { $cond: [{ $eq: ['$dueDate', today] }, 1, 0] } } } },
+    ]);
+    const countsById = new Map(taskCounts.map((c) => [String(c._id), { overdue: c.overdue, today: c.today }]));
+
     const counts = Object.fromEntries(VOYAGE_STATUSES.map((s) => [s, 0]));
     byStatus.forEach((r) => { counts[r._id] = r.n; });
     counts.ALL = Object.values(counts).reduce((a, b) => a + b, 0);
 
-    res.json({
-      items: items.map((v) => ({ ...v, rotation: rotation.get(String(v._id)) || [], permissions: access.permissionsFor(req.user, v) })),
-      total,
-      page,
-      limit,
-      counts,
-      canCreate: access.canCreate(req.user),
-    });
+    const out = [];
+    for (const v of items) {
+      out.push({
+        ...v,
+        vesselStatusShown: v.vesselStatusOverride?.value || v.vesselStatus,
+        rotation: rotation.get(String(v._id)) || [],
+        taskCounts: countsById.get(String(v._id)) || { overdue: 0, today: 0 },
+        permissions: await access.permissionsFor(req.user, v),
+      });
+    }
+    res.json({ items: out, total, page, limit, counts, canCreate: access.canCreate(req.user) });
   } catch (err) { sendError(res, err, 'Error fetching voyages'); }
 });
 
@@ -148,7 +214,13 @@ router.post('/', async (req, res) => {
 
     const portInputs = Array.isArray(req.body.portCalls) ? req.body.portCalls : [];
     const portCalls = [];
-    for (const [i, pc] of portInputs.entries()) portCalls.push(await normalisePortCall(pc, null, i));
+    for (const [i, input] of portInputs.entries()) {
+      const pc = await normalisePortCall(input, null, i);
+      pc.manual = manualFlagsFromInput(input, null);
+      applySuggestions(pc);
+      assertPortCallOrder(pc, `Port call ${i + 1}`);
+      portCalls.push(pc);
+    }
 
     const bunkerIndex = req.body.bunker && Number.isInteger(req.body.bunker.portCallIndex) ? req.body.bunker.portCallIndex : null;
     if (bunkerIndex !== null && (!portCalls[bunkerIndex] || portCalls[bunkerIndex].type !== 'BUNKERING')) {
@@ -164,7 +236,6 @@ router.post('/', async (req, res) => {
     }
     res.status(201).json(await populatedVoyage(voyage._id, req.user));
   } catch (err) {
-    // No transactions on a standalone MongoDB: undo a half-created voyage by hand
     if (voyage) {
       await PortCall.deleteMany({ voyage: voyage._id }).catch(() => {});
       await Voyage.deleteOne({ _id: voyage._id }).catch(() => {});
@@ -181,34 +252,49 @@ router.get('/:id', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error fetching voyage'); }
 });
 
-// ------------------------------------------------------------------ update
+// ------------------------------------------------------------------ update (recalculates due dates on an active voyage)
 router.put('/:id', async (req, res) => {
   try {
-    const voyage = await loadVisible(req, req.params.id);
-    if (!access.canEdit(req.user, voyage)) throw httpError(403, 'You cannot edit this voyage');
-
-    const wantsStatus = req.body.status && req.body.status !== voyage.status;
+    const current = await loadEditable(req, req.params.id);
+    const wantsStatus = req.body.status && req.body.status !== current.status;
     if (wantsStatus) {
       const to = req.body.status;
-      if (to === 'ACTIVE' && voyage.status === 'DRAFT') throw badRequest('A draft becomes Active through “Activate” (task generation), not by editing its status');
-      if (!(STATUS_MOVES[voyage.status] || []).includes(to)) throw badRequest(`A ${voyage.status.toLowerCase()} voyage cannot be changed to ${String(to).toLowerCase()}`);
+      if (to === 'ACTIVE' && current.status === 'DRAFT') throw badRequest('A draft becomes Active through “Activate” (task generation), not by editing its status');
+      if (!(STATUS_MOVES[current.status] || []).includes(to)) throw badRequest(`A ${current.status.toLowerCase()} voyage cannot be changed to ${String(to).toLowerCase()}`);
     }
-    const editableFields = Object.keys(req.body).filter((k) => k !== 'status');
-    if (editableFields.length && !['DRAFT', 'ACTIVE'].includes(voyage.status)) {
-      throw badRequest(`A ${voyage.status.toLowerCase()} voyage cannot be edited. Re-open it first.`);
+    const editable = Object.keys(req.body).filter((k) => !['status', 'reason'].includes(k));
+    if (editable.length && !['DRAFT', 'ACTIVE'].includes(current.status)) {
+      throw badRequest(`A ${current.status.toLowerCase()} voyage cannot be edited. Re-open it first.`);
     }
-
-    const data = await normaliseVoyage(req.body, voyage.toObject());
+    const data = await normaliseVoyage(req.body, current.toObject());
     if (data.operators && !data.operators.length) throw badRequest('A voyage needs at least one operator');
     if (data.bunker && data.bunker.portCall) {
-      const pc = await PortCall.findOne({ _id: data.bunker.portCall, voyage: voyage._id });
+      const pc = await PortCall.findOne({ _id: data.bunker.portCall, voyage: current._id });
       if (!pc || pc.type !== 'BUNKERING') throw badRequest('The bunkering port call must be a BUNKERING call of this voyage');
     }
-    Object.assign(voyage, data, { updatedBy: req.user._id });
-    if (wantsStatus) voyage.status = req.body.status;
-    await voyage.save();
-    // Due-date recalculation is triggered here from step 4
-    res.json(await populatedVoyage(voyage._id, req.user));
+
+    const result = await taskEngine.withTransaction(async (session) => {
+      const voyage = await Voyage.findById(current._id).session(session);
+      const before = voyage.toObject();
+      Object.assign(voyage, data, { updatedBy: req.user._id });
+      if (wantsStatus) voyage.status = req.body.status;
+      const changed = KEY_FIELDS.filter(([g, k]) => timeOf(before[g] && before[g][k]) !== timeOf(voyage[g] && voyage[g][k]));
+      if (changed.some(([g, k]) => k === 'actual')) voyage.vesselStatusOverride = { value: null, setBy: null, setAt: null };
+      await voyage.save({ session });
+      if (voyage.status !== 'ACTIVE') return { movedTasks: [], dueSoon: [] };
+
+      const recalc = await taskEngine.recalculate(voyage._id, { session, user: req.user, reason: req.body.reason });
+      await taskEngine.refreshVesselStatus(voyage._id, { session });
+      if (changed.length) {
+        await DateRevision.insertMany(changed.map(([g, k]) => ({
+          voyage: voyage._id, field: `${g}.${k}`, from: before[g] && before[g][k], to: voyage[g][k],
+          by: req.user._id, reason: req.body.reason || '', tasksMoved: recalc.movedTasks.length,
+        })), { session });
+      }
+      return recalc;
+    });
+    emitDatesChanged(req, current._id, result);
+    res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon });
   } catch (err) { sendError(res, err, 'Error updating voyage'); }
 });
 
@@ -222,6 +308,7 @@ router.delete('/:id', async (req, res) => {
         : 'Only an admin or manager can delete a draft voyage');
     }
     await PortCall.deleteMany({ voyage: voyage._id });
+    await VoyageTask.deleteMany({ voyage: voyage._id });
     await voyage.deleteOne();
     res.json({ message: `Voyage ${voyage.voyageNo} deleted` });
   } catch (err) { sendError(res, err, 'Error deleting voyage'); }
@@ -280,8 +367,89 @@ router.post('/:id/clone', async (req, res) => {
   }
 });
 
+// ------------------------------------------------------------------ task generation (B9)
+router.post('/:id/generate-preview', async (req, res) => {
+  try {
+    const voyage = await loadEditable(req, req.params.id);
+    if (voyage.status !== 'DRAFT') throw badRequest('Tasks are previewed before a draft is activated');
+    const tasks = await taskEngine.preview(voyage._id);
+    res.json({
+      tasks,
+      totals: {
+        total: tasks.length,
+        included: tasks.filter((t) => t.included).length,
+        optional: tasks.filter((t) => t.isOptional).length,
+        awaitingDate: tasks.filter((t) => !t.dueDate).length,
+      },
+    });
+  } catch (err) { sendError(res, err, 'Error previewing tasks'); }
+});
+
+// { excluded: [{ code, portCall, reason }], adhocTasks: [{ name, dueDate | anchor+offsetDays, priority, stage, portCall }] }
+router.post('/:id/activate', async (req, res) => {
+  try {
+    const voyage = await loadEditable(req, req.params.id);
+    const result = await taskEngine.activate(voyage._id, {
+      excluded: Array.isArray(req.body.excluded) ? req.body.excluded : [],
+      adhocTasks: Array.isArray(req.body.adhocTasks) ? req.body.adhocTasks : [],
+    }, req.user);
+    res.json({ ...(await populatedVoyage(voyage._id, req.user)), activation: result });
+  } catch (err) { sendError(res, err, 'Error activating voyage'); }
+});
+
+// ------------------------------------------------------------------ vessel status override (C6)
+// { value: 'WAITING_FOR_BERTH' | ... } or { value: null } to go back to the status derived from actuals
+router.put('/:id/vessel-status', async (req, res) => {
+  try {
+    const voyage = await loadEditable(req, req.params.id);
+    const value = req.body.value || null;
+    if (value && !VESSEL_STATUS_VALUES.includes(value)) throw badRequest(`Unknown vessel status ${value}`);
+    voyage.vesselStatusOverride = value ? { value, setBy: req.user._id, setAt: new Date() } : { value: null, setBy: null, setAt: null };
+    voyage.updatedBy = req.user._id;
+    await voyage.save();
+    res.json(await populatedVoyage(voyage._id, req.user));
+  } catch (err) { sendError(res, err, 'Error setting vessel status'); }
+});
+
+// ------------------------------------------------------------------ tasks (read; editing arrives in step 7)
+router.get('/:id/tasks', async (req, res) => {
+  try {
+    const voyage = await loadVisible(req, req.params.id);
+    const filter = { voyage: voyage._id };
+    for (const k of ['stage', 'portCall', 'status', 'priority']) if (req.query[k]) filter[k] = req.query[k];
+    if (req.query.assignee) filter.assignedTo = req.query.assignee;
+    const tasks = await VoyageTask.find(filter)
+      .select('-history -reminderSent')
+      .populate('stage', 'name code order scope')
+      .populate({ path: 'portCall', select: 'seq type port timeZone status', populate: { path: 'port', select: 'name' } })
+      .populate('assignedTo', 'employeeName')
+      .sort({ sortKey: 1 })
+      .lean();
+    const today = engine.todayIn();
+    let out = tasks.map((t) => ({ ...t, ...engine.derive(t, today) }));
+    if (req.query.bucket) out = out.filter((t) => t.bucket === req.query.bucket);
+    const byBucket = {};
+    for (const t of out) byBucket[t.bucket] = (byBucket[t.bucket] || 0) + 1;
+    res.json({ today, total: out.length, byBucket, tasks: out });
+  } catch (err) { sendError(res, err, 'Error fetching tasks'); }
+});
+
+router.get('/:id/revisions', async (req, res) => {
+  try {
+    const voyage = await loadVisible(req, req.params.id);
+    const revisions = await DateRevision.find({ voyage: voyage._id })
+      .populate('by', 'username')
+      .populate({ path: 'portCall', select: 'seq type port timeZone', populate: { path: 'port', select: 'name' } })
+      .sort({ at: -1 })
+      .lean();
+    res.json(revisions);
+  } catch (err) { sendError(res, err, 'Error fetching date revisions'); }
+});
+
 router.use('/:id/port-calls', require('./portCalls'));
 
 module.exports = router;
 module.exports.loadVisible = loadVisible;
+module.exports.loadEditable = loadEditable;
 module.exports.populatedVoyage = populatedVoyage;
+module.exports.emitDatesChanged = emitDatesChanged;

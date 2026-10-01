@@ -195,11 +195,14 @@ async function normalisePortCall(input, current = null, index = null) {
     }
     out.actual = Object.fromEntries(['ata', 'norTendered', 'pob', 'atb', 'commenced', 'completed', 'atd'].map((k) => [k, actual[k] || null]));
   }
-  if (has(p, 'manual')) {
-    const m = p.manual || {};
-    out.manual = { etb: Boolean(m.etb), etc: Boolean(m.etc), ets: Boolean(m.ets) };
-  }
 
+  return out;
+}
+
+// Date order inside one port call. Run after suggestions have filled ETB / ETC / ETS.
+function assertPortCallOrder(pc, label = 'Port call') {
+  const planned = pc.planned || {};
+  const actual = pc.actual || {};
   assertOrder([
     [`${label} ETA`, planned.eta, `${label} ETB`, planned.etb],
     [`${label} ETB`, planned.etb, `${label} ETC`, planned.etc],
@@ -210,7 +213,6 @@ async function normalisePortCall(input, current = null, index = null) {
     [`${label} operations completed`, actual.completed, `${label} ATD`, actual.atd],
     [`${label} ATA`, actual.ata, `${label} ATD`, actual.atd],
   ]);
-  return out;
 }
 
-module.exports = { normaliseVoyage, normalisePortCall, badRequest, refId };
+module.exports = { normaliseVoyage, normalisePortCall, assertPortCallOrder, badRequest, refId };

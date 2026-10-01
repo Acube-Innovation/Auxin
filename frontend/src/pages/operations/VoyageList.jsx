@@ -6,7 +6,7 @@ import OpsVoyageService from "../../services/OpsVoyageService";
 import OpsMasterService from "../../services/OpsMasterService";
 import EmployeeService from "../../services/EmployeeService";
 import { useToast } from "../../context/ToastContext";
-import { formatInstantDate } from "../../utils/opsFormat";
+import { formatInstantDate, VESSEL_STATUS_LABEL } from "../../utils/opsFormat";
 import styles from "./masters/Masters.module.css";
 
 const TABS = [
@@ -141,7 +141,20 @@ function VoyageList() {
                       {formatInstantDate(v.delivery?.estimated, v.delivery?.timeZone) || "—"} → {formatInstantDate(v.redelivery?.estimated, v.redelivery?.timeZone) || "—"}
                     </td>
                     <td>{(v.operators || []).map((o) => o.employeeName).join(", ")}</td>
-                    <td><span className={`${styles.chip} ${STATUS_CLASS[v.status]}`}>{v.status[0] + v.status.slice(1).toLowerCase()}</span></td>
+                    <td>
+                      <span className={`${styles.chip} ${STATUS_CLASS[v.status]}`}>{v.status[0] + v.status.slice(1).toLowerCase()}</span>
+                      {v.status === "ACTIVE" && (
+                        <>
+                          <div className={styles.note} style={{ whiteSpace: "nowrap" }}>{VESSEL_STATUS_LABEL[v.vesselStatusShown]}</div>
+                          {(v.taskCounts?.overdue > 0 || v.taskCounts?.today > 0) && (
+                            <div style={{ whiteSpace: "nowrap", marginTop: 2 }}>
+                              {v.taskCounts.overdue > 0 && <span className={`${styles.chip} ${styles.chipHigh}`}>{v.taskCounts.overdue} overdue</span>}{" "}
+                              {v.taskCounts.today > 0 && <span className={`${styles.chip} ${styles.chipMedium}`}>{v.taskCounts.today} today</span>}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
                       <button className={styles.btnLink} onClick={() => setViewId(v._id)}>View</button>
@@ -166,7 +179,7 @@ function VoyageList() {
         </div>
       </div>
 
-      <VoyageSummaryModal voyageId={viewId} officeTz={officeTz} onClose={() => setViewId(null)} />
+      <VoyageSummaryModal voyageId={viewId} officeTz={officeTz} onClose={() => setViewId(null)} onChanged={load} />
       <DeleteModal
         isOpen={Boolean(toDelete)}
         onClose={() => setToDelete(null)}
