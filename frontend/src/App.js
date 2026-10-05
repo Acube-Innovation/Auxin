@@ -27,6 +27,7 @@ import VoyageWorkspace from "./pages/operations/workspace/VoyageWorkspace";
 import MyTasks from "./pages/operations/MyTasks";
 import OpsDashboard from "./pages/operations/OpsDashboard";
 import OpsReports from "./pages/operations/OpsReports";
+import OpsSettings from "./pages/operations/OpsSettings";
 import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "./config/opsRoles";
 
 
@@ -94,6 +95,7 @@ function App() {
           <Route path="/operations/reports" element={<ProtectedRoute roles={ALL_OPS_ROLES}><OpsReports /></ProtectedRoute>} />
           <Route path="/operations/masters" element={<Navigate to="/operations/masters/vessels" replace />} />
           <Route path="/operations/masters/:master" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsMasters /></ProtectedRoute>} />
+          <Route path="/operations/settings" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsSettings /></ProtectedRoute>} />
 
           <Route path="/venkat" element={<ProtectedRoute><Venkat /></ProtectedRoute>} />
           <Route path="/example" element={<Example />} />
