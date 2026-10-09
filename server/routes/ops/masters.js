@@ -215,7 +215,7 @@ router.delete('/stages/:id', adminOnly, async (req, res) => {
 
 // ---------------------------------------------------------------- task templates (A4)
 const TEMPLATE_FIELDS = [
-  'name', 'instructions', 'stage', 'anchor', 'offsetDays', 'recurrence', 'defaultPriority', 'reminderProfile',
+  'name', 'instructions', 'stage', 'anchor', 'offsetDays', 'recurrence', 'plannedHours', 'defaultPriority', 'reminderProfile',
   'defaultRole', 'isOptional', 'linkedField', 'autoCompleteOnField', 'voyageTypes', 'sortOrder', 'isActive',
 ];
 
@@ -224,6 +224,11 @@ function normaliseTemplate(data) {
   if (data.linkedField === '') data.linkedField = null;
   if (data.defaultRole === '') data.defaultRole = null;
   if (data.offsetDays !== undefined) data.offsetDays = Number(data.offsetDays);
+  if (data.plannedHours === '') data.plannedHours = null;
+  if (data.plannedHours != null) {
+    data.plannedHours = Number(data.plannedHours);
+    if (!(Number.isFinite(data.plannedHours) && data.plannedHours >= 0)) throw httpError(400, 'Planned hours must be a number of 0 or more');
+  }
   return data;
 }
 

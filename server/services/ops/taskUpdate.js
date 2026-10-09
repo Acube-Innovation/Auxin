@@ -9,6 +9,7 @@ const { assertPortCallOrder } = require('./voyageInput');
 const { parseInstant } = require('./time');
 const { OFFICE_TZ } = require('./config');
 const { TASK_STATUSES } = require('../../models/ops/VoyageTask');
+const { stopOnClose } = require('./taskTimer');
 
 const OPEN = ['NOT_STARTED', 'INITIATED', 'AWAITING'];
 const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -20,7 +21,7 @@ function badRequest(message) {
 }
 
 // Apply a patch to a task document (not saved). Returns the list of changes for the history.
-// patch: { status, naReason, startDate, completedDate, dueDate, unlockDueDate, priority, assignedTo, remarks }
+// patch: { status, naReason, startDate, completedDate, dueDate, unlockDueDate, priority, assignedTo, remarks, plannedHours }
 async function applyTaskPatch(task, patch, { session } = {}) {
   const changes = [];
   const set = (field, value) => {
@@ -40,6 +41,11 @@ async function applyTaskPatch(task, patch, { session } = {}) {
     set('priority', patch.priority);
   }
   if (patch.remarks !== undefined) set('remarks', String(patch.remarks || ''));
+  if (patch.plannedHours !== undefined) {
+    const h = patch.plannedHours === null || patch.plannedHours === '' ? null : Number(patch.plannedHours);
+    if (h !== null && !(Number.isFinite(h) && h >= 0)) throw badRequest('Planned hours must be a number of 0 or more');
+    set('plannedHours', h);
+  }
   if (patch.assignedTo !== undefined) {
     if (!Array.isArray(patch.assignedTo)) throw badRequest('assignedTo must be a list');
     const ids = [...new Set(patch.assignedTo.map(String))];
@@ -89,6 +95,10 @@ async function applyTaskPatch(task, patch, { session } = {}) {
       if (['INITIATED', 'AWAITING'].includes(to) && !task.startDate) set('startDate', today);
     }
     set('status', to);
+    if (to === 'DONE' || to === 'NA') {
+      const stopped = stopOnClose(task);
+      if (stopped) changes.push(stopped);
+    }
   } else if (patch.completedDate !== undefined && task.status === 'DONE') {
     if (!isDate(patch.completedDate)) throw badRequest('completedDate must be YYYY-MM-DD');
     if (patch.completedDate > today) throw badRequest('The completion date cannot be in the future');

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import OpsModal from "../../../components/operations/OpsModal";
 import OpsMasterService from "../../../services/OpsMasterService";
 import { useToast } from "../../../context/ToastContext";
-import { addDays, formatLocalDate, ruleText, ANCHOR_SHORT, PORT_TYPE_LABEL } from "../../../utils/opsFormat";
+import { addDays, formatLocalDate, plannedText, ruleText, ANCHOR_SHORT, PORT_TYPE_LABEL } from "../../../utils/opsFormat";
 import styles from "./Masters.module.css";
 
 const PRIORITY_CLASS = { HIGH: styles.chipHigh, MEDIUM: styles.chipMedium, LOW: styles.chipLow, NONE: styles.chipNone };
@@ -19,7 +19,7 @@ const SAMPLE_DATE = "2026-07-05";
 
 const emptyForm = (stageId) => ({
   name: "", instructions: "", stage: stageId || "", event: "", direction: "after", days: 1, basis: "BEST",
-  recurring: false, everyDays: 15, until: "", defaultPriority: "MEDIUM", reminderProfile: "MEDIUM", defaultRole: "",
+  recurring: false, everyDays: 15, until: "", plannedHours: "", defaultPriority: "MEDIUM", reminderProfile: "MEDIUM", defaultRole: "",
   isOptional: false, linkedField: "", autoCompleteOnField: false, voyageTypes: [], isActive: true,
 });
 
@@ -29,7 +29,7 @@ function toForm(t) {
     name: t.name, instructions: t.instructions || "", stage: t.stage?._id || t.stage, event: t.anchor?.event || "",
     direction: off === 0 ? "on" : off < 0 ? "before" : "after", days: Math.abs(off), basis: t.anchor?.basis || "BEST",
     recurring: Boolean(t.recurrence?.everyDays), everyDays: t.recurrence?.everyDays || 15, until: t.recurrence?.until || "",
-    defaultPriority: t.defaultPriority, reminderProfile: t.reminderProfile, defaultRole: t.defaultRole || "",
+    plannedHours: t.plannedHours ?? "", defaultPriority: t.defaultPriority, reminderProfile: t.reminderProfile, defaultRole: t.defaultRole || "",
     isOptional: t.isOptional, linkedField: t.linkedField || "", autoCompleteOnField: t.autoCompleteOnField,
     voyageTypes: t.voyageTypes || [], isActive: t.isActive,
   };
@@ -149,6 +149,7 @@ function TaskTemplatesMaster({ canEdit, meta }) {
     if (!form.event) return setFormError("Choose the key date the due date is calculated from");
     if (form.direction !== "on" && !(parseInt(form.days, 10) > 0)) return setFormError("Enter the number of days (1 or more), or choose “on the day”");
     if (form.recurring && !(parseInt(form.everyDays, 10) > 0)) return setFormError("Enter how often the task repeats");
+    if (form.plannedHours !== "" && !(Number(form.plannedHours) >= 0)) return setFormError("Planned hours must be a number of 0 or more");
     setSaving(true);
     setFormError("");
     const payload = {
@@ -158,6 +159,7 @@ function TaskTemplatesMaster({ canEdit, meta }) {
       anchor: { event: form.event, basis: form.basis },
       offsetDays: offsetOf(form),
       recurrence: form.recurring ? { everyDays: parseInt(form.everyDays, 10), until: form.until || null } : { everyDays: null, until: null },
+      plannedHours: form.plannedHours === "" ? null : Number(form.plannedHours),
       defaultPriority: form.defaultPriority,
       reminderProfile: form.reminderProfile,
       defaultRole: form.defaultRole || null,
@@ -254,16 +256,16 @@ function TaskTemplatesMaster({ canEdit, meta }) {
           <thead>
             <tr>
               {canDrag && <th style={{ width: 24 }} />}
-              <th>Code</th><th>Task</th><th>Due date rule</th><th>Priority</th><th>Options</th><th>Source</th><th>Status</th>
+              <th>Code</th><th>Task</th><th>Due date rule</th><th>Planned hours</th><th>Priority</th><th>Options</th><th>Source</th><th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={8} className={styles.empty}>Loading…</td></tr>}
-            {!loading && filtered.length === 0 && <tr><td colSpan={8} className={styles.empty}>No task templates match these filters</td></tr>}
+            {loading && <tr><td colSpan={9} className={styles.empty}>Loading…</td></tr>}
+            {!loading && filtered.length === 0 && <tr><td colSpan={9} className={styles.empty}>No task templates match these filters</td></tr>}
             {grouped.map((g) => (
               <React.Fragment key={g.stage._id}>
                 <tr className={styles.groupRow}>
-                  <td colSpan={canDrag ? 8 : 7}>
+                  <td colSpan={canDrag ? 9 : 8}>
                     {g.stage.order}. {g.stage.name}
                     <span className={styles.subtle} style={{ fontWeight: 400, marginLeft: 8 }}>
                       {g.stage.scope === "PORT_CALL" ? `repeats for every ${PORT_TYPE_LABEL[g.stage.portType]?.toLowerCase()} call` : "once per voyage"} · {g.items.length} task{g.items.length === 1 ? "" : "s"}
@@ -291,6 +293,7 @@ function TaskTemplatesMaster({ canEdit, meta }) {
                       {ruleText(t.anchor?.event, t.offsetDays, t.recurrence)}
                       {t.anchor?.basis && t.anchor.basis !== "BEST" && <div className={styles.note}>{t.anchor.basis === "ACTUAL" ? "actual date only" : "estimate only"}</div>}
                     </td>
+                    <td style={{ whiteSpace: "nowrap" }} className={t.plannedHours == null ? styles.subtle : ""}>{plannedText(t.plannedHours)}</td>
                     <td>
                       <span className={`${styles.chip} ${PRIORITY_CLASS[t.defaultPriority]}`}>{t.defaultPriority}</span>
                       {t.priorityDefaulted && <span className={styles.defaulted} title="The sheet gave no priority; Medium is the default until the client confirms">default</span>}
@@ -344,6 +347,11 @@ function TaskTemplatesMaster({ canEdit, meta }) {
             </select>
           </div>
 
+          <div className={`${styles.field} ${styles.full}`}>
+            <label>Planned hours</label>
+            <input className={styles.input} style={{ maxWidth: 160 }} type="number" min="0" step="0.25" value={form.plannedHours} onChange={set("plannedHours")} placeholder="e.g. 2" aria-label="Planned hours" />
+            <div className={styles.hint}>Expected working time. Shown next to the actual hours in the Operations View</div>
+          </div>
           <div className={`${styles.field} ${styles.full}`}>
             <label>Due date rule<span className={styles.req}>*</span></label>
             <div className={styles.ruleRow}>

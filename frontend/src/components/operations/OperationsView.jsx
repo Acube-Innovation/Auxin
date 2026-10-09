@@ -3,6 +3,7 @@ import OpsModal from "./OpsModal";
 import TaskDrawer from "./TaskDrawer";
 import AdhocTaskDialog from "./AdhocTaskDialog";
 import useTaskActions from "./useTaskActions";
+import { TaskHours, TimerButtons, useNow } from "./TaskTimer";
 import OpsVoyageService from "../../services/OpsVoyageService";
 import OpsTaskService, { TASK_STATUS_LABEL, TASK_STATUSES } from "../../services/OpsTaskService";
 import OpsMasterService from "../../services/OpsMasterService";
@@ -71,6 +72,8 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
       && (!q || `${t.code || ""} ${t.name}`.toLowerCase().includes(q)));
   }, [data, filters]);
   const rows = useMemo(() => filtered.filter((t) => !bucket || t.bucket === bucket), [filtered, bucket]);
+  const anyRunning = useMemo(() => Boolean(data && data.tasks.some((t) => t.timer?.state === "RUNNING")), [data]);
+  const now = useNow(anyRunning);
   const counts = useMemo(() => {
     const c = {};
     for (const t of filtered) c[t.bucket] = (c[t.bucket] || 0) + 1;
@@ -105,7 +108,7 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
 
   const setF = (k) => (e) => setFilters({ ...filters, [k]: e.target.value });
   const calls = (voyage.portCalls || []).filter((p) => p.status !== "CANCELLED");
-  const cols = editable ? 9 : 7;
+  const cols = editable ? 10 : 8;
   let lastGroup = null;
 
   return (
@@ -173,7 +176,7 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
             <tr>
               {editable && <th style={{ width: 28 }}><input type="checkbox" aria-label="Select all shown" checked={allShown}
                 onChange={() => setSelected(allShown ? new Set() : new Set(rows.map((t) => t._id)))} /></th>}
-              <th className={ov.hideSm}>Code</th><th>Task</th><th>Due</th><th>Status</th><th>When</th><th className={ov.hideSm}>Priority</th><th className={ov.hideSm}>Assigned</th>
+              <th className={ov.hideSm}>Code</th><th>Task</th><th>Due</th><th>Status</th><th>When</th><th className={ov.hideSm}>Priority</th><th className={ov.hideSm}>Hours</th><th className={ov.hideSm}>Assigned</th>
               {editable && <th />}
             </tr>
           </thead>
@@ -214,8 +217,14 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
                       {t.dueInDays != null && !closed && <div className={styles.note}>due in {t.dueInDays} day(s)</div>}
                     </td>
                     <td className={ov.hideSm}><PriorityTag value={t.priority} /></td>
+                    <td className={ov.hideSm}><TaskHours task={t} now={now} /></td>
                     <td className={`${styles.subtle} ${ov.hideSm}`}>{(t.assignedTo || []).map((a) => a.employeeName).join(", ") || "—"}</td>
-                    {editable && <td>{!closed && <button className={ov.doneBtn} onClick={() => setStatus(t, "DONE")} aria-label={`Mark ${t.baseName || t.name} done`}>✓ Done</button>}</td>}
+                    {editable && <td>{!closed && (
+                      <div className={ov.actions}>
+                        <TimerButtons task={t} onChanged={() => changed(null)} />
+                        <button className={ov.doneBtn} onClick={() => setStatus(t, "DONE")} aria-label={`Mark ${t.baseName || t.name} done`}>✓ Done</button>
+                      </div>
+                    )}</td>}
                   </tr>
                 </React.Fragment>
               );
@@ -224,7 +233,7 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
         </table>
       </div>
       <div className={styles.hint} style={{ marginTop: 8 }}>
-        Click a task to see its details, files and history. {editable ? "“✓ Done” records today as the completion date; open the task to choose another date." : "Read only."}
+        Click a task to see its details, files and history. {editable ? "“▶ Start”, “❚❚ Hold” and “■ Stop” record the hours worked (time on hold is not counted); “✓ Done” stops the timer and records today as the completion date; open the task to choose another date." : "Read only."}
       </div>
 
       {openTask && <TaskDrawer taskId={openTask} employees={employees} officeTz={officeTz} onClose={() => { setOpenTask(null); if (onTaskClosed) onTaskClosed(); }} onChanged={changed} />}

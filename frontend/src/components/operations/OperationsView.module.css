@@ -73,3 +73,67 @@
 @media (max-width: 768px) {
   .hideSm { display: none; }
 }
+
+/* Working time: Start / Hold / Stop */
+.actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.timerBtns {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.timerBtn {
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  background: #fff;
+}
+
+.timerBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.timerStart { border: 1px solid #84adff; color: #1849a9; background: #eff4ff; }
+.timerHold { border: 1px solid #fdb022; color: #b54708; background: #fffaeb; }
+.timerStop { border: 1px solid #fda29b; color: #b42318; background: #fef3f2; }
+
+.hours {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  line-height: 1.45;
+}
+
+.hoursLabel {
+  display: inline-block;
+  width: 42px;
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+.held {
+  font-size: 0.72rem;
+  color: #b54708;
+}
+
+.liveDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: #12b76a;
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  50% { opacity: 0.3; }
+}

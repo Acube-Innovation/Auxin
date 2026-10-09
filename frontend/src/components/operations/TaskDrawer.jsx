@@ -2,14 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Select from "react-select";
 import OpsModal from "./OpsModal";
 import useTaskActions from "./useTaskActions";
+import { TaskHours, TimerButtons, useNow } from "./TaskTimer";
 import OpsTaskService, { TASK_STATUS_LABEL, TASK_STATUSES } from "../../services/OpsTaskService";
 import { useToast } from "../../context/ToastContext";
-import { BUCKET_BY_KEY, DATE_FIELD_LABEL, formatInstant, formatLocalDate, ruleText } from "../../utils/opsFormat";
+import { BUCKET_BY_KEY, DATE_FIELD_LABEL, TIMER_LABEL, formatInstant, formatLocalDate, ruleText, workedText } from "../../utils/opsFormat";
 import styles from "../../pages/operations/masters/Masters.module.css";
 
 const FIELD_NAME = {
   status: "Status", priority: "Priority", dueDate: "Due date", dueOverridden: "Due date lock", startDate: "Start date",
-  completedDate: "Completed on", assignedTo: "Assigned to", remarks: "Remarks", naReason: "N/A reason", attachment: "File", linkedValue: "Recorded time",
+  completedDate: "Completed on", assignedTo: "Assigned to", remarks: "Remarks", naReason: "N/A reason", attachment: "File", linkedValue: "Recorded time", timer: "Timer", plannedHours: "Planned hours",
 };
 
 function historyText(h, empName, officeTz) {
@@ -20,6 +21,8 @@ function historyText(h, empName, officeTz) {
     if (h.field === "assignedTo") return (Array.isArray(x) ? x : [x]).map(empName).join(", ") || "nobody";
     if (h.field === "dueOverridden") return x ? "set by hand" : "follows the rule";
     if (h.field === "linkedValue") return formatInstant(x, officeTz, { withUtc: false });
+    if (h.field === "timer") return TIMER_LABEL[x] || x;
+    if (h.field === "plannedHours") return `${x} h`;
     return String(x);
   };
   if (h.field === "created") return h.note || "Created";
@@ -45,7 +48,7 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
       setTask(t);
       setForm({
         priority: t.priority, startDate: t.startDate || "", dueDate: t.dueDate || "", completedDate: t.completedDate || "",
-        assignedTo: (t.assignedTo || []).map((a) => a._id), remarks: t.remarks || "",
+        assignedTo: (t.assignedTo || []).map((a) => a._id), remarks: t.remarks || "", plannedHours: t.plannedHours ?? "",
       });
       setError("");
     } catch (e) { setError(e.message); }
@@ -54,6 +57,7 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
 
   const changed = async (res) => { await load(); if (onChanged) await onChanged(res); };
   const { setStatus, dialogs } = useTaskActions(changed);
+  const now = useNow(task?.timer?.state === "RUNNING", 15000);
 
   if (!taskId) return null;
   const empOptions = employees.map((e) => ({ value: e._id, label: e.employeeName }));
@@ -68,6 +72,7 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
     if (task.status === "DONE" && form.completedDate && form.completedDate !== task.completedDate) patch.completedDate = form.completedDate;
     if (JSON.stringify(form.assignedTo) !== JSON.stringify((task.assignedTo || []).map((a) => a._id))) patch.assignedTo = form.assignedTo;
     if (form.remarks !== (task.remarks || "")) patch.remarks = form.remarks;
+    if (String(form.plannedHours) !== String(task.plannedHours ?? "")) patch.plannedHours = form.plannedHours === "" ? null : Number(form.plannedHours);
     if (!Object.keys(patch).length) { onClose(); return; }
     setSaving(true);
     try {
@@ -159,6 +164,12 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
                 <input type="date" className={styles.input} value={form.completedDate} disabled={!canEdit} aria-label="Completed on" onChange={(e) => setForm({ ...form, completedDate: e.target.value })} />
               </div>
             )}
+            <div className={styles.field}>
+              <label>Planned hours</label>
+              <input type="number" min="0" step="0.25" className={styles.input} value={form.plannedHours} disabled={!canEdit} aria-label="Planned hours"
+                onChange={(e) => setForm({ ...form, plannedHours: e.target.value })} />
+              <div className={styles.hint}>From the task template; change it for this task only</div>
+            </div>
             <div className={`${styles.field} ${styles.full}`}>
               <label>Assigned to</label>
               <Select isMulti isDisabled={!canEdit} options={empOptions} aria-label="Assigned to" classNamePrefix="assignees"
@@ -169,6 +180,27 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
               <label>Remarks</label>
               <textarea className={styles.textarea} rows={3} value={form.remarks} disabled={!canEdit} aria-label="Remarks" onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
             </div>
+          </div>
+
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Working time</div>
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <TaskHours task={task} now={now} />
+              {canEdit && <TimerButtons task={task} onChanged={() => changed(null)} />}
+              {task.timer?.state && <span className={styles.subtle}>Timer: {TIMER_LABEL[task.timer.state]}</span>}
+            </div>
+            {(task.timeLog || []).length > 0 && (
+              <div style={{ marginTop: 6, fontSize: "0.85rem" }} data-testid="time-log">
+                {task.timeLog.map((p) => (
+                  <div key={p._id} className={styles.subtle}>
+                    {formatInstant(p.start, officeTz, { withUtc: false })} → {p.end ? formatInstant(p.end, officeTz, { withUtc: false }) : "running"}
+                    {" · "}{workedText(((p.end ? new Date(p.end).getTime() : now) - new Date(p.start).getTime()) / 1000)}
+                    {p.by?.username ? ` · ${p.by.username}` : ""}
+                  </div>
+                ))}
+              </div>
+            )}
+            {canEdit && <div className={styles.hint}>Only running time counts: time between Hold and the next Start is not added. Done stops the timer.</div>}
           </div>
 
           <div>

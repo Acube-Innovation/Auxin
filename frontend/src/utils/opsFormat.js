@@ -143,3 +143,25 @@ export const DATE_FIELD_LABEL = {
   "redelivery.estimated": "Re-delivery (estimated)", "redelivery.actual": "Re-delivery (actual)",
   "bunker.bookedOn": "Bunker booked on", "bunker.bunkeringDate": "Bunkering date",
 };
+
+// ---------------------------------------------------------------- working time (Start / Hold / Stop)
+// Planned hours as entered (2, 1.5 → "2 h", "1.5 h")
+export function plannedText(hours) {
+  if (hours == null || hours === "") return "—";
+  return `${Number(hours)} h`;
+}
+
+// Worked seconds → "2h 05m"
+export function workedText(seconds) {
+  const m = Math.floor((seconds || 0) / 60);
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+}
+
+// Seconds worked on a task up to `nowMs`, counting the period running now (time on hold does not count)
+export function workedSeconds(task, nowMs = Date.now()) {
+  let s = task.workedSeconds || 0;
+  if (task.timer?.state === "RUNNING" && task.timer.runningSince) s += Math.max(0, (nowMs - new Date(task.timer.runningSince).getTime()) / 1000);
+  return s;
+}
+
+export const TIMER_LABEL = { RUNNING: "Running", HELD: "On hold", STOPPED: "Stopped" };

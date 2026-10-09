@@ -10,6 +10,7 @@ const PortCall = require('../../models/ops/PortCall');
 const Vessel = require('../../models/ops/Vessel');
 const Counter = require('../../models/ops/Counter');
 const VoyageTask = require('../../models/ops/VoyageTask');
+const timer = require('../../services/ops/taskTimer');
 const DateRevision = require('../../models/ops/DateRevision');
 const VoyageLog = require('../../models/ops/VoyageLog');
 const access = require('../../services/ops/accessScope');
@@ -459,7 +460,8 @@ router.get('/:id/tasks', async (req, res) => {
       .sort({ sortKey: 1 })
       .lean();
     const today = engine.todayIn();
-    let out = tasks.map((t) => ({ ...t, ...engine.derive(t, today) }));
+    await timer.fillPlannedHours(tasks);
+    let out = tasks.map((t) => ({ ...t, ...engine.derive(t, today), actualSeconds: timer.actualSeconds(t) }));
     if (req.query.bucket) out = out.filter((t) => t.bucket === req.query.bucket);
     const byBucket = {};
     for (const t of out) byBucket[t.bucket] = (byBucket[t.bucket] || 0) + 1;

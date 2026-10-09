@@ -12,6 +12,7 @@ const access = require('../../services/ops/accessScope');
 const taskEngine = require('../../services/ops/taskEngine');
 const engine = require('../../services/ops/dueDateEngine');
 const { applyTaskPatch, writeLinkedValue, resolveLinkedTarget, badRequest } = require('../../services/ops/taskUpdate');
+const timer = require('../../services/ops/taskTimer');
 const { sendError, httpError } = require('./helpers');
 
 // Task attachments are kept outside the public /uploads folder and served only to people who may see the voyage
@@ -46,8 +47,10 @@ async function loadTask(req, taskId, { forWrite = false, session = null } = {}) 
 }
 
 async function taskOut(id) {
-  const t = await VoyageTask.findById(id).populate(POPULATE).populate('history.by', 'username').populate('attachments.uploadedBy', 'username').lean();
-  return { ...t, ...engine.derive(t) };
+  const t = await VoyageTask.findById(id).populate(POPULATE).populate('history.by', 'username').populate('attachments.uploadedBy', 'username')
+    .populate('timeLog.by', 'username').lean();
+  await timer.fillPlannedHours([t]);
+  return { ...t, ...engine.derive(t), actualSeconds: timer.actualSeconds(t) };
 }
 
 // ------------------------------------------------------------------ my tasks across voyages (G1 cross-voyage)
@@ -67,7 +70,8 @@ router.get('/mine', async (req, res) => {
       .populate({ path: 'voyage', select: 'voyageNo vessel vesselStatus vesselStatusOverride', populate: { path: 'vessel', select: 'name' } })
       .lean();
     const today = engine.todayIn();
-    let out = tasks.map((t) => ({ ...t, ...engine.derive(t, today) }));
+    await timer.fillPlannedHours(tasks);
+    let out = tasks.map((t) => ({ ...t, ...engine.derive(t, today), actualSeconds: timer.actualSeconds(t) }));
     // Earliest due first, tasks without a date last
     out.sort((a, b) => String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999')) || a.sortKey - b.sortKey);
     const byBucket = {};
@@ -177,6 +181,24 @@ router.patch('/:taskId', async (req, res) => {
     if (io && out.movedTasks.length) io.to(`voyage-${out.voyage._id}`).emit('ops-dates-changed', { voyageId: String(out.voyage._id), moved: out.movedTasks.length, dueSoon: out.dueSoon.length });
     res.json({ task: await taskOut(out.task._id), movedTasks: out.movedTasks.filter((m) => String(m.id) !== String(out.task._id)), dueSoon: out.dueSoon, autoCompleted: out.autoCompleted || 0, checksTicked: out.checksTicked || 0 });
   } catch (err) { sendError(res, err, 'Error updating task'); }
+});
+
+// ------------------------------------------------------------------ working time: { action: 'start' | 'hold' | 'stop' }
+// Starting a task that was not started marks it Initiated.
+router.post('/:taskId/timer', async (req, res) => {
+  try {
+    const out = await taskEngine.withTransaction(async (session) => {
+      const { task, voyage } = await loadTask(req, req.params.taskId, { forWrite: true, session });
+      const now = new Date();
+      const entries = [timer.applyTimerAction(task, req.body.action, req.user, now)];
+      if (req.body.action === 'start' && task.status === 'NOT_STARTED') entries.push(...await applyTaskPatch(task, { status: 'INITIATED' }, { session }));
+      entries.forEach((c) => task.history.push({ at: now, by: req.user._id, ...c }));
+      await task.save({ session });
+      return { task, voyage };
+    });
+    emitUpdated(req, [out.voyage._id]);
+    res.json({ task: await taskOut(out.task._id) });
+  } catch (err) { sendError(res, err, 'Error updating the timer'); }
 });
 
 // ------------------------------------------------------------------ attachments (D1)

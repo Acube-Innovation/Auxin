@@ -746,3 +746,38 @@ test('deleting a draft voyage removes its documents and files', async () => {
   assert.ok(!fs.existsSync(path.join(STORAGE, String(clone._id))), 'storage folder removed');
   assert.equal(await require('../../models/ops/VoyageDocument').countDocuments({ voyage: clone._id }), 0);
 });
+
+test('working time: planned hours from the template, Start / Hold / Stop through the API, Done stops the timer', async () => {
+  const tpl = (await call('GET', '/ops/task-templates?search=T004')).data.find((x) => x.code === 'T004');
+  const put = await call('PUT', `/ops/task-templates/${tpl._id}`, { plannedHours: 1.5 });
+  assert.equal(put.status, 200, JSON.stringify(put.data));
+  assert.equal(put.data.plannedHours, 1.5);
+  assert.equal((await call('PUT', `/ops/task-templates/${tpl._id}`, { plannedHours: -1 })).status, 400);
+
+  // Tasks generated before planned hours were set show the template's value
+  const t = taskByCode(await freshTasks(), 'T004');
+  assert.equal(t.plannedHours, 1.5);
+  if (t.status !== 'NOT_STARTED') await patchTask(t._id, { status: 'NOT_STARTED' });
+
+  const timer = (action, who) => call('POST', `/ops/tasks/${t._id}/timer`, { action }, who);
+  assert.equal((await timer('hold')).status, 400);
+  const started = await timer('start');
+  assert.equal(started.status, 200, JSON.stringify(started.data));
+  assert.equal(started.data.task.timer.state, 'RUNNING');
+  assert.equal(started.data.task.status, 'INITIATED', 'starting the timer starts the task');
+  assert.equal((await timer('start')).status, 400);
+  assert.equal((await timer('hold')).data.task.timer.state, 'HELD');
+  assert.equal((await timer('start')).data.task.timer.state, 'RUNNING');
+  assert.equal((await timer('start', 'ops2')).status, 404, 'an operator outside the voyage cannot use the timer');
+
+  const done = await patchTask(t._id, { status: 'DONE' });
+  assert.equal(done.data.task.timer.state, 'STOPPED');
+  assert.ok(done.data.task.timeLog.length === 2 && done.data.task.timeLog.every((p) => p.end));
+  assert.equal(done.data.task.actualSeconds, done.data.task.workedSeconds);
+  assert.equal((await timer('start')).status, 400, 'a Done task is re-opened before more time is recorded');
+  const full = (await call('GET', `/ops/tasks/${t._id}`)).data;
+  assert.ok(full.history.some((h) => h.field === 'timer' && h.to === 'STOPPED' && /when the task was closed/.test(h.note)));
+
+  const own = await patchTask(t._id, { plannedHours: 4 });
+  assert.equal(own.data.task.plannedHours, 4, 'planned hours can be changed for one task');
+});

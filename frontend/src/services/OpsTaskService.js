@@ -7,6 +7,7 @@ const OpsTaskService = {
   mine: (params) => opsRequest("/tasks/mine", { params }),
   get: (id) => opsRequest(`/tasks/${id}`),
   update: (id, patch) => opsRequest(`/tasks/${id}`, { method: "PATCH", body: patch }),
+  timer: (id, action) => opsRequest(`/tasks/${id}/timer`, { method: "POST", body: { action } }), // start | hold | stop
   bulk: (ids, patch) => opsRequest("/tasks/bulk", { method: "POST", body: { ids, patch } }),
   addAdhoc: (voyageId, data) => opsRequest(`/voyages/${voyageId}/tasks`, { method: "POST", body: data }),
 

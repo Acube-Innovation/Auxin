@@ -22,6 +22,7 @@ const taskTemplateSchema = new mongoose.Schema({
     until: { type: String, enum: [...ANCHOR_EVENT_VALUES, null], default: null },
   },
 
+  plannedHours: { type: Number, min: [0, 'Planned hours cannot be negative'], default: null },  // expected working time
   defaultPriority: { type: String, enum: PRIORITIES, default: 'MEDIUM' },
   priorityDefaulted: { type: Boolean, default: false },    // true when the client sheet gave no priority
   reminderProfile: { type: String, enum: REMINDER_PROFILES, default: 'MEDIUM' },

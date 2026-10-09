@@ -6,6 +6,7 @@ const Voyage = require('../../models/ops/Voyage');
 const PortCall = require('../../models/ops/PortCall');
 const VoyageTask = require('../../models/ops/VoyageTask');
 const engine = require('./dueDateEngine');
+const { stopOnClose } = require('./taskTimer');
 const { RECURRING_LOOKAHEAD_DAYS } = require('./config');
 const { DateTime } = require('luxon');
 
@@ -45,7 +46,7 @@ async function generateRecurring(voyageId, { session, user = null } = {}) {
         name: pc && pc.port ? `${pc.port.name} – ${label}` : label, baseName: label,
         instructions: base.instructions, stage: base.stage, sortKey: base.sortKey,
         anchor: base.anchor, offsetDays: base.offsetDays, recurrence: base.recurrence, recurrenceIndex: k,
-        dueDate: d, priority: base.priority, reminderProfile: base.reminderProfile,
+        dueDate: d, priority: base.priority, plannedHours: base.plannedHours ?? null, reminderProfile: base.reminderProfile,
         linkedField: base.linkedField, autoCompleteOnField: base.autoCompleteOnField, assignedTo: base.assignedTo,
         history: [{ at: now, by: user ? user._id : null, field: 'created', note: `Recurring task #${n} generated (every ${base.recurrence.everyDays} days)`, auto: true }],
         createdBy: user ? user._id : null,
@@ -57,6 +58,8 @@ async function generateRecurring(voyageId, { session, user = null } = {}) {
         t.history.push({ at: now, by: user ? user._id : null, field: 'status', from: t.status, to: 'NA', note: 'After the end of the recurring cycle (re-delivery moved)', auto: true });
         t.status = 'NA';
         t.naReason = 'After the end of the recurring cycle';
+        const stopped = stopOnClose(t);
+        if (stopped) t.history.push(stopped);
         await t.save({ session });
         closed++;
       }

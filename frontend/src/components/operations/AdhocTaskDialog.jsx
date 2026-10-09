@@ -10,7 +10,7 @@ const PORT_EVENTS = ["ARRIVAL", "BERTHING", "OPS_COMPLETED", "SAILING"];
 function AdhocTaskDialog({ voyage, stages = [], employees = [], myEmployeeId, onClose, onSubmit }) {
   const calls = (voyage.portCalls || []).filter((p) => p.status !== "CANCELLED");
   const [form, setForm] = useState({
-    name: "", stage: "", portCall: "", mode: "date", dueDate: "", anchor: "ARRIVAL", offsetDays: 0, priority: "MEDIUM",
+    name: "", stage: "", portCall: "", mode: "date", dueDate: "", anchor: "ARRIVAL", offsetDays: 0, priority: "MEDIUM", plannedHours: "",
     assignedTo: myEmployeeId ? [myEmployeeId] : (voyage.operators || []).map((o) => o._id), remarks: "",
   });
   const [error, setError] = useState("");
@@ -27,6 +27,7 @@ function AdhocTaskDialog({ voyage, stages = [], employees = [], myEmployeeId, on
     try {
       await onSubmit({
         name: form.name.trim(), stage: form.stage || null, portCall: form.portCall || null, priority: form.priority,
+        plannedHours: form.plannedHours === "" ? null : Number(form.plannedHours),
         assignedTo: form.assignedTo, remarks: form.remarks,
         ...(form.mode === "date" ? { dueDate: form.dueDate } : { anchor: { event: form.anchor }, offsetDays: Number(form.offsetDays) || 0 }),
       });
@@ -82,6 +83,10 @@ function AdhocTaskDialog({ voyage, stages = [], employees = [], myEmployeeId, on
           <select className={styles.select} value={form.priority} onChange={set("priority")} aria-label="Priority">
             {["HIGH", "MEDIUM", "LOW"].map((p) => <option key={p} value={p}>{p[0] + p.slice(1).toLowerCase()}</option>)}
           </select>
+        </div>
+        <div className={styles.field}>
+          <label>Planned hours</label>
+          <input type="number" min="0" step="0.25" className={styles.input} value={form.plannedHours} onChange={set("plannedHours")} aria-label="Planned hours" placeholder="e.g. 2" />
         </div>
         <div className={styles.field}>
           <label>Assigned to</label>

@@ -12,6 +12,7 @@ const { DUE_SOON_DAYS } = require('./config');
 const dailyChecks = require('./dailyChecks');
 const { generateRecurring } = require('./recurring');
 const { DateTime } = require('luxon');
+const { stopOnClose } = require('./taskTimer');
 
 const OPEN = ['NOT_STARTED', 'INITIATED', 'AWAITING'];
 const idOf = (v) => (v ? String(v._id || v) : null);
@@ -94,6 +95,7 @@ async function buildTemplateTasks(voyage, portCalls, { session, onlyPortCall = n
         recurrenceIndex: recurring ? 0 : null,
         dueDate: engine.dueDateFor(t, voyage, pc, portCalls, recurring ? 0 : null),
         priority: t.defaultPriority || 'MEDIUM',
+        plannedHours: t.plannedHours ?? null,
         reminderProfile: t.reminderProfile || t.defaultPriority || 'MEDIUM',
         isOptional: Boolean(t.isOptional),
         linkedField: t.linkedField || null,
@@ -150,6 +152,8 @@ function buildAdhocTask(input, voyage, portCalls, stagesById, user) {
     dueDate = engine.dueDateFor({ anchor, offsetDays }, voyage, pc, portCalls);
   }
   const priority = ['HIGH', 'MEDIUM', 'LOW'].includes(input.priority) ? input.priority : 'MEDIUM';
+  const plannedHours = input.plannedHours === undefined || input.plannedHours === null || input.plannedHours === '' ? null : Number(input.plannedHours);
+  if (plannedHours !== null && !(Number.isFinite(plannedHours) && plannedHours >= 0)) throw badRequest(`Ad-hoc task "${name}": planned hours must be a number of 0 or more`);
   return {
     voyage: voyage._id,
     portCall: pc ? pc._id : null,
@@ -164,6 +168,7 @@ function buildAdhocTask(input, voyage, portCalls, stagesById, user) {
     dueDate,
     dueOverridden,
     priority,
+    plannedHours,
     reminderProfile: priority,
     assignedTo: (voyage.operators || []).map(idOf),
     history: [{ at: new Date(), by: user._id, field: 'created', note: 'Ad-hoc task added at voyage creation', auto: true }],
@@ -279,6 +284,12 @@ async function addPortCallTasks(voyageId, portCallId, { session, user }) {
 }
 
 async function cancelPortCallTasks(portCallId, { session, user }) {
+  // Timers still counting on these tasks stop now
+  const timed = await VoyageTask.find({ portCall: portCallId, status: { $in: OPEN }, 'timer.state': { $in: ['RUNNING', 'HELD'] } }).session(session || null);
+  for (const t of timed) {
+    t.history.push(stopOnClose(t));
+    await t.save({ session });
+  }
   const res = await VoyageTask.updateMany(
     { portCall: portCallId, status: { $in: OPEN } },
     { $set: { status: 'NA', naReason: 'Port call cancelled' }, $push: { history: { at: new Date(), by: user._id, field: 'status', to: 'NA', note: 'Port call cancelled', auto: true } } },
@@ -307,6 +318,8 @@ async function autoCompleteLinked(voyageId, changes, { session, user }) {
     t.status = 'DONE';
     t.completedDate = today;
     if (!t.startDate) t.startDate = today;
+    const stopped = stopOnClose(t);
+    if (stopped) t.history.push(stopped);
     t.history.push({ at: new Date(), by: user ? user._id : null, field: 'status', from: 'NOT_STARTED', to: 'DONE', note: 'Completed automatically when the linked date was entered' });
     await t.save({ session });
   }

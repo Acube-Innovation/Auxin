@@ -3,6 +3,7 @@ const { ANCHOR_EVENT_VALUES, ANCHOR_BASES, PRIORITIES, REMINDER_PROFILES, LINKED
 
 const { ObjectId } = mongoose.Schema.Types;
 const TASK_STATUSES = ['NOT_STARTED', 'INITIATED', 'AWAITING', 'DONE', 'NA'];
+const TIMER_STATES = ['RUNNING', 'HELD', 'STOPPED'];
 const localDate = { type: String, default: null, match: [/^\d{4}-\d{2}-\d{2}$/, 'must be a date YYYY-MM-DD'] };
 
 // A task of one voyage (features D1–D10). The rule is copied from the template at generation time,
@@ -34,6 +35,15 @@ const voyageTaskSchema = new mongoose.Schema({
   dueOverridden: { type: Boolean, default: false },                   // user set the due date by hand
   startDate: localDate,
   completedDate: localDate,
+
+  // Working time: Start / Hold / Stop. Only running periods count; time on hold does not.
+  plannedHours: { type: Number, min: 0, default: null },              // copied from the template
+  timer: {
+    state: { type: String, enum: [...TIMER_STATES, null], default: null }, // null = never started
+    runningSince: { type: Date, default: null },
+  },
+  workedSeconds: { type: Number, default: 0 },                        // total of the finished running periods
+  timeLog: [{ start: Date, end: Date, by: { type: ObjectId, ref: 'User', default: null } }],
 
   status: { type: String, enum: TASK_STATUSES, default: 'NOT_STARTED', required: true },
   naReason: { type: String },
@@ -70,3 +80,4 @@ voyageTaskSchema.index({ voyage: 1, sortKey: 1 });
 
 module.exports = mongoose.model('VoyageTask', voyageTaskSchema);
 module.exports.TASK_STATUSES = TASK_STATUSES;
+module.exports.TIMER_STATES = TIMER_STATES;
