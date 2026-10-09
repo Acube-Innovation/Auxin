@@ -6,7 +6,7 @@ import { suggestTimes } from "../../../utils/opsSuggest";
 let seq = 0;
 export const newKey = () => `k${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export const STEPS = ["Fixture & Vessel", "Cargo", "Port Rotation", "Delivery & Bunkers", "Task Preview", "Review & Activate"];
+export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Delivery & Bunkers", "Task Preview", "Review & Activate"];
 
 export const clientOption = (c) => (c ? { value: c._id, label: c.companyName } : null);
 export const employeeOption = (e) => (e ? { value: e._id, label: e.employeeName } : null);
@@ -125,7 +125,7 @@ export function rowPayload(row) {
 
 // Problems that stop the user leaving a step (null = fine)
 export function stepError(step, form, { isOperator, settings } = {}) {
-  if (step === 1) {
+  if (step === 2) {
     if (!form.vessel) return "Choose the vessel";
     if (!form.operators.length && !isOperator) return "Choose at least one operator";
     if (form.master.email && !/^\S+@\S+\.\S+$/.test(form.master.email)) return "The Master's email is not valid";
@@ -133,7 +133,7 @@ export function stepError(step, form, { isOperator, settings } = {}) {
     if (f.cargoLaycanFrom && f.cargoLaycanTo && f.cargoLaycanTo < f.cargoLaycanFrom) return "Cargo laycan 'to' is before 'from'";
     if (f.vesselLaycanFrom && f.vesselLaycanTo && f.vesselLaycanTo < f.vesselLaycanFrom) return "Vessel laycan 'to' is before 'from'";
   }
-  if (step === 2) {
+  if (step === 1) {
     const bad = form.cargo.find((c) => !String(c.description).trim() && (c.quantity !== "" || c.packages !== ""));
     if (bad) return "Every cargo line with a quantity needs a description";
   }

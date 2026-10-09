@@ -4,7 +4,7 @@ import { PortDateTimeInput, ZoneDateInput } from "../../../components/operations
 import { clientOption } from "./wizardModel";
 import styles from "../masters/Masters.module.css";
 
-// Step 1 — Fixture & Vessel (features B1–B3)
+// Step 2 — Fixture & Vessel (features B1–B3)
 function StepFixture({ form, update, opts, officeTz, isOperator }) {
   const setFixture = (k) => (v) => update((f) => ({ ...f, fixture: { ...f.fixture, [k]: v } }));
   const setMaster = (k) => (e) => update((f) => ({ ...f, master: { ...f.master, [k]: e.target.value } }));

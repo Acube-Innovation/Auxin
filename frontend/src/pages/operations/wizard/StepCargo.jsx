@@ -4,7 +4,7 @@ import styles from "../masters/Masters.module.css";
 
 const UNITS = ["MT", "CBM", "Units", "TEU", "Pieces"];
 
-// Step 2 — Cargo lines (feature B4)
+// Step 1 — Cargo lines (feature B4)
 function StepCargo({ form, update }) {
   const set = (key, field) => (e) => update((f) => ({ ...f, cargo: f.cargo.map((c) => (c.key === key ? { ...c, [field]: e.target.value } : c)) }));
   const remove = (key) => update((f) => ({ ...f, cargo: f.cargo.length > 1 ? f.cargo.filter((c) => c.key !== key) : [emptyCargo()] }));

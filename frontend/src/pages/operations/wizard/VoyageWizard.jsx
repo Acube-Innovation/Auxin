@@ -204,8 +204,8 @@ function VoyageWizard() {
 
   const saveOnly = async () => {
     setError("");
-    const problem = stepError(1, form, { isOperator, settings });
-    if (problem) { setError(problem); setStep(1); return; }
+    const problem = stepError(2, form, { isOperator, settings }); // a draft needs the vessel and operators
+    if (problem) { setError(problem); setStep(2); return; }
     setBusy(true);
     try {
       const v = await saveDraft();
@@ -277,8 +277,8 @@ function VoyageWizard() {
           {error && <div className={shared.formError} role="alert">{error}</div>}
           {!meta ? <div className={shared.empty}>Loading…</div> : (
             <>
-              {step === 1 && <StepFixture {...stepProps} />}
-              {step === 2 && <StepCargo {...stepProps} />}
+              {step === 1 && <StepCargo {...stepProps} />}
+              {step === 2 && <StepFixture {...stepProps} />}
               {step === 3 && <StepRotation {...stepProps} />}
               {step === 4 && <StepDeliveryBunker {...stepProps} />}
               {step === 5 && <StepTaskPreview preview={preview} excluded={excluded} setExcluded={setExcluded} adhoc={adhoc} setAdhoc={setAdhoc} loading={busy} />}
