@@ -147,3 +147,6 @@ client/node_modules/
 # Cache folders
 .cache/
 client/node_modules/.cache/
+
+# Upload directories
+server/uploads/expense-documents/

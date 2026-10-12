@@ -5,6 +5,13 @@ require('dotenv').config();
 const path = require('path');
 const http = require('http');
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 console.log('=== ENVIRONMENT VARIABLES ===');
 console.log('MONGO_URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
@@ -21,6 +28,12 @@ const clientRoutes = require('./routes/clients');
 const meetingsRoutes = require('./routes/meetings');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const leaveRequestRoutes = require('./routes/leaveRequestRoutes');
+const salarySlipRoutes = require('./routes/salarySlipRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
+const roleRoutes = require('./routes/roleRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
+
 
 const app = express();
 const server = http.createServer(app);
@@ -34,19 +47,34 @@ let allowedOrigins = [
   "https://auxin-mern-app-front.onrender.com",
   "http://72.60.202.115:5000",
   "https://auxincrm.cloud",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
 ];
 if (FRONTEND_URL && !allowedOrigins.includes(FRONTEND_URL)) {
   allowedOrigins.unshift(FRONTEND_URL);
 }
 const ALLOW_ALL = process.env.ALLOW_ALL_ORIGINS === 'true';
+function isOriginAllowed(origin) {
+  if (!origin || origin === 'null') return true;
+  if (ALLOW_ALL) return true;
+  const port = String(process.env.PORT || '5000');
+  if (port === '5000') return true;
+  if (process.env.NODE_ENV !== 'production') return true;
+  if (allowedOrigins.indexOf(origin) !== -1) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
+  if (/^https?:\/\/\[::1\](:\d+)?$/i.test(origin)) return true;
+  return false;
+}
 console.log('Socket allowed origins:', allowedOrigins, 'ALLOW_ALL:', ALLOW_ALL);
 
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // allow undefined origin (tools / server-to-server) or explicit matches, or all if allowed
-      if (!origin || allowedOrigins.indexOf(origin) !== -1 || ALLOW_ALL) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
         console.warn('Socket.io blocked origin:', origin);
@@ -74,8 +102,9 @@ io.on("connection", (socket) => {
   socket.on('join-user', async (userData) => {
     try {
       // Handle both object format and simple userId format for backward compatibility
-      if (typeof userData === 'object') {
-        const { userId, role } = userData;
+      if (typeof userData === 'object' && userData !== null) {
+        const userId = userData.userId;
+        const role = userData.role;
         currentUserId = userId;
         currentUserRole = role;
         if (userId) socket.join(`user-${userId}`);
@@ -194,30 +223,92 @@ io.on("connection", (socket) => {
 app.set('io', io);
 
 // ====== CORS CONFIG ======
+// Echo the request Origin explicitly (cb(null, true) can reflect the wrong origin with credentials).
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || ALLOW_ALL) return cb(null, true);
+    if (!origin || origin === 'null') {
+      return cb(null, true);
+    }
+    if (isOriginAllowed(origin)) {
+      return cb(null, origin);
+    }
     console.warn('HTTP CORS blocked origin:', origin);
     return cb(new Error('Not allowed by CORS'), false);
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // ====== MIDDLEWARE ======
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ====== HEALTH CHECK (no DB, so server can respond even if DB is slow) ======
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, message: 'Server is running' });
+});
+
 // ====== API ROUTES ======
+// Client remarks: explicit routes registered first so POST/GET always match
+const authMiddleware = require('./middleware/authMiddleware');
+const ClientRemark = require('./models/ClientRemark');
+const Client = require('./models/Client');
+
+app.get('/api/client-remarks/:clientId', authMiddleware, async (req, res) => {
+  try {
+    const remarks = await ClientRemark.find({ clientId: req.params.clientId })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(remarks);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching remarks', error: error.message });
+  }
+});
+
+app.post('/api/client-remarks/:clientId', authMiddleware, async (req, res) => {
+  try {
+    const text = (req.body?.remark != null ? String(req.body.remark) : req.body?.text != null ? String(req.body.text) : '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Remark text cannot be empty' });
+    }
+    const client = await Client.findById(req.params.clientId);
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+    const user = await User.findById(req.user._id);
+    const remark = new ClientRemark({
+      clientId: req.params.clientId,
+      text,
+      createdBy: {
+        userId: req.user._id,
+        username: (user && user.username) || req.user.username || 'Unknown',
+        role: (user && user.role) || req.user.role || ''
+      }
+    });
+    await remark.save();
+    res.status(201).json(remark);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding remark', error: error.message });
+  }
+});
+
+app.use('/api/salary-slips', salarySlipRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employeedocuments', employeeDocumentRoutes);
+app.use('/api/clients', clientRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/clients', clientRoutes);
 app.use('/api/meetings', meetingsRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/checkins', require('./routes/checkInRoutes'));
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/leave-requests', leaveRequestRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/departments', departmentRoutes);
+
 
 // ====== DATABASE CONNECTION ======
 mongoose.connect(process.env.MONGO_URI)
@@ -242,8 +333,10 @@ const reactRoutes = [
   '/documents',
   '/teammanagement',
   '/venkat',
+  '/leave-requests',
   '/example'
 ];
+
 
 // Serve index.html for basic React routes
 reactRoutes.forEach(route => {

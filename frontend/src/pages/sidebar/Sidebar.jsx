@@ -40,7 +40,7 @@ function Sidebar() {
   const location = useLocation();
   const isActive = (path) => location.pathname.startsWith(path);
   const navigate = useNavigate();
-  
+
 
   // Fix: Get role directly from localStorage
   const userRole = localStorage.getItem("role"); // This returns a string like "sales_executive"
@@ -110,21 +110,21 @@ function Sidebar() {
               </li>
 
               {/* */}
-                {/* Fixed: Compare userRole directly, not userRole.role */}
-              
-                <li className={isActive("/teammanagement") ? styles.active : ""}>
-                  <Link to="/teammanagement" className={styles["sidebar-link"]}>
-                    <img
-                      src={users}
-                      alt="teamManagement"
-                      className={styles.icon}
-                    />{" "}
-                    Team Management
-                  </Link>
-                </li>
-             
+              {/* Fixed: Compare userRole directly, not userRole.role */}
 
-             
+              <li className={isActive("/teammanagement") ? styles.active : ""}>
+                <Link to="/teammanagement" className={styles["sidebar-link"]}>
+                  <img
+                    src={users}
+                    alt="teamManagement"
+                    className={styles.icon}
+                  />{" "}
+                  Team Management
+                </Link>
+              </li>
+
+
+
 
               {/* <li>
                 <img src={packageicon} alt="Sales" className={styles.icon} /> Sales &
@@ -162,7 +162,7 @@ function Sidebar() {
                   Reports
                 </Link>
               </li>
-              
+
               <li className={isActive("/checkin-history") ? styles.active : ""}>
                 <Link to="/checkin-history" className={styles["sidebar-link"]}>
                   <img
@@ -174,8 +174,31 @@ function Sidebar() {
                 </Link>
               </li>
 
-               {/* User Management - Admin Only */}
-              {userRole === "admin" && (
+              <li className={isActive("/leave-requests") ? styles.active : ""}>
+                <Link to="/leave-requests" className={styles["sidebar-link"]}>
+                  <img
+                    src={calendar}
+                    alt="Leave Management"
+                    className={styles.icon}
+                  />
+                  Leave Management
+                </Link>
+              </li>
+
+              <li className={isActive("/salary-slips") ? styles.active : ""}>
+                <Link to="/salary-slips" className={styles["sidebar-link"]}>
+                  <img
+                    src={filechartcolumn}
+                    alt="Salary Slips"
+                    className={styles.icon}
+                  />
+                  Salary Slips
+                </Link>
+              </li>
+
+
+              {/* User Management - Admin & HOD Only */}
+              {["admin", "hod"].includes(userRole) && (
                 <li className={isActive("/user-management") ? styles.active : ""}>
                   <Link to="/user-management" className={styles["sidebar-link"]}>
                     <img
@@ -201,24 +224,24 @@ function Sidebar() {
               </li>
               <li>
                 <Link to="" className={styles["sidebar-link"]}>
-                <img src={cloud} alt="My Files" className={styles.icon} /> My
-                Files
-               </Link>
+                  <img src={cloud} alt="My Files" className={styles.icon} /> My
+                  Files
+                </Link>
               </li>
               <li className={isActive("/help-support") ? styles.active : ""}>
                 <Link to="/help-support" className={styles["sidebar-link"]}>
-                <img
-                  src={circlehelp}
-                  alt="Help & Support"
-                  className={styles.icon}
-                />{" "}
-                Help & Support
+                  <img
+                    src={circlehelp}
+                    alt="Help & Support"
+                    className={styles.icon}
+                  />{" "}
+                  Help & Support
                 </Link>
               </li>
               <li className={styles["logout"]} onClick={handleLogout}>
-                 <Link to="" className={styles["sidebar-link"]}>
-                <img src={logout} alt="Log Out" className={styles.icon} /> Log
-                Out
+                <Link to="" className={styles["sidebar-link"]}>
+                  <img src={logout} alt="Log Out" className={styles.icon} /> Log
+                  Out
                 </Link>
               </li>
             </ul>

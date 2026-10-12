@@ -37,7 +37,13 @@ function TeamManagementSalesLeads() {
   const basicInfoRef = useRef(null);
   const meetingsRef = useRef(null);
   const documentsRef = useRef(null);
+  const remarksRef = useRef(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
+  const [remarks, setRemarks] = useState([]);
+  const [remarksLoading, setRemarksLoading] = useState(false);
+  const [remarkText, setRemarkText] = useState("");
+  const [remarkError, setRemarkError] = useState("");
+  const [addingRemark, setAddingRemark] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteType, setDeleteType] = useState(""); // 'entry' or 'data'
  const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
@@ -123,6 +129,49 @@ function TeamManagementSalesLeads() {
     }
   };
 
+  const fetchRemarks = React.useCallback(async () => {
+    if (!employeeId || (userRole !== "admin" && userRole !== "hod")) return;
+    setRemarksLoading(true);
+    setRemarkError("");
+    try {
+      const data = await employeeService.getEmployeeRemarks(employeeId);
+      setRemarks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setRemarkError(err?.message || "Failed to load remarks");
+      setRemarks([]);
+    } finally {
+      setRemarksLoading(false);
+    }
+  }, [employeeId, userRole]);
+
+  useEffect(() => {
+    if (activeTab === "remarks" && employeeId) fetchRemarks();
+  }, [activeTab, employeeId, fetchRemarks]);
+
+  const handleAddRemark = async (e) => {
+    e.preventDefault();
+    const trimmed = (remarkText || "").trim();
+    if (!trimmed) {
+      setRemarkError("Remark cannot be empty");
+      return;
+    }
+    setRemarkError("");
+    setAddingRemark(true);
+    try {
+      const created = await employeeService.addEmployeeRemark(employeeId, trimmed);
+      setRemarks((prev) => [created, ...prev]);
+      setRemarkText("");
+      showToast?.("Remark added successfully", "success");
+    } catch (err) {
+      setRemarkError(err?.message || "Failed to add remark");
+      showToast?.(err?.message || "Failed to add remark", "error");
+    } finally {
+      setAddingRemark(false);
+    }
+  };
+
+  const canAccessRemarks = userRole === "admin" || userRole === "hod";
+
   useEffect(() => {
     const updateIndicatorPosition = () => {
       let activeElement;
@@ -135,6 +184,9 @@ function TeamManagementSalesLeads() {
           break;
         case "documents":
           activeElement = documentsRef.current;
+          break;
+        case "remarks":
+          activeElement = remarksRef.current;
           break;
         default:
           activeElement = basicInfoRef.current;
@@ -592,6 +644,17 @@ function TeamManagementSalesLeads() {
                   >
                     <span className={styles.text8}>{"Documents"}</span>
                   </div>
+                  {canAccessRemarks && (
+                    <div
+                      ref={remarksRef}
+                      className={`${styles.view2} ${
+                        activeTab === "remarks" ? styles.active : ""
+                      }`}
+                      onClick={() => setActiveTab("remarks")}
+                    >
+                      <span className={styles.text8}>{"Remarks"}</span>
+                    </div>
+                  )}
                   <div
                     className={styles.box}
                     style={{
@@ -741,6 +804,55 @@ function TeamManagementSalesLeads() {
                   <section className="documents-table-section">
                     <Documents employeeId={employeeId} refreshKey={documentsKey}  />
                   </section>
+                </div>
+              )}
+
+              {activeTab === "remarks" && canAccessRemarks && (
+                <div className={styles.remarksSection}>
+                  <form onSubmit={handleAddRemark} className={styles.remarksForm}>
+                    <textarea
+                      className={styles.remarksTextarea}
+                      value={remarkText}
+                      onChange={(e) => {
+                        setRemarkText(e.target.value);
+                        setRemarkError("");
+                      }}
+                      placeholder="Add a remark..."
+                      rows={3}
+                      maxLength={2000}
+                      disabled={addingRemark}
+                    />
+                    <button
+                      type="submit"
+                      className={styles.remarksSubmitBtn}
+                      disabled={addingRemark || !(remarkText || "").trim()}
+                    >
+                      {addingRemark ? "Adding..." : "Add Remark"}
+                    </button>
+                  </form>
+                  {remarkError && (
+                    <div className={styles.remarksError}>{remarkError}</div>
+                  )}
+                  <div className={styles.remarksListLabel}>Remarks history (latest first)</div>
+                  <div className={styles.remarksList}>
+                    {remarksLoading ? (
+                      <p className={styles.remarksLoading}>Loading remarks...</p>
+                    ) : remarks.length === 0 ? (
+                      <p className={styles.remarksEmpty}>No remarks yet.</p>
+                    ) : (
+                      remarks.map((r, index) => (
+                        <div
+                          key={r._id}
+                          className={`${styles.remarkCard} ${index === 0 ? styles.remarkCardLatest : ""}`}
+                        >
+                          <div className={styles.remarkText}>{r.text}</div>
+                          <div className={styles.remarkMeta}>
+                            {r.createdBy?.username || "Unknown"} · {r.createdBy?.role ? `${r.createdBy.role}` : ""} · {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>

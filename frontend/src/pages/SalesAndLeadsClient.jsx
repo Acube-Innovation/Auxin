@@ -39,7 +39,13 @@ function SalesAndLeadsClient(clientId ) {
   const meetingsRef = useRef(null);
   const documentsRef = useRef(null);
   const tasksRef = useRef(null);
+  const remarksRef = useRef(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
+  const [remarks, setRemarks] = useState([]);
+  const [remarksLoading, setRemarksLoading] = useState(false);
+  const [remarkText, setRemarkText] = useState("");
+  const [remarkError, setRemarkError] = useState("");
+  const [addingRemark, setAddingRemark] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteType, setDeleteType] = useState(""); // 'entry' or 'data'
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
@@ -67,7 +73,14 @@ function SalesAndLeadsClient(clientId ) {
         setUsername(localStorage.getItem("username") || "");
         setUserRole(localStorage.getItem("role") || "");
       }, []);
-    
+
+  const handleAuthFailure = React.useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("role");
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
   // Fetch client data when component mounts
   useEffect(() => {
@@ -81,14 +94,19 @@ function SalesAndLeadsClient(clientId ) {
         setError(null);
       } catch (err) {
         console.error("Error fetching client:", err);
-        setError(err.message || "Failed to fetch client data");
+        const msg = err.message || "";
+        if (msg.includes("401") || msg.includes("Invalid token") || msg.includes("Token expired") || msg.includes("No token provided")) {
+          handleAuthFailure();
+          return;
+        }
+        setError(msg || "Failed to fetch client data");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchClientData();
-  }, [id]);
+  }, [id, handleAuthFailure]);
 
   // Main useEffect for tab indicator positioning
   useEffect(() => {
@@ -106,6 +124,9 @@ function SalesAndLeadsClient(clientId ) {
           break;
         case "tasks":
           activeElement = tasksRef.current;
+          break;
+        case "remarks":
+          activeElement = remarksRef.current;
           break;
         default:
           activeElement = basicInfoRef.current;
@@ -129,6 +150,57 @@ function SalesAndLeadsClient(clientId ) {
       window.removeEventListener("resize", updateIndicatorPosition);
     };
   }, [activeTab]);
+
+  const fetchRemarks = React.useCallback(async () => {
+    if (!id) return;
+    setRemarksLoading(true);
+    setRemarkError("");
+    try {
+      const data = await clientService.getClientRemarks(id);
+      setRemarks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      const msg = err?.message || "";
+      if (msg.includes("401") || msg.includes("Invalid token") || msg.includes("Token expired") || msg.includes("No token provided")) {
+        handleAuthFailure();
+        return;
+      }
+      setRemarkError(msg || "Failed to load remarks");
+      setRemarks([]);
+    } finally {
+      setRemarksLoading(false);
+    }
+  }, [id, handleAuthFailure]);
+
+  useEffect(() => {
+    if (activeTab === "remarks" && id) fetchRemarks();
+  }, [activeTab, id, fetchRemarks]);
+
+  const handleAddRemark = async (e) => {
+    e.preventDefault();
+    const trimmed = (remarkText || "").trim();
+    if (!trimmed) {
+      setRemarkError("Remark cannot be empty");
+      return;
+    }
+    setRemarkError("");
+    setAddingRemark(true);
+    try {
+      const created = await clientService.addClientRemark(id, trimmed);
+      setRemarks((prev) => [created, ...prev]);
+      setRemarkText("");
+      showToast?.("Remark added successfully", "success");
+    } catch (err) {
+      const msg = err?.message || "";
+      if (msg.includes("401") || msg.includes("Invalid token") || msg.includes("Token expired") || msg.includes("No token provided")) {
+        handleAuthFailure();
+        return;
+      }
+      setRemarkError(msg || "Failed to add remark");
+      showToast?.(msg || "Failed to add remark", "error");
+    } finally {
+      setAddingRemark(false);
+    }
+  };
 
   // Additional useEffect to handle initial tab indicator positioning after data loads
   useEffect(() => {
@@ -653,6 +725,15 @@ const handleTaskCreated = (newTask) => {
                     <span className={styles.text8}>{"Tasks"}</span>
                   </div>
                   <div
+                    ref={remarksRef}
+                    className={`${styles.view2} ${
+                      activeTab === "remarks" ? styles.active : ""
+                    }`}
+                    onClick={() => setActiveTab("remarks")}
+                  >
+                    <span className={styles.text8}>{"Remarks"}</span>
+                  </div>
+                  <div
                     className={styles.box}
                     style={{
                       width: `${indicatorStyle.width}px`,
@@ -868,6 +949,55 @@ const handleTaskCreated = (newTask) => {
               {activeTab === "tasks" && (
                 <div className={styles.tasksContent}>
                   <TaskBoard onRefresh={taskBoardRefreshRef} />
+                </div>
+              )}
+
+              {activeTab === "remarks" && (
+                <div className={styles.remarksSection}>
+                  <form onSubmit={handleAddRemark} className={styles.remarksForm}>
+                    <textarea
+                      className={styles.remarksTextarea}
+                      value={remarkText}
+                      onChange={(e) => {
+                        setRemarkText(e.target.value);
+                        setRemarkError("");
+                      }}
+                      placeholder="Add a remark..."
+                      rows={3}
+                      maxLength={2000}
+                      disabled={addingRemark}
+                    />
+                    <button
+                      type="submit"
+                      className={styles.remarksSubmitBtn}
+                      disabled={addingRemark || !(remarkText || "").trim()}
+                    >
+                      {addingRemark ? "Adding..." : "Add Remark"}
+                    </button>
+                  </form>
+                  {remarkError && (
+                    <div className={styles.remarksError}>{remarkError}</div>
+                  )}
+                  <div className={styles.remarksListLabel}>Remarks (latest first)</div>
+                  <div className={styles.remarksList}>
+                    {remarksLoading ? (
+                      <p className={styles.remarksLoading}>Loading remarks...</p>
+                    ) : remarks.length === 0 ? (
+                      <p className={styles.remarksEmpty}>No remarks yet.</p>
+                    ) : (
+                      remarks.map((r, index) => (
+                        <div
+                          key={r._id}
+                          className={`${styles.remarkCard} ${index === 0 ? styles.remarkCardLatest : ""}`}
+                        >
+                          <div className={styles.remarkText}>{r.text}</div>
+                          <div className={styles.remarkMeta}>
+                            {r.createdBy?.username || "Unknown"} · {r.createdBy?.role ? `${r.createdBy.role}` : ""} · {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -8,6 +8,7 @@ import employeeService from "../../services/EmployeeService";
 import clientService from "../../services/ClientService";
 import Select from "react-select";
 import { useToast } from "../../context/ToastContext";
+import { OFFICIAL_HOLIDAYS_2026 } from "../../utils/leaveHolidays";
 
 /*
  Props:
@@ -123,6 +124,7 @@ function CreateMeetingModal({ isOpen, onClose, onEventCreated, initial = null })
 
   const validate = () => {
     if (!formData.eventName || !formData.date || !formData.time) return "Event name, date and time are required";
+    if (OFFICIAL_HOLIDAYS_2026.includes(formData.date)) return "Events cannot be scheduled on government holidays.";
     return null;
   };
 
@@ -332,7 +334,14 @@ function CreateMeetingModal({ isOpen, onClose, onEventCreated, initial = null })
           </div>
         </div>
 
-        <DatePickerModal isOpen={isDatePickerOpen} onClose={handleDatePickerClose} onSelectDate={handleDateSelect} selectedDate={formData.date ? new Date(formData.date) : null} />
+        <DatePickerModal
+          isOpen={isDatePickerOpen}
+          onClose={handleDatePickerClose}
+          onSelectDate={handleDateSelect}
+          selectedDate={formData.date ? new Date(`${formData.date}T12:00:00`) : null}
+          disabledDates={OFFICIAL_HOLIDAYS_2026}
+          highlightHolidayDates
+        />
       </div>
     </div>
   );

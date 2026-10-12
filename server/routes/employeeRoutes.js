@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Employee = require('../models/Employee');
+const User = require('../models/User');
+const EmployeeRemark = require('../models/EmployeeRemark');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
@@ -405,6 +407,179 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
 });
 
 // ====== PARAMETERIZED ROUTES (With :id or other parameters) ======
+
+// Get profile photo by email (for salary slip; auth: admin/hod or same email)
+// Uses Employee.profilePhoto (Team Management) first, then falls back to User.profilePicture from Settings
+router.get('/profile-photo', authMiddleware, async (req, res) => {
+  try {
+    const email = (req.query.email || '').toString().trim();
+    if (!email) return res.status(400).json({ profilePhoto: '' });
+    const user = req.user;
+    const isAdmin = user && (user.role === 'admin' || user.role === 'hod');
+    const sameUser = user && user.emailId && String(user.emailId).trim().toLowerCase() === email.toLowerCase();
+    if (!isAdmin && !sameUser) return res.status(403).json({ profilePhoto: '' });
+    const emailRegex = new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const employee = await Employee.findOne({ emailId: emailRegex }).select('profilePhoto').lean();
+    if (employee && employee.profilePhoto) return res.json({ profilePhoto: employee.profilePhoto });
+    const userByEmail = await User.findOne({ emailId: emailRegex }).select('profilePicture').lean();
+    return res.json({ profilePhoto: (userByEmail && userByEmail.profilePicture) || '' });
+  } catch (e) {
+    res.status(500).json({ profilePhoto: '' });
+  }
+});
+
+// Stream profile photo image file by email (for salary slip PDF; auth: admin/hod or same email)
+// Prefers Employee.profilePhoto (Team Management), then User.profilePicture
+router.get('/profile-photo-image', authMiddleware, async (req, res) => {
+  try {
+    const email = (req.query.email || '').toString().trim();
+    if (!email) {
+      console.log('Profile photo image: No email provided');
+      return res.status(400).end();
+    }
+    const user = req.user;
+    const isAdmin = user && (user.role === 'admin' || user.role === 'hod');
+    const sameUser = user && user.emailId && String(user.emailId).trim().toLowerCase() === email.toLowerCase();
+    if (!isAdmin && !sameUser) {
+      console.log('Profile photo image: Unauthorized access attempt');
+      return res.status(403).end();
+    }
+    const emailRegex = new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const employee = await Employee.findOne({ emailId: emailRegex }).select('profilePhoto').lean();
+    let photoPath = (employee && employee.profilePhoto) || null;
+    if (!photoPath) {
+      const userByEmail = await User.findOne({ emailId: emailRegex }).select('profilePicture').lean();
+      photoPath = (userByEmail && userByEmail.profilePicture) || null;
+    }
+    if (!photoPath) {
+      console.log(`Profile photo image: No photo found for email ${email}`);
+      return res.status(404).end();
+    }
+    // Handle both absolute paths starting with /uploads and relative paths
+    const normalizedPath = photoPath.startsWith('/uploads') ? photoPath.substring(1) : photoPath;
+    const filePath = path.join(__dirname, '..', normalizedPath);
+    if (!fs.existsSync(filePath)) {
+      console.log(`Profile photo image: File not found at ${filePath} (original path: ${photoPath})`);
+      return res.status(404).end();
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.resolve(filePath), (err) => {
+      if (err) {
+        console.error('Profile photo image: Error sending file:', err);
+        if (!res.headersSent) res.status(500).end();
+      }
+    });
+  } catch (e) {
+    console.error('Profile photo image: Server error:', e);
+    if (!res.headersSent) res.status(500).end();
+  }
+});
+
+// ---- Employee Remarks (must be before /:id) ----
+// Middleware: only admin or hod can add/view remarks
+const requireAdminOrHod = (req, res, next) => {
+  const role = req.user?.role;
+  if (role === 'admin' || role === 'hod') return next();
+  return res.status(403).json({ message: 'Only Admin or HOD can access remarks' });
+};
+
+// GET /api/employees/:id/remarks - fetch remarks for employee (latest first)
+router.get('/:id/remarks', authMiddleware, requireAdminOrHod, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const remarks = await EmployeeRemark.find({ employeeId: id })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(remarks);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching remarks', error: error.message });
+  }
+});
+
+// POST /api/employees/:id/remarks - add a remark (validation: text required)
+router.post('/:id/remarks', authMiddleware, requireAdminOrHod, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const text = req.body?.text != null ? String(req.body.text).trim() : '';
+    if (!text) {
+      return res.status(400).json({ message: 'Remark text cannot be empty' });
+    }
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    const remark = new EmployeeRemark({
+      employeeId: id,
+      text,
+      createdBy: {
+        userId: req.user._id,
+        username: req.user.username || 'Unknown',
+        role: req.user.role || ''
+      }
+    });
+    await remark.save();
+    res.status(201).json(remark);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding remark', error: error.message });
+  }
+});
+
+// Admin-only: Save manual leave override values for Leave Chart
+router.put('/:id/leave-override', authMiddleware, async (req, res) => {
+  try {
+    const role = req.user?.role;
+    if (role !== 'admin' && role !== 'hod') {
+      return res.status(403).json({ message: 'Only Admin or HOD can edit leave overrides' });
+    }
+
+    const { sickLeave, privilegeLeave, casualLeave, otherLeave, totalTaken, balance } = req.body;
+
+    const updatePayload = {
+      'leaveOverride.lastUpdatedBy': req.user.username || 'Admin',
+      'leaveOverride.lastUpdatedAt': new Date(),
+    };
+
+    if (sickLeave !== undefined) updatePayload['leaveOverride.sickLeave'] = Number(sickLeave);
+    if (privilegeLeave !== undefined) updatePayload['leaveOverride.privilegeLeave'] = Number(privilegeLeave);
+    if (casualLeave !== undefined) updatePayload['leaveOverride.casualLeave'] = Number(casualLeave);
+    if (otherLeave !== undefined) updatePayload['leaveOverride.otherLeave'] = Number(otherLeave);
+    if (totalTaken !== undefined) updatePayload['leaveOverride.totalTaken'] = Number(totalTaken);
+    if (balance !== undefined) updatePayload['leaveOverride.balance'] = Number(balance);
+
+    const updated = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { $set: updatePayload },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Sync the User.leaveBalance field so the employee's Leave Balance card
+    // reflects the admin override immediately via /api/auth/me
+    if (balance !== undefined && updated.emailId) {
+      try {
+        const escapedEmail = updated.emailId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        await User.findOneAndUpdate(
+          { emailId: new RegExp(`^${escapedEmail}$`, 'i') },
+          { leaveBalance: Number(balance) }
+        );
+        console.log(`[LeaveOverride] Synced User.leaveBalance to ${balance} for email ${updated.emailId}`);
+      } catch (syncErr) {
+        console.error('[LeaveOverride] Failed to sync User.leaveBalance:', syncErr.message);
+      }
+    }
+
+    res.json({ message: 'Leave override saved', leaveOverride: updated.leaveOverride });
+  } catch (error) {
+    console.error('Error saving leave override:', error);
+    res.status(500).json({ message: 'Error saving leave override', error: error.message });
+  }
+});
 
 // Get single employee by ID
 router.get('/:id', authMiddleware, async (req, res) => {

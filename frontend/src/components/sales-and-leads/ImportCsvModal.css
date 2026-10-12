@@ -301,3 +301,69 @@
   max-height: 100px;
   overflow-y: auto;
 }
+
+/* Duplicate-handling confirmation (above import modal) */
+.import-dup-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.import-dup-confirm-box {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+  padding: 24px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1f2937;
+}
+
+.import-dup-confirm-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.import-dup-confirm-text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.import-dup-confirm-list {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.import-dup-confirm-list li {
+  margin-bottom: 8px;
+}
+
+.import-dup-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.import-dup-btn-reject {
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.import-dup-btn-reject:hover {
+  background: #fffbeb;
+}

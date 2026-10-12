@@ -20,6 +20,9 @@ import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceManagement from "./pages/team-management/AttendanceManagement";
 import HelpSupport from "./pages/HelpSupport";
+import LeaveRequests from "./pages/LeaveRequests";
+import SalarySlips from "./pages/SalarySlips";
+
 
 
 
@@ -76,7 +79,12 @@ function App() {
 
           <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
 
+          <Route path="/leave-requests" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
+
+          <Route path="/salary-slips" element={<ProtectedRoute><SalarySlips /></ProtectedRoute>} />
+
           <Route path="/venkat" element={<ProtectedRoute><Venkat /></ProtectedRoute>} />
+
           <Route path="/example" element={<Example />} />
 
         </Routes>

@@ -26,6 +26,26 @@ import Ellipse_dot from "../assets/dashboard/Ellipse27.svg";
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+// Month names helper
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Week grouping helper
+const getWeekRangeString = (date) => {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 is Sunday, 1 is Monday, etc.
+  const diff = d.getDate() - day; // adjust to Sunday
+  const sunday = new Date(d.setDate(diff));
+  
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  
+  const format = (dt) => dt.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return {
+    key: `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`,
+    label: `${format(sunday)} - ${format(saturday)}, ${saturday.getFullYear()}`
+  };
+};
+
 function DashboardOverview() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -52,10 +72,252 @@ function DashboardOverview() {
     monthlyGrowth: 0
   });
 
+  // Leads card filter state
+  const [leadsFilter, setLeadsFilter] = useState('total'); // 'total' | 'daily' | 'weekly' | 'month' | 'yearly' | 'employee'
+  const [leadsDropdownOpen, setLeadsDropdownOpen] = useState(false);
+
+  // Clients card filter state
+  const [clientsFilter, setClientsFilter] = useState('total'); // 'total' | 'daily' | 'weekly' | 'month' | 'yearly' | 'employee'
+  const [clientsDropdownOpen, setClientsDropdownOpen] = useState(false);
+
+  // --- Leads breakdown computations ---
+
+  // Daily-wise leads
+  const dailyWiseLeads = React.useMemo(() => {
+    const leads = clients.filter(c => c.leadType === 'Lead');
+    const map = {};
+    leads.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([dateStr, count]) => {
+        const [year, month, day] = dateStr.split('-');
+        const d = new Date(year, month - 1, day);
+        const formatted = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        return { label: formatted, count };
+      });
+  }, [clients]);
+
+  // Weekly-wise leads
+  const weeklyWiseLeads = React.useMemo(() => {
+    const leads = clients.filter(c => c.leadType === 'Lead');
+    const map = {};
+    leads.forEach(c => {
+      if (!c.createdAt) return;
+      const { key, label } = getWeekRangeString(c.createdAt);
+      if (!map[key]) {
+        map[key] = { label, count: 0 };
+      }
+      map[key].count++;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([_, val]) => ({ label: val.label, count: val.count }));
+  }, [clients]);
+
+  // Month-wise leads
+  const monthWiseLeads = React.useMemo(() => {
+    const leads = clients.filter(c => c.leadType === 'Lead');
+    const map = {};
+    leads.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => {
+        const [am, ay] = a[0].split(' ');
+        const [bm, by] = b[0].split(' ');
+        const aDate = new Date(`${am} 1 ${ay}`);
+        const bDate = new Date(`${bm} 1 ${by}`);
+        return bDate - aDate;
+      })
+      .map(([month, count]) => ({ label: month, count }));
+  }, [clients]);
+
+  // Yearly-wise leads
+  const yearlyWiseLeads = React.useMemo(() => {
+    const leads = clients.filter(c => c.leadType === 'Lead');
+    const map = {};
+    leads.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = String(d.getFullYear());
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([year, count]) => ({ label: year, count }));
+  }, [clients]);
+
+  // Employee-wise leads
+  const employeeWiseLeads = React.useMemo(() => {
+    const leads = clients.filter(c => c.leadType === 'Lead');
+    const map = {};
+    leads.forEach(c => {
+      const name =
+        (c.createdBy && typeof c.createdBy === 'object' ? c.createdBy.username : null) ||
+        c.createdByUsername ||
+        'Unknown';
+      map[name] = (map[name] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([employee, count]) => ({ label: employee, count }));
+  }, [clients]);
+
+  // --- Clients breakdown computations ---
+
+  // Daily-wise clients
+  const dailyWiseClients = React.useMemo(() => {
+    const items = clients.filter(c => c.leadType === 'Client');
+    const map = {};
+    items.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([dateStr, count]) => {
+        const [year, month, day] = dateStr.split('-');
+        const d = new Date(year, month - 1, day);
+        const formatted = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        return { label: formatted, count };
+      });
+  }, [clients]);
+
+  // Weekly-wise clients
+  const weeklyWiseClients = React.useMemo(() => {
+    const items = clients.filter(c => c.leadType === 'Client');
+    const map = {};
+    items.forEach(c => {
+      if (!c.createdAt) return;
+      const { key, label } = getWeekRangeString(c.createdAt);
+      if (!map[key]) {
+        map[key] = { label, count: 0 };
+      }
+      map[key].count++;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([_, val]) => ({ label: val.label, count: val.count }));
+  }, [clients]);
+
+  // Month-wise clients
+  const monthWiseClients = React.useMemo(() => {
+    const items = clients.filter(c => c.leadType === 'Client');
+    const map = {};
+    items.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => {
+        const [am, ay] = a[0].split(' ');
+        const [bm, by] = b[0].split(' ');
+        const aDate = new Date(`${am} 1 ${ay}`);
+        const bDate = new Date(`${bm} 1 ${by}`);
+        return bDate - aDate;
+      })
+      .map(([month, count]) => ({ label: month, count }));
+  }, [clients]);
+
+  // Yearly-wise clients
+  const yearlyWiseClients = React.useMemo(() => {
+    const items = clients.filter(c => c.leadType === 'Client');
+    const map = {};
+    items.forEach(c => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      const key = String(d.getFullYear());
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([year, count]) => ({ label: year, count }));
+  }, [clients]);
+
+  // Employee-wise clients
+  const employeeWiseClients = React.useMemo(() => {
+    const items = clients.filter(c => c.leadType === 'Client');
+    const map = {};
+    items.forEach(c => {
+      const name =
+        (c.createdBy && typeof c.createdBy === 'object' ? c.createdBy.username : null) ||
+        c.createdByUsername ||
+        'Unknown';
+      map[name] = (map[name] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([employee, count]) => ({ label: employee, count }));
+  }, [clients]);
+
+  // Selector helper functions
+  const getBreakdownData = (filterType, isLead) => {
+    if (filterType === 'daily') return isLead ? dailyWiseLeads : dailyWiseClients;
+    if (filterType === 'weekly') return isLead ? weeklyWiseLeads : weeklyWiseClients;
+    if (filterType === 'month') return isLead ? monthWiseLeads : monthWiseClients;
+    if (filterType === 'yearly') return isLead ? yearlyWiseLeads : yearlyWiseClients;
+    if (filterType === 'employee') return isLead ? employeeWiseLeads : employeeWiseClients;
+    return [];
+  };
+
+  const getBreakdownHeaderLabel = (filterType) => {
+    if (filterType === 'daily') return 'Date';
+    if (filterType === 'weekly') return 'Week';
+    if (filterType === 'month') return 'Month';
+    if (filterType === 'yearly') return 'Year';
+    if (filterType === 'employee') return 'Employee';
+    return '';
+  };
+
+  const getFilterButtonLabel = (filterVal) => {
+    if (filterVal === 'total') return 'Total';
+    if (filterVal === 'daily') return 'Daily-wise';
+    if (filterVal === 'weekly') return 'Weekly-wise';
+    if (filterVal === 'month') return 'Month-wise';
+    if (filterVal === 'yearly') return 'Yearly-wise';
+    if (filterVal === 'employee') return 'Employee-wise';
+    return 'Total';
+  };
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    if (!leadsDropdownOpen) return;
+    const handle = (e) => {
+      if (!e.target.closest('[data-leads-dropdown]')) {
+        setLeadsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [leadsDropdownOpen]);
+
+  useEffect(() => {
+    if (!clientsDropdownOpen) return;
+    const handle = (e) => {
+      if (!e.target.closest('[data-clients-dropdown]')) {
+        setClientsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [clientsDropdownOpen]);
+
   useEffect(() => {
     const storedUsername = localStorage.getItem("username") || "User";
     const storedUserId = localStorage.getItem("userId");
-    
+
     setUsername(storedUsername);
     console.log("Dashboard mounted - User ID:", storedUserId);
 
@@ -76,8 +338,8 @@ function DashboardOverview() {
   }, []);
 
   useEffect(() => {
-  calculateDashboardMetrics();
-}, [clients, meetings]);
+    calculateDashboardMetrics();
+  }, [clients, meetings]);
 
   const fetchLastCheckIn = async () => {
     try {
@@ -85,9 +347,9 @@ function DashboardOverview() {
       const role = localStorage.getItem("role") || "";
       console.log("Fetching check-ins for user:", userId, "role:", role);
       setDebugInfo(`User ID: ${userId || 'NOT FOUND'} | Role: ${role || 'NOT FOUND'}`);
-      
+
       // Don't return early if userId missing — service can use /user/me
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'hod') {
         // Admin: fetch global latest check-ins (page 1, limit 1)
         const resp = await checkInService.getCheckIns(1, 1);
         console.log('Admin getCheckIns response:', resp);
@@ -131,7 +393,7 @@ function DashboardOverview() {
       const token = localStorage.getItem("token");
       let me = null;
       try {
-        const resp = await fetch(`${config.API_BASE_URL.replace(/\/api\/?$/,'')}/api/auth/me`, {
+        const resp = await fetch(`${config.API_BASE_URL.replace(/\/api\/?$/, '')}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (resp.ok) me = await resp.json();
@@ -144,7 +406,7 @@ function DashboardOverview() {
       // fetch aggregated client events
       let clientEvents = [];
       try {
-        const allEventsResp = await fetch(`${clientService.baseURL.replace(/\/clients\/?$/,'')}/clients/events`, {
+        const allEventsResp = await fetch(`${clientService.baseURL.replace(/\/clients\/?$/, '')}/clients/events`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (allEventsResp.ok) clientEvents = await allEventsResp.json();
@@ -184,34 +446,34 @@ function DashboardOverview() {
       // });
 
       // fetch standalone meetings
-let meetingsList = [];
-try {
-  const raw = await MeetingService.getMeetings();
-  meetingsList = Array.isArray(raw) ? raw : (raw.meetings || []);
-} catch (e) {
-  console.warn('Failed to fetch meetings', e);
-  meetingsList = [];
-}
+      let meetingsList = [];
+      try {
+        const raw = await MeetingService.getMeetings();
+        meetingsList = Array.isArray(raw) ? raw : (raw.meetings || []);
+      } catch (e) {
+        console.warn('Failed to fetch meetings', e);
+        meetingsList = [];
+      }
 
-// Normalize meetings - FIXED VERSION
-const normalizedMeetings = (meetingsList || []).map(m => {
-  const date = m.date ? new Date(m.date) : null;
-  return {
-    _id: m._id || m.id,
-    eventId: m._id || m.id,
-    eventName: m.title || m.eventName || '',
-    title: m.title || m.eventName || '',
-    date: date ? date.toISOString().split('T')[0] : null,
-    time: m.time || '',
-    clientId: m.clientId || null,
-    clientName: m.clientName || null,
-    assignedTeamMembers: m.assignedTeamMembers || [],
-    createdBy: m.createdBy || null,
-    color: m.color || (m.meta && m.meta.meeting && m.meta.meeting.color) || '#FF9500',
-    link: m.link || m.meetingLink || '', // Make sure this line includes both possible field names
-    meta: { meeting: m }
-  };
-});
+      // Normalize meetings - FIXED VERSION
+      const normalizedMeetings = (meetingsList || []).map(m => {
+        const date = m.date ? new Date(m.date) : null;
+        return {
+          _id: m._id || m.id,
+          eventId: m._id || m.id,
+          eventName: m.title || m.eventName || '',
+          title: m.title || m.eventName || '',
+          date: date ? date.toISOString().split('T')[0] : null,
+          time: m.time || '',
+          clientId: m.clientId || null,
+          clientName: m.clientName || null,
+          assignedTeamMembers: m.assignedTeamMembers || [],
+          createdBy: m.createdBy || null,
+          color: m.color || (m.meta && m.meta.meeting && m.meta.meeting.color) || '#FF9500',
+          link: m.link || m.meetingLink || '', // Make sure this line includes both possible field names
+          meta: { meeting: m }
+        };
+      });
 
 
       const events = [
@@ -221,7 +483,7 @@ const normalizedMeetings = (meetingsList || []).map(m => {
 
       // Filter based on role
       let filteredEvents = [];
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'hod') {
         filteredEvents = events;
       } else {
         let employee = null;
@@ -241,9 +503,9 @@ const normalizedMeetings = (meetingsList || []).map(m => {
 
         filteredEvents = (events || []).filter(ev => {
           if (ev.createdBy && (
-              (userId && String(ev.createdBy) === userId) ||
-              (usernameKey && ev.createdBy.toLowerCase && String(ev.createdBy).toLowerCase() === usernameKey)
-            )) {
+            (userId && String(ev.createdBy) === userId) ||
+            (usernameKey && ev.createdBy.toLowerCase && String(ev.createdBy).toLowerCase() === usernameKey)
+          )) {
             return true;
           }
 
@@ -448,7 +710,7 @@ const normalizedMeetings = (meetingsList || []).map(m => {
   return (
     <div className={styles.dashboardOverview}>
 
-       {/* Temporary debug info */}
+      {/* Temporary debug info */}
       {/* <div style={{ 
         background: '#f0f0f0', 
         padding: '10px', 
@@ -480,37 +742,181 @@ const normalizedMeetings = (meetingsList || []).map(m => {
 
         <div className={styles.metricsRow}>
           {/* Total Clients Card */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricContent}>
-              <div className={styles.metricLabel}>Total Clients</div>
-              <div className={styles.metricValue}>{isLoadingClients ? '--' : dashboardMetrics.totalClients}</div>
-            </div>
-            <div className={styles.metricDetails}>
-              {/* <img src={threedot} alt="trend" className={styles.trendIcon} /> */}
-              <div className={styles.changeIndicator}>
-                <div className={styles.changeChip}>
-                  <span className={styles.changeIcon}>&#8599;</span>
-                  <span className={styles.grow}>{isLoadingClients ? '--' : `${dashboardMetrics.monthlyGrowth >= 0 ? '+' : ''}${dashboardMetrics.monthlyGrowth}%`}</span>
+          <div className={styles.metricCard} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+              <div className={styles.metricContent}>
+                <div className={styles.metricLabel}>Total Clients</div>
+                {/* Big count — only shown in Total view */}
+                {clientsFilter === 'total' && (
+                  <div className={styles.metricValue}>
+                    {isLoadingClients ? '--' : dashboardMetrics.totalClients}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                {/* Dropdown trigger */}
+                <div className={styles.leadsFilterDropdown} data-clients-dropdown>
+                  <button
+                    className={styles.leadsFilterBtn}
+                    onClick={() => setClientsDropdownOpen(v => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={clientsDropdownOpen}
+                  >
+                    <span className={styles.leadsFilterBtnText}>
+                      {getFilterButtonLabel(clientsFilter)}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: clientsDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                      <path d="M2 4L6 8L10 4" stroke="#334afa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  {clientsDropdownOpen && (
+                    <ul className={styles.leadsFilterMenu} role="listbox">
+                      {[
+                        { value: 'total', label: 'Total Clients' },
+                        { value: 'daily', label: 'Daily-wise' },
+                        { value: 'weekly', label: 'Weekly-wise' },
+                        { value: 'month', label: 'Month-wise' },
+                        { value: 'yearly', label: 'Yearly-wise' },
+                        { value: 'employee', label: 'Employee-wise' },
+                      ].map(opt => (
+                        <li
+                          key={opt.value}
+                          role="option"
+                          aria-selected={clientsFilter === opt.value}
+                          className={`${styles.leadsFilterMenuItem} ${clientsFilter === opt.value ? styles.leadsFilterMenuItemActive : ''}`}
+                          onClick={() => { setClientsFilter(opt.value); setClientsDropdownOpen(false); }}
+                        >
+                          {clientsFilter === opt.value && (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: 4, flexShrink: 0 }}>
+                              <path d="M2 6L5 9L10 3" stroke="#334afa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          {opt.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
+                {/* Growth chip — only shown in Total view */}
+                {clientsFilter === 'total' && (
+                  <div className={styles.changeChip} style={{ marginTop: 0 }}>
+                    <span className={styles.changeIcon}>&#8599;</span>
+                    <span className={styles.grow}>{isLoadingClients ? '--' : `${dashboardMetrics.monthlyGrowth >= 0 ? '+' : ''}${dashboardMetrics.monthlyGrowth}%`}</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Breakdown panel — shown for sub-views */}
+            {clientsFilter !== 'total' && !isLoadingClients && (
+              <div className={styles.leadsBreakdown}>
+                <div className={styles.leadsBreakdownHeader}>
+                  {getBreakdownHeaderLabel(clientsFilter)}
+                  <span>Clients</span>
+                </div>
+                <div className={styles.leadsBreakdownList}>
+                  {getBreakdownData(clientsFilter, false).length === 0 ? (
+                    <div className={styles.leadsBreakdownEmpty}>No data available</div>
+                  ) : (
+                    getBreakdownData(clientsFilter, false).map((item, idx) => (
+                      <div key={idx} className={styles.leadsBreakdownRow}>
+                        <span className={styles.leadsBreakdownLabel}>{item.label}</span>
+                        <span className={styles.leadsBreakdownCount}>{item.count}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Total Leads Card */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricContent}>
-              <div className={styles.metricLabel}>Total Leads</div>
-              <div className={styles.metricValue}>{isLoadingClients ? '--' : dashboardMetrics.totalLeads}</div>
-            </div>
-            <div className={styles.metricDetails}>
-              {/* <img src={threedot} alt="trend" className={styles.trendIcon} /> */}
-              <div className={styles.changeIndicator}>
-                <div className={styles.changeChip}>
-                  <span className={styles.changeIcon}>&#8599;</span>
-                  <span className={styles.grow}>{isLoadingClients ? '--' : `${dashboardMetrics.monthlyGrowth >= 0 ? '+' : ''}${dashboardMetrics.monthlyGrowth}%`}</span>
+          <div className={styles.metricCard} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+              <div className={styles.metricContent}>
+                <div className={styles.metricLabel}>Total Leads</div>
+                {/* Big count — only shown in Total view */}
+                {leadsFilter === 'total' && (
+                  <div className={styles.metricValue}>
+                    {isLoadingClients ? '--' : dashboardMetrics.totalLeads}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                {/* Dropdown trigger */}
+                <div className={styles.leadsFilterDropdown} data-leads-dropdown>
+                  <button
+                    className={styles.leadsFilterBtn}
+                    onClick={() => setLeadsDropdownOpen(v => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={leadsDropdownOpen}
+                  >
+                    <span className={styles.leadsFilterBtnText}>
+                      {getFilterButtonLabel(leadsFilter)}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: leadsDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                      <path d="M2 4L6 8L10 4" stroke="#334afa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  {leadsDropdownOpen && (
+                    <ul className={styles.leadsFilterMenu} role="listbox">
+                      {[
+                        { value: 'total', label: 'Total Leads' },
+                        { value: 'daily', label: 'Daily-wise' },
+                        { value: 'weekly', label: 'Weekly-wise' },
+                        { value: 'month', label: 'Month-wise' },
+                        { value: 'yearly', label: 'Yearly-wise' },
+                        { value: 'employee', label: 'Employee-wise' },
+                      ].map(opt => (
+                        <li
+                          key={opt.value}
+                          role="option"
+                          aria-selected={leadsFilter === opt.value}
+                          className={`${styles.leadsFilterMenuItem} ${leadsFilter === opt.value ? styles.leadsFilterMenuItemActive : ''}`}
+                          onClick={() => { setLeadsFilter(opt.value); setLeadsDropdownOpen(false); }}
+                        >
+                          {leadsFilter === opt.value && (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: 4, flexShrink: 0 }}>
+                              <path d="M2 6L5 9L10 3" stroke="#334afa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          {opt.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
+                {/* Growth chip — only shown in Total view */}
+                {leadsFilter === 'total' && (
+                  <div className={styles.changeChip} style={{ marginTop: 0 }}>
+                    <span className={styles.changeIcon}>&#8599;</span>
+                    <span className={styles.grow}>{isLoadingClients ? '--' : `${dashboardMetrics.monthlyGrowth >= 0 ? '+' : ''}${dashboardMetrics.monthlyGrowth}%`}</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Breakdown panel — shown for sub-views */}
+            {leadsFilter !== 'total' && !isLoadingClients && (
+              <div className={styles.leadsBreakdown}>
+                <div className={styles.leadsBreakdownHeader}>
+                  {getBreakdownHeaderLabel(leadsFilter)}
+                  <span>Leads</span>
+                </div>
+                <div className={styles.leadsBreakdownList}>
+                  {getBreakdownData(leadsFilter, true).length === 0 ? (
+                    <div className={styles.leadsBreakdownEmpty}>No data available</div>
+                  ) : (
+                    getBreakdownData(leadsFilter, true).map((item, idx) => (
+                      <div key={idx} className={styles.leadsBreakdownRow}>
+                        <span className={styles.leadsBreakdownLabel}>{item.label}</span>
+                        <span className={styles.leadsBreakdownCount}>{item.count}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Today's Meetings Card */}
@@ -539,9 +945,9 @@ const normalizedMeetings = (meetingsList || []).map(m => {
 
       <div className={styles["mobile-checkin"]}>
         <CheckIn
-         
+
           lastCheckInTime={lastCheckInTime}
-   onCheckInLogged={handleCheckInLogged}
+          onCheckInLogged={handleCheckInLogged}
         />
       </div>
 

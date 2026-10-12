@@ -1,6 +1,34 @@
 const mongoose = require("mongoose");
 const createEventSchema = require('./CreateEvent');
 
+const FOLLOWUP_STATUS_ENUM = [
+  "Contacted",
+  "Needs Analysis",
+  "Demo Scheduled",
+  "Proposal Sent",
+  "Completed",
+  "Pending",
+  "Progress",
+  "Won",
+  "Lost",
+];
+
+function coerceFollowupStatus(value) {
+  if (value === undefined) return undefined;
+  const s = value == null ? "" : String(value).trim();
+  if (s === "" || !FOLLOWUP_STATUS_ENUM.includes(s)) return "Pending";
+  return s;
+}
+
+function patchFollowupInUpdateObject(obj) {
+  if (!obj || typeof obj !== "object") return;
+  if (!Object.prototype.hasOwnProperty.call(obj, "followupStatus")) return;
+  const raw = obj.followupStatus;
+  const coerced =
+    raw === undefined ? undefined : coerceFollowupStatus(raw);
+  if (coerced !== undefined) obj.followupStatus = coerced;
+}
+
 const clientSchema = new mongoose.Schema({
   // 1. Company & Contact Details
   companyName: { type: String, required: true },
@@ -93,5 +121,24 @@ const clientSchema = new mongoose.Schema({
 
   events: [createEventSchema]
 }, { timestamps: true });
+
+// Empty string "" is not a valid enum value; coerce before validation (covers .save()).
+clientSchema.pre("validate", function (next) {
+  if (this.followupStatus === undefined) return next();
+  const coerced = coerceFollowupStatus(this.followupStatus);
+  if (coerced !== undefined) this.followupStatus = coerced;
+  next();
+});
+
+// findByIdAndUpdate / updateOne bypass document middleware; patch update payload before validators run.
+clientSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  if (!update || typeof update !== "object") return next();
+  patchFollowupInUpdateObject(update);
+  if (update.$set && typeof update.$set === "object") {
+    patchFollowupInUpdateObject(update.$set);
+  }
+  next();
+});
 
 module.exports = mongoose.model("Client", clientSchema);

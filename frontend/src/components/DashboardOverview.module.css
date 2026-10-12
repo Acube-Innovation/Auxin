@@ -89,7 +89,7 @@
 .metricsRow {
   display: flex;
   min-width: 240px;
-  align-items: center;
+  align-items: flex-start;
   gap: 19px;
   font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
   justify-content: space-between;
@@ -97,12 +97,13 @@
   flex-grow: 1;
   flex-shrink: 1;
   width: 920px;
+  overflow: visible;
 }
 
 .metricCard {
   border-radius: 18px;
   background-color: #fff;
-  align-self: stretch;
+  align-self: auto;
   display: flex;
   min-width: 240px;
   align-items: center;
@@ -111,6 +112,7 @@
   margin: auto 0;
   padding: 25px;
   border: 1px solid #e4e4e4;
+  overflow: visible;
 }
 
 .profitCard {
@@ -1329,4 +1331,175 @@ background: #FFF; */
     width: 11px;
     height: 11px;
   }
+}
+
+/* ── Leads filter dropdown ─────────────────────────────────────────── */
+.leadsFilterDropdown {
+  position: relative;
+  z-index: 50;
+}
+
+.leadsFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1.5px solid #334afa;
+  background: #fff;
+  color: #334afa;
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  line-height: 1;
+}
+
+.leadsFilterBtn:hover {
+  background: #334afa;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(51, 74, 250, 0.25);
+}
+
+.leadsFilterBtn:hover svg path {
+  stroke: #fff;
+}
+
+.leadsFilterBtnText {
+  font-size: 0.78rem;
+}
+
+.leadsFilterMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 148px;
+  background: #fff;
+  border: 1.5px solid #e4e4e4;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  margin: 0;
+  padding: 5px 0;
+  z-index: 100;
+  animation: leadsMenuFadeIn 0.15s ease;
+}
+
+@keyframes leadsMenuFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.leadsFilterMenuItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 2px 4px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.leadsFilterMenuItem:hover {
+  background: #f0f2ff;
+  color: #334afa;
+}
+
+.leadsFilterMenuItemActive {
+  color: #334afa;
+  font-weight: 700;
+  background: #eef0ff;
+}
+
+/* ── Leads breakdown panel ─────────────────────────────────────────── */
+.leadsBreakdown {
+  margin-top: 16px;
+  border-top: 1px solid #ececec;
+  padding-top: 12px;
+  animation: breakdownFadeIn 0.2s ease;
+}
+
+@keyframes breakdownFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.leadsBreakdownHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(22, 22, 22, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.leadsBreakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #e0e0e0 transparent;
+}
+
+.leadsBreakdownList::-webkit-scrollbar {
+  width: 4px;
+}
+.leadsBreakdownList::-webkit-scrollbar-thumb {
+  background: #d8d8d8;
+  border-radius: 4px;
+}
+
+.leadsBreakdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.12s;
+}
+
+.leadsBreakdownRow:hover {
+  background: #f5f6ff;
+}
+
+.leadsBreakdownLabel {
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leadsBreakdownCount {
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334afa;
+  text-align: right;
+}
+
+.leadsBreakdownEmpty {
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 0.82rem;
+  color: rgba(22, 22, 22, 0.4);
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
 }

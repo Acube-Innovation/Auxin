@@ -13,6 +13,16 @@ import styles from "../../components/team-management-components/MeetingsTable.mo
 import MobileBottomNavigation from "../../components/MobileBottomNavigation";
 import DateRangePickerModal from "../../components/DateRangePickerModal";
 import { getAllEvents } from "../../services/MeetingService";
+import { OFFICE_HOLIDAYS_2026, OFFICIAL_HOLIDAYS_2026 } from "../../utils/leaveHolidays";
+
+const governmentHolidayDateSet = new Set(OFFICIAL_HOLIDAYS_2026);
+
+function dateToYmd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 const locales = {
   "en-US": require("date-fns/locale/en-US"),
@@ -51,6 +61,27 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
   }, [view, date]);
 
   const [events, setEvents] = useState([]);
+
+  const governmentHolidayEvents = useMemo(
+    () =>
+      OFFICE_HOLIDAYS_2026.map(({ date, name }) => {
+        const [y, mo, da] = date.split("-").map(Number);
+        const start = new Date(y, mo - 1, da);
+        const end = new Date(y, mo - 1, da + 1);
+        return {
+          id: `gov-holiday-${date}`,
+          title: name,
+          start,
+          end,
+          allDay: true,
+          color: "#ea580c",
+          isGovernmentHoliday: true,
+          notes: "",
+          link: null,
+        };
+      }),
+    []
+  );
 
   useEffect(() => {
     // If parent provided events (merged client events + meetings), map them into calendar shape.
@@ -124,10 +155,10 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
               [],
           };
         });
-        setEvents(mapped);
+        setEvents([...governmentHolidayEvents, ...mapped]);
       } catch (err) {
         console.error("Failed to map external events for calendar:", err);
-        setEvents([]);
+        setEvents([...governmentHolidayEvents]);
       }
       return;
     }
@@ -162,13 +193,13 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
             notes: e.notes || e.meta?.event?.notes || "",
           };
         });
-        setEvents(mapped);
+        setEvents([...governmentHolidayEvents, ...mapped]);
       } catch (err) {
         console.error("Failed to fetch client events for calendar:", err);
-        setEvents([]);
+        setEvents([...governmentHolidayEvents]);
       }
     })();
-  }, [externalEvents]);
+  }, [externalEvents, governmentHolidayEvents]);
 
   const handleNavigate = (newDate) => {
     setDate(newDate);
@@ -179,6 +210,7 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
   };
 
   const handleSelectEvent = (event) => {
+    if (event.isGovernmentHoliday) return;
     setSelectedMeeting(event);
   };
 
@@ -202,6 +234,31 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
   };
 
   const eventStyleGetter = (event, start, end, isSelected) => {
+    if (event.isGovernmentHoliday) {
+      if (view === Views.MONTH) {
+        return {
+          style: {
+            backgroundColor: "transparent",
+            color: "#c2410c",
+            border: "none",
+            padding: "0",
+            boxShadow: "none",
+            fontWeight: 600,
+            fontSize: "0.7rem",
+          },
+        };
+      }
+      return {
+        style: {
+          backgroundColor: "#fff7ed",
+          color: "#c2410c",
+          borderRadius: "4px",
+          border: "1px solid #ea580c",
+          padding: "4px 8px",
+          opacity: 1,
+        },
+      };
+    }
     if (view === Views.MONTH) {
       return {
         style: {
@@ -227,18 +284,36 @@ const YourCalendarMeetings = ({ events: externalEvents, onEdit, onDelete }) => {
   };
 
   const dayPropGetter = (date) => {
-    const isCurrentDate = date.toDateString() === new Date().toDateString();
+    const ymd = dateToYmd(date);
+    const isHoliday = governmentHolidayDateSet.has(ymd);
     return {
       style: {
-        backgroundColor: isCurrentDate ? "white" : "white",
+        backgroundColor: isHoliday ? "#fff7ed" : "white",
+        ...(isHoliday ? { boxShadow: "inset 0 0 0 1.5px #ea580c" } : {}),
       },
+      title: isHoliday ? "Government / public holiday" : undefined,
     };
   };
 
   const customComponents = {
     event: ({ event }) => (
       <div className={styles["rbc-custom-event"]}>
-        {view === Views.MONTH ? (
+        {event.isGovernmentHoliday ? (
+          view === Views.MONTH ? (
+            <div className={styles["meetingcontent"]}>
+              <span style={{ backgroundColor: "#ea580c" }}></span>
+              <div className={styles["event-title"]} style={{ color: "#c2410c" }}>
+                {event.title}
+              </div>
+            </div>
+          ) : (
+            <div className={styles["event-content"]}>
+              <div className={styles["event-title"]} style={{ color: "#c2410c" }}>
+                {event.title}
+              </div>
+            </div>
+          )
+        ) : view === Views.MONTH ? (
           <div className={styles["meetingcontent"]}>
             <span style={{ backgroundColor: event.color }}></span>
             <div className={styles["event-title"]}>{event.title}</div>

@@ -201,6 +201,30 @@
   color: var(--Gray-500, #717680);
 }
 
+.calendar-cell.disabled {
+  color: var(--Gray-400, #9ca3af);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.calendar-cell.disabled .calendar-day {
+  color: inherit;
+}
+
+/* Government / public holidays (leave request date picker) */
+.calendar-cell.disabled.holiday-highlight {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+  outline: 1.5px solid #ea580c;
+  outline-offset: -1px;
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.calendar-cell.disabled.holiday-highlight .calendar-day {
+  color: #c2410c;
+  font-weight: 600;
+}
+
 .calendar-day {
   color: inherit;
 }

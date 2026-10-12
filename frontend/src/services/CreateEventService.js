@@ -17,7 +17,7 @@ const getAuthHeaders = () => {
 export const createEvent = async (clientId, eventData) => {
   try {
     const response = await axios.post(
-      `${API_URL}/api/clients/${clientId}/events`,
+      `${API_URL}/clients/${clientId}/events`,
       eventData,
       {
         headers: getAuthHeaders(),
@@ -33,7 +33,7 @@ export const createEvent = async (clientId, eventData) => {
 // Get all events for a client
 export const getEventsByClientId = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/api/clients/${clientId}/events`, {
+    const response = await axios.get(`${API_URL}/clients/${clientId}/events`, {
       headers: getAuthHeaders(),
     });
     return response.data;
@@ -47,7 +47,7 @@ export const getEventsByClientId = async (clientId) => {
 export const updateEvent = async (clientId, eventId, eventData) => {
   try {
     const response = await axios.put(
-      `${API_URL}/api/clients/${clientId}/events/${eventId}`,
+      `${API_URL}/clients/${clientId}/events/${eventId}`,
       eventData,
       {
         headers: getAuthHeaders(),
@@ -63,7 +63,7 @@ export const updateEvent = async (clientId, eventId, eventData) => {
 // Delete event for a client
 export const deleteEvent = async (clientId, eventId) => {
   try {
-    const response = await axios.delete(`${API_URL}/api/clients/${clientId}/events/${eventId}`, {
+    const response = await axios.delete(`${API_URL}/clients/${clientId}/events/${eventId}`, {
       headers: getAuthHeaders(),
     });
     return response.data;
@@ -75,7 +75,7 @@ export const deleteEvent = async (clientId, eventId) => {
 
 export const getAllEvents = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/clients/events`, {
+    const response = await axios.get(`${API_URL}/clients/events`, {
       headers: getAuthHeaders(),
     });
     return response.data;

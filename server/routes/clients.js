@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Client = require('../models/Client');
+const ClientRemark = require('../models/ClientRemark');
 const Employee = require('../models/Employee');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require("nodemailer");
+const { sendEventAssignedTemplate } = require('../services/interaktWhatsAppService');
 
 // Storage config
 const storage = multer.diskStorage({
@@ -26,6 +29,21 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Only image files allowed'), false);
   }
 };
+
+const FOLLOWUP_STATUS_ENUM = [
+  'Contacted', 'Needs Analysis', 'Demo Scheduled', 'Proposal Sent',
+  'Completed', 'Pending', 'Progress', 'Won', 'Lost',
+];
+
+/** Empty or invalid followupStatus breaks Mongoose enum; coerce to Pending (matches Client schema default). */
+function normalizeFollowupStatusOnPayload(payload) {
+  if (!payload || typeof payload !== 'object') return;
+  if (!Object.prototype.hasOwnProperty.call(payload, 'followupStatus')) return;
+  const s = payload.followupStatus == null ? '' : String(payload.followupStatus).trim();
+  if (s === '' || !FOLLOWUP_STATUS_ENUM.includes(s)) {
+    payload.followupStatus = 'Pending';
+  }
+}
 
 // ?? Background email sender (non-blocking)
 async function sendEventEmailsInBackground(eventData, assignedBy, client, actionType = 'created') {
@@ -82,6 +100,44 @@ async function sendEventEmailsInBackground(eventData, assignedBy, client, action
     }
   } catch (emailError) {
     console.error("? Background email error:", emailError);
+  }
+}
+
+// Send WhatsApp template to each assigned team member (one message per member).
+async function sendEventWhatsAppInBackground(eventData, assignedBy, client) {
+  const assignedUserIds = Array.isArray(eventData.assignedTeamMembers) ? eventData.assignedTeamMembers : [];
+  if (assignedUserIds.length === 0) return;
+  const clientName = client.clientName || client.companyName || 'Client';
+  try {
+    for (const userId of assignedUserIds) {
+      try {
+        const member = await Employee.findById(userId);
+        if (!member) {
+          console.warn('[WhatsApp] Skipped – no employee found for id:', userId);
+          continue;
+        }
+        if (!member.mobile) {
+          console.warn('[WhatsApp] Skipped – no mobile for', member.employeeName, '(id:', userId, ')');
+          continue;
+        }
+        const result = await sendEventAssignedTemplate(
+          member.mobile,
+          member.employeeName || 'Team Member',
+          eventData,
+          clientName,
+          assignedBy
+        );
+        if (result.success) {
+          console.log(`[WhatsApp] Event template sent to ${member.employeeName} (${member.mobile})`);
+        } else {
+          console.warn(`[WhatsApp] Failed for ${member.employeeName}:`, result.error);
+        }
+      } catch (err) {
+        console.error(`[WhatsApp] Error sending to member ${userId}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Background send error:', err);
   }
 }
 
@@ -224,8 +280,11 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     let clients;
-    if (userRole === 'admin') {
-      clients = await Client.find(baseFilter).sort({ createdAt: -1 });
+    if (userRole === 'admin' || userRole === 'hod') {
+      clients = await Client.find(baseFilter)
+        .populate('createdBy', 'username')
+        .populate('assignedTo', 'username')
+        .sort({ createdAt: -1 });
     } else if (userRole === 'sales_executive') {
       const orConditions = [
         { createdBy: userId },
@@ -239,15 +298,115 @@ router.get('/', authMiddleware, async (req, res) => {
       clients = await Client.find({
         ...baseFilter,
         $or: orConditions
-      }).sort({ createdAt: -1 });
+      })
+        .populate('createdBy', 'username')
+        .populate('assignedTo', 'username')
+        .sort({ createdAt: -1 });
     } else {
       // Default fallback for other roles if any
-      clients = await Client.find({ ...baseFilter, createdBy: userId }).sort({ createdAt: -1 });
+      clients = await Client.find({ ...baseFilter, createdBy: userId })
+        .populate('createdBy', 'username')
+        .populate('assignedTo', 'username')
+        .sort({ createdAt: -1 });
     }
-    res.json(clients);
+
+    // Build a user lookup map { id -> username } to handle legacy records
+    // where createdBy was stored as a plain string (not a valid ObjectId),
+    // causing Mongoose populate() to silently return null.
+    const allUsers = await User.find({}).select('_id username').lean();
+    const userMap = {};
+    allUsers.forEach(u => { userMap[String(u._id)] = u.username; });
+
+    // Convert to plain objects and inject resolved usernames
+    const enriched = clients.map(c => {
+      const obj = c.toObject ? c.toObject() : { ...c };
+
+      // Resolve createdBy → createdByUsername
+      if (obj.createdBy && typeof obj.createdBy === 'object' && obj.createdBy.username) {
+        obj.createdByUsername = obj.createdBy.username;
+      } else {
+        const rawId = obj.createdBy ? String(obj.createdBy) : null;
+        obj.createdByUsername = rawId ? (userMap[rawId] || 'Unknown') : 'Unknown';
+      }
+
+      // Resolve assignedTo → assignedToUsername
+      if (obj.assignedTo && typeof obj.assignedTo === 'object' && obj.assignedTo.username) {
+        obj.assignedToUsername = obj.assignedTo.username;
+      } else {
+        const rawId = obj.assignedTo ? String(obj.assignedTo) : null;
+        obj.assignedToUsername = rawId ? (userMap[rawId] || 'Unassigned') : 'Unassigned';
+      }
+
+      return obj;
+    });
+
+    res.json(enriched);
   } catch (err) {
     console.error('GET /clients error:', err);
     res.status(500).json({ message: 'Error fetching clients', error: err.message });
+  }
+});
+
+// Get all events from all clients (must be before /:id routes)
+router.get('/events', authMiddleware, async (req, res) => {
+  try {
+    const clients = await Client.find({}, { companyName: 1, events: 1 }).lean();
+    const all = [];
+    for (const c of clients) {
+      if (Array.isArray(c.events)) {
+        for (const e of c.events) {
+          all.push({
+            clientId: c._id,
+            clientName: c.companyName,
+            ...e,
+          });
+        }
+      }
+    }
+    res.json(all);
+  } catch (error) {
+    console.error('Error fetching all events:', error);
+    res.status(500).json({ message: 'Error fetching all events', error: error.message });
+  }
+});
+
+// Get remarks for a client/lead (latest first)
+router.get('/:id/remarks', authMiddleware, async (req, res) => {
+  try {
+    const remarks = await ClientRemark.find({ clientId: req.params.id })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(remarks);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching remarks', error: error.message });
+  }
+});
+
+// Add a remark for a client/lead (validation: text required)
+router.post('/:id/remarks', authMiddleware, async (req, res) => {
+  try {
+    const text = req.body?.text != null ? String(req.body.text).trim() : '';
+    if (!text) {
+      return res.status(400).json({ message: 'Remark text cannot be empty' });
+    }
+    const client = await Client.findById(req.params.id);
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+    const user = await User.findById(req.user._id);
+    const remark = new ClientRemark({
+      clientId: req.params.id,
+      text,
+      createdBy: {
+        userId: req.user._id,
+        username: (user && user.username) || req.user.username || 'Unknown',
+        role: (user && user.role) || req.user.role || ''
+      }
+    });
+    await remark.save();
+    res.status(201).json(remark);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding remark', error: error.message });
   }
 });
 
@@ -291,8 +450,13 @@ router.post('/', authMiddleware,
         return res.status(400).json({ message: "companyName is required" });
       }
 
-      // Check for duplicate email
-      if (clientData.email) {
+      // Bulk import can explicitly allow saving duplicate contacts.
+      const allowDuplicates =
+        clientData.allowDuplicates === true ||
+        clientData.allowDuplicates === "true";
+
+      // Check for duplicate email (unless duplicate override is enabled)
+      if (!allowDuplicates && clientData.email) {
         const existingEmail = await Client.findOne({
           email: clientData.email.toLowerCase().trim()
         });
@@ -303,8 +467,8 @@ router.post('/', authMiddleware,
         }
       }
 
-      // Check for duplicate phone (both phone and mobile fields)
-      if (clientData.phone || clientData.mobile) {
+      // Check for duplicate phone (both phone and mobile fields), unless override is enabled
+      if (!allowDuplicates && (clientData.phone || clientData.mobile)) {
         const phoneQuery = {
           createdBy: req.user.id,
           $or: []
@@ -335,7 +499,7 @@ router.post('/', authMiddleware,
       clientData.createdBy = req.user.id;
 
       // If admin creating ? can assign manually. For everyone else (or if admin didn't assign), assign to self.
-      if (req.user.role === 'admin') {
+      if (req.user.role === 'admin' || req.user.role === 'hod') {
         if (!clientData.assignedTo) {
           clientData.assignedTo = req.user.id;
         }
@@ -348,6 +512,9 @@ router.post('/', authMiddleware,
         clientData.profilePicture = `/uploads/clients/${req.file.filename}`;
       }
 
+      // Internal override flag is not persisted as a document field
+      delete clientData.allowDuplicates;
+
       // Convert date strings to Date objects if they exist
       if (clientData.projectTimelineStart) {
         clientData.projectTimelineStart = new Date(clientData.projectTimelineStart);
@@ -358,6 +525,8 @@ router.post('/', authMiddleware,
       if (clientData.followUpDate) {
         clientData.followUpDate = new Date(clientData.followUpDate);
       }
+
+      normalizeFollowupStatusOnPayload(clientData);
 
       const client = new Client(clientData);
       const savedClient = await client.save();
@@ -392,16 +561,25 @@ router.put('/:id', authMiddleware, // keep sales_executive also admin separately
         ? JSON.parse(req.body.data)
         : req.body;
 
-      // Check for duplicate email
+      const currentClient = await Client.findById(req.params.id);
+      if (!currentClient) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+
+      // Check for duplicate email only when email value is being changed
       if (updateData.email) {
-        const existingEmail = await Client.findOne({
-          email: updateData.email.toLowerCase().trim(),
-          _id: { $ne: req.params.id }
-        });
-        if (existingEmail) {
-          return res.status(400).json({
-            message: `This email address is already in use.`
+        const nextEmail = String(updateData.email).toLowerCase().trim();
+        const currentEmail = String(currentClient.email || "").toLowerCase().trim();
+        if (nextEmail !== currentEmail) {
+          const existingEmail = await Client.findOne({
+            email: nextEmail,
+            _id: { $ne: req.params.id }
           });
+          if (existingEmail) {
+            return res.status(400).json({
+              message: `This email address is already in use.`
+            });
+          }
         }
       }
 
@@ -427,15 +605,13 @@ router.put('/:id', authMiddleware, // keep sales_executive also admin separately
         updateData.opportunityValue = Number(updateData.opportunityValue);
       }
 
+      normalizeFollowupStatusOnPayload(updateData);
+
       const updatedClient = await Client.findByIdAndUpdate(
         req.params.id,
         updateData,
         { new: true, runValidators: true }
       );
-
-      if (!updatedClient) {
-        return res.status(404).json({ message: 'Client not found' });
-      }
 
       res.json(updatedClient);
     } catch (error) {
@@ -603,6 +779,11 @@ router.post('/:id/events', authMiddleware, async (req, res) => {
     sendEventEmailsInBackground(eventData, assignedBy, client)
       .then(() => console.log("Background email process completed"))
       .catch(err => console.error("Background email process failed:", err));
+
+    // Send WhatsApp to each assigned team member (non-blocking)
+    sendEventWhatsAppInBackground(eventWithAssignedBy, assignedBy, client)
+      .then(() => console.log("Background WhatsApp process completed"))
+      .catch(err => console.error("Background WhatsApp process failed:", err));
   } catch (error) {
     console.error("Error adding event:", error);
     res.status(400).json({ message: 'Error adding event', error: error.message });
@@ -659,6 +840,20 @@ router.put('/:id/events/:eventId', authMiddleware, async (req, res) => {
     sendEventEmailsInBackground(updatedData, assignedBy, client)
       .then(() => console.log("Background email process completed"))
       .catch(err => console.error("Background email process failed:", err));
+
+    // Send WhatsApp template with updated event data to assigned team members
+    const eventPayloadForWhatsApp = {
+      eventName: event.eventName || updatedData.eventName || updatedData.title,
+      title: event.title || updatedData.title || updatedData.eventName,
+      date: event.date || updatedData.date,
+      time: event.time || updatedData.time,
+      assignedTeamMembers: Array.isArray(event.assignedTeamMembers) ? event.assignedTeamMembers : (updatedData.assignedTeamMembers || []),
+      notes: event.notes ?? updatedData.notes,
+      link: event.link ?? updatedData.link
+    };
+    sendEventWhatsAppInBackground(eventPayloadForWhatsApp, assignedBy, client)
+      .then(() => console.log("Background WhatsApp (update) process completed"))
+      .catch(err => console.error("Background WhatsApp (update) process failed:", err));
 
     // ? Reschedule Reminders (Add new setTimeouts)
     if (updatedData.reminders && updatedData.reminders.length > 0) {
@@ -731,29 +926,6 @@ router.delete('/:id/events/:eventId', authMiddleware, async (req, res) => {
     res.json({ message: 'Event deleted successfully', client });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting event', error: error.message });
-  }
-});
-
-
-router.get('/events', authMiddleware, async (req, res) => {
-  try {
-    const clients = await Client.find({}, { companyName: 1, events: 1 }).lean();
-    const all = [];
-    for (const c of clients) {
-      if (Array.isArray(c.events)) {
-        for (const e of c.events) {
-          all.push({
-            clientId: c._id,
-            clientName: c.companyName,
-            ...e,
-          });
-        }
-      }
-    }
-    res.json(all);
-  } catch (error) {
-    console.error('Error fetching all events:', error);
-    res.status(500).json({ message: 'Error fetching all events', error: error.message });
   }
 });
 

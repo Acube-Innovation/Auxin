@@ -14,7 +14,7 @@ async function sendTaskEmailsInBackground(taskData, assignedBy, clientId) {
     console.log("📧 Task Data:", JSON.stringify(taskData, null, 2));
     console.log("📧 Assigned By:", assignedBy);
     console.log("📧 Client ID:", clientId);
-    
+
     // Check if email credentials are available
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error("❌ EMAIL CREDENTIALS MISSING - Check EMAIL_USER and EMAIL_PASS environment variables");
@@ -28,7 +28,7 @@ async function sendTaskEmailsInBackground(taskData, assignedBy, clientId) {
     // Add assigned employees emails
     if (Array.isArray(taskData.assignedEmployees) && taskData.assignedEmployees.length > 0) {
       console.log(`📧 Processing ${taskData.assignedEmployees.length} assigned employees`);
-      
+
       for (const employeeId of taskData.assignedEmployees) {
         try {
           console.log(`📧 Looking up employee: ${employeeId}`);
@@ -72,13 +72,13 @@ async function sendTaskEmailsInBackground(taskData, assignedBy, clientId) {
     // Send emails only if we have recipients and client
     if (uniqueRecipients.length > 0 && client) {
       console.log(`📧 Ready to send ${uniqueRecipients.length} emails`);
-      
+
       const emailResults = await Promise.allSettled(
-        uniqueRecipients.map(email => 
+        uniqueRecipients.map(email =>
           sendTaskAssignmentEmail(email, taskData, assignedBy, client)
         )
       );
-      
+
       // Log email results
       emailResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
@@ -92,7 +92,7 @@ async function sendTaskEmailsInBackground(taskData, assignedBy, clientId) {
       if (uniqueRecipients.length === 0) console.log("📧 Reason: No valid recipients");
       if (!client) console.log("📧 Reason: Client not found");
     }
-    
+
     console.log("📧 ===== TASK EMAIL PROCESS COMPLETED =====");
   } catch (emailError) {
     console.error("❌ Background task email error:", emailError);
@@ -116,21 +116,21 @@ async function sendTaskAssignmentEmail(to, taskData, assignedBy, client) {
 
     const formattedDate = taskData.date
       ? new Date(taskData.date).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "N/A";
 
     const clientName = client.clientName || client.companyName || "Unknown Client";
-    
+
     // Get priority color and text
     const priorityInfo = {
       high: { color: "#dc3545", text: "High Priority" },
       medium: { color: "#ffc107", text: "Medium Priority" },
       low: { color: "#28a745", text: "Low Priority" }
     };
-    
+
     const priority = priorityInfo[taskData.priority] || { color: "#6c757d", text: taskData.priority || "Normal" };
 
     const mailOptions = {
@@ -356,7 +356,7 @@ router.post('/clients/:clientId/tasks', authMiddleware, async (req, res) => {
             }
           }
         }
-        
+
         // Also send to admin channel (persist role notification)
         const adminPayload = {
           id: `task-admin-${saved._id}-${Date.now()}`,
@@ -368,7 +368,7 @@ router.post('/clients/:clientId/tasks', authMiddleware, async (req, res) => {
           meta: { clientId, taskId: saved._id },
           timestamp: new Date()
         };
-        io.to('role-admin').emit('notification', adminPayload);
+        io.to('role-admin').to('role-hod').emit('notification', adminPayload);
         console.log('Sent task notification to role-admin');
         // persist for role
         const adminNotice = new Notification({ title: adminPayload.title, body: adminPayload.body, payload: adminPayload, role: 'admin' });
@@ -396,17 +396,17 @@ router.post('/clients/:clientId/tasks', authMiddleware, async (req, res) => {
 
     // Send emails in background (non-blocking)
     sendTaskEmailsInBackground(
-      { 
-        title, 
-        project, 
-        priority, 
-        date, 
-        assignedEmployees, 
-        notes, 
-        link, 
-        status 
-      }, 
-      assignedBy, 
+      {
+        title,
+        project,
+        priority,
+        date,
+        assignedEmployees,
+        notes,
+        link,
+        status
+      },
+      assignedBy,
       clientId
     )
       .then(() => console.log("Background task email process completed"))
@@ -432,7 +432,7 @@ router.put('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, res) 
       update,
       { new: true }
     );
-    
+
     if (!updated) {
       return res.status(404).json({ message: 'Task not found' });
     }
@@ -445,7 +445,7 @@ router.put('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, res) 
     // Send emails in background only if assigned employees changed
     if (update.assignedEmployees && Array.isArray(update.assignedEmployees)) {
       sendTaskEmailsInBackground(
-        { 
+        {
           title: updated.title,
           project: updated.project,
           priority: updated.priority,
@@ -454,8 +454,8 @@ router.put('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, res) 
           notes: updated.notes,
           link: updated.link,
           status: updated.status
-        }, 
-        assignedBy, 
+        },
+        assignedBy,
         clientId
       )
         .then(() => console.log("Background task update email process completed"))

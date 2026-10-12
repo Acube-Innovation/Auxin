@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, Link  } from "react-router-dom";
 import auxin_logo from "../assets/auxin_logo.png";
 import styles from "./Login.module.css";
+import { getAuthApiUrl } from "../config/config";
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -15,7 +16,7 @@ function Login() {
     e.preventDefault();
 
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { username, password }, { withCredentials: true });
+      const res = await axios.post(getAuthApiUrl('/login'), { username, password }, { withCredentials: true });
 
       // Store the token in localStorage
       localStorage.setItem("token", res.data.token);
@@ -35,7 +36,12 @@ function Login() {
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      setError('Your Username/Password is incorrect!');
+      const status = err.response?.status;
+      setError(
+        status === 502 || (status >= 500 && status < 600)
+          ? 'Server is temporarily unavailable. Please try again later.'
+          : 'Your Username/Password is incorrect!'
+      );
     }
   };
 

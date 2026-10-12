@@ -21,9 +21,11 @@ const UserManagement = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [userToEdit, setUserToEdit] = useState(null); // New state for User to Edit
   const [username, setUsername] = useState("");
+  const [role, setRole] = useState("");
 
    useEffect(() => {
       setUsername(localStorage.getItem("username") || "");
+      setRole(localStorage.getItem("role") || "");
     }, []);
 
   useEffect(() => {
@@ -130,7 +132,7 @@ const UserManagement = () => {
                      <div className={styles["profile-name"]}>
                        {username?.toUpperCase()}
                      </div>
-                     <div className={styles["profile-type"]}>Administrator</div>
+                     <div className={styles["profile-type"]}>{role || ""}</div>
                    </div>
                  </div>
                  {/* <img src={chevrondown} alt="" /> */}

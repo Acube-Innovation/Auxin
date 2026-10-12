@@ -1,7 +1,191 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
+import * as XLSX from "xlsx";
 import clientService from "../../services/ClientService";
+import { getApiBaseUrl } from "../../config/config";
 import "./ImportCsvModal.css";
+
+/** Normalize Excel/CSV header text so "Company Name" (NBSP) matches "company name" */
+function normalizeHeaderKey(h) {
+  return String(h ?? "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** Build row objects from matrix; header row is at headerRowIndex (0-based) */
+function buildItemsFromMatrix(matrix, headerRowIndex) {
+  if (
+    !matrix ||
+    matrix.length <= headerRowIndex + 1 ||
+    !Array.isArray(matrix[headerRowIndex])
+  ) {
+    return [];
+  }
+  const headerRow = matrix[headerRowIndex].map((h) => normalizeHeaderKey(h));
+  const items = [];
+  for (let r = headerRowIndex + 1; r < matrix.length; r++) {
+    const rowArr = matrix[r] || [];
+    const row = {};
+    headerRow.forEach((h, i) => {
+      if (!h) return;
+      const cell = rowArr[i];
+      row[h] =
+        cell != null && cell !== "" ? String(cell).trim() : "";
+    });
+    const hasAny = Object.values(row).some((v) => v && String(v).trim());
+    if (hasAny) items.push(row);
+  }
+  return items;
+}
+
+/** Find sheet + header row that contains Company Name and Email (handles NBSP, extra title rows) */
+function findMatrixAndHeaderRow(wb) {
+  const sheetOpts = {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: true,
+  };
+  for (const sheetName of wb.SheetNames) {
+    const sheet = wb.Sheets[sheetName];
+    const m = XLSX.utils.sheet_to_json(sheet, sheetOpts);
+    if (!m || m.length < 2 || !Array.isArray(m[0])) continue;
+    const maxScan = Math.min(30, m.length - 1);
+    for (let hi = 0; hi < maxScan; hi++) {
+      const row = m[hi];
+      if (!Array.isArray(row)) continue;
+      const cells = row.map((c) => normalizeHeaderKey(c)).filter(Boolean);
+      if (cells.includes("company name") && cells.includes("email")) {
+        return { matrix: m, headerRowIndex: hi, sheetName };
+      }
+    }
+  }
+  return null;
+}
+
+/** Plain-text CSV fallback when SheetJS yields too few rows (encoding / delimiter issues) */
+function parseCsvTextFallback(text) {
+  const parseLine = (line) => {
+    const parts = line.match(/([^",]+|"[^"]*")+/g) || [];
+    return parts.map((s) => s.replace(/^"|"$/g, "").replace(/""/g, '"').trim());
+  };
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return [];
+  const headers = parseLine(lines[0]).map((h) => normalizeHeaderKey(h));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseLine(lines[i]);
+    const row = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      row[h] = cols[idx] ?? "";
+    });
+    if (Object.values(row).some((v) => v && String(v).trim())) rows.push(row);
+  }
+  return rows;
+}
+
+/** Parse CSV / Excel (.xlsx, .xls) into row objects with lowercase header keys */
+async function parseImportFile(file) {
+  const name = (file.name || "").toLowerCase();
+  const buf = await file.arrayBuffer();
+
+  let wb = null;
+
+  try {
+    wb = XLSX.read(buf, { type: "array", cellDates: true });
+  } catch (e) {
+    if (name.endsWith(".csv")) {
+      const text = new TextDecoder("utf-8").decode(buf);
+      const items = parseCsvTextFallback(text);
+      if (items.length) return { items, error: null };
+    }
+    return {
+      items: [],
+      error:
+        "Could not read this file. Try saving as .xlsx or export CSV (UTF-8) from Excel.",
+    };
+  }
+
+  if (!wb.SheetNames || wb.SheetNames.length === 0) {
+    return { items: [], error: "No sheets found in this file." };
+  }
+
+  const found = findMatrixAndHeaderRow(wb);
+  if (!found) {
+    if (name.endsWith(".csv")) {
+      try {
+        const text = new TextDecoder("utf-8").decode(buf);
+        const items = parseCsvTextFallback(text);
+        if (items.length) return { items, error: null };
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return {
+      items: [],
+      error:
+        "Could not find columns Company Name and Email. Use Download Template, or put those headers on one row (any sheet). Add at least one data row below.",
+    };
+  }
+
+  const items = buildItemsFromMatrix(found.matrix, found.headerRowIndex);
+  if (items.length === 0) {
+    return {
+      items: [],
+      error:
+        "Header row was found but all following rows are empty. Fill in at least one full row with Company Name and Email.",
+    };
+  }
+
+  return { items, error: null };
+}
+
+/**
+ * Find 2+ duplicate occurrences in file rows (email/phone/mobile).
+ * Returns both duplicate row indices and row-level messages.
+ */
+function getFileDuplicateInfo(rows, mapRowToPayload) {
+  const seenEmails = new Set();
+  const seenPhones = new Set();
+  const duplicateIndices = new Set();
+  const duplicateErrors = [];
+  rows.forEach((row, index) => {
+    const payload = mapRowToPayload(row);
+    const email = (payload.email || "").toLowerCase().trim();
+    const phone = (payload.phone || "").trim();
+    const mobile = (payload.mobile || "").trim();
+    let duplicateReason = "";
+    if (email) {
+      if (seenEmails.has(email)) {
+        duplicateIndices.add(index);
+        duplicateReason = `Duplicate email "${email}" found in import file`;
+      } else {
+        seenEmails.add(email);
+      }
+    }
+    const phoneToCheck = phone || mobile;
+    if (phoneToCheck && !duplicateReason) {
+      if (seenPhones.has(phoneToCheck)) {
+        duplicateIndices.add(index);
+        duplicateReason = `Duplicate phone number "${phoneToCheck}" found in import file`;
+      } else {
+        seenPhones.add(phoneToCheck);
+      }
+    }
+    if (duplicateReason) {
+      duplicateErrors.push({
+        row: index + 2,
+        reason: duplicateReason,
+        rowData: payload,
+      });
+    }
+  });
+  return { duplicateIndices, duplicateErrors };
+}
 
 function ImportCsvModal({ isOpen, onClose, onComplete }) {
   const [fileName, setFileName] = useState("");
@@ -12,6 +196,9 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
   const [successCount, setSuccessCount] = useState(0);
   const [previewRows, setPreviewRows] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false);
+  const [pendingImportRows, setPendingImportRows] = useState(null);
+  const [duplicatePreviewErrors, setDuplicatePreviewErrors] = useState([]);
 
   // Columns ordered by importance
   const requiredColumns = [
@@ -51,38 +238,38 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
     setSelectedFile(file);
     setErrors([]);
     setSuccessCount(0);
+    setDuplicatePreviewErrors([]);
     setIsReady(false);
     setPreviewRows([]);
     
     try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-
-      if (lines.length < 2) {
-        setErrors(["CSV must contain a header and at least one data row"]);
+      const { items, error } = await parseImportFile(file);
+      if (error) {
+        setErrors([error]);
+        setRowCount(0);
         return;
       }
-      
-      const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
 
-      // Validate required columns
-      const missing = requiredColumns.filter(req => !headers.includes(req.toLowerCase()));
-      
+      const headers = Object.keys(items[0] || {});
+      if (items.length === 0) {
+        setErrors([
+          "No data rows found. Use the Download Template and ensure the first row lists column names (Company Name, Email, …).",
+        ]);
+        setRowCount(0);
+        return;
+      }
+
+      const missing = requiredColumns.filter(
+        (req) => !headers.includes(req.toLowerCase())
+      );
       if (missing.length > 0) {
-        setErrors([`Missing required columns: ${missing.join(", ")}`]);
+        setErrors([
+          `Missing required columns: ${missing.join(", ")}. First row must include: Company Name, Email.`,
+        ]);
+        setRowCount(0);
         return;
       }
 
-      // Parse the data rows
-      const items = lines.slice(1).map((line, index) => {
-        const cols = parseCSVLine(line);
-        const row = {};
-        headers.forEach((h, i) => {
-          row[h] = cols[i] ?? "";
-        });
-        return row;
-      });
-      
       setRowCount(items.length);
       setPreviewRows(items.slice(0, 5));
       setIsReady(true);
@@ -90,11 +277,11 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
     } catch (err) {
       console.error("Error in handleFile:", err);
       setErrors([err.message || "Failed to read file"]);
+      setRowCount(0);
     }
   };
 
-  const mapRowToPayload = (row) => {
-    return {
+  const mapRowToPayload = (row) => ({
       companyName: row["company name"] || row["company"] || "",
       email: row["email"] || row["email id"] || "",
       primaryContactName: row["primary contact name"] || "",
@@ -138,92 +325,44 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
       preferredDischargePorts: row["preferred discharge ports"] || "",
       demurrageTerms: row["demurrage terms"] || "",
       preferredAgents: row["preferred agents"] || "",
-    };
-  };
+  });
 
-  const handleImport = async () => {
-    if (!selectedFile) {
-      setErrors(["No file selected"]);
-      return;
-    }
-    
+  /**
+   * @param {object[]} rows
+   * @param {{ skipFileDuplicates: boolean, includeDuplicateWarnings?: boolean, forceImportDuplicates?: boolean }} options
+   */
+  const runImport = async (rows, options) => {
+    const { skipFileDuplicates, includeDuplicateWarnings, forceImportDuplicates } = options;
     setIsImporting(true);
     setErrors([]);
     setSuccessCount(0);
     const successes = [];
-    const errs = [];
+    const { duplicateIndices: fileDupIndices, duplicateErrors } = getFileDuplicateInfo(
+      rows,
+      mapRowToPayload
+    );
+    const errs = includeDuplicateWarnings ? [...duplicateErrors] : [];
 
     try {
-      const text = await selectedFile.text();
-      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-      const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
-      const rows = lines.slice(1).map((line) => {
-        const cols = parseCSVLine(line);
-        const row = {};
-        headers.forEach((h, i) => {
-          row[h] = cols[i] ?? "";
-        });
-        return row;
-      });
-
-      // Check for duplicates within the import file itself
-      const seenEmails = new Set();
-      const seenPhones = new Set();
-      const fileDuplicateErrors = [];
-
-      rows.forEach((row, index) => {
-        const payload = mapRowToPayload(row);
-        const email = payload.email?.toLowerCase().trim();
-        const phone = payload.phone?.trim();
-        const mobile = payload.mobile?.trim();
-        
-        let hasError = false;
-        
-        if (email) {
-          if (seenEmails.has(email)) {
-            fileDuplicateErrors.push({
-              row: index + 2,
-              reason: `Duplicate email "${email}" found in import file`,
-              rowData: payload,
-            });
-            hasError = true;
-          } else {
-            seenEmails.add(email);
-          }
-        }
-
-        const phoneToCheck = phone || mobile;
-        if (phoneToCheck && !hasError) {
-          if (seenPhones.has(phoneToCheck)) {
-            fileDuplicateErrors.push({
-              row: index + 2,
-              reason: `Duplicate phone number "${phoneToCheck}" found in import file`,
-              rowData: payload,
-            });
-            hasError = true;
-          } else {
-            seenPhones.add(phoneToCheck);
-          }
-        }
-      });
-
-      if (fileDuplicateErrors.length > 0) {
-        errs.push(...fileDuplicateErrors);
-      }
-
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const payload = mapRowToPayload(row);
-        
-        const hasFileDuplicate = fileDuplicateErrors.some(error => error.row === i + 2);
-        if (hasFileDuplicate) continue;
-        
+
+        if (skipFileDuplicates && fileDupIndices.has(i)) {
+          errs.push({
+            row: i + 2,
+            reason: "Skipped: duplicate email or phone in import file",
+            rowData: payload,
+          });
+          continue;
+        }
+
         const importPayload = {
           ...payload,
           disableNotifications: true,
-          isBulkImport: true
+          isBulkImport: true,
         };
-        
+
         if (!importPayload.companyName || !importPayload.email) {
           errs.push({
             row: i + 2,
@@ -232,21 +371,48 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
           });
           continue;
         }
-        
+
         try {
           const saved = await clientService.createClient(importPayload);
           successes.push(saved);
         } catch (err) {
-          if (err.message.includes('already exists') || err.message.includes('duplicate')) {
+          const msg =
+            (err && err.message) ||
+            (typeof err === "string" ? err : "") ||
+            "Server error saving row";
+          if (msg.includes("already exists") || msg.includes("duplicate")) {
             errs.push({
               row: i + 2,
-              reason: err.message || "Duplicate client found in database",
+              reason: msg || "Duplicate client found in database",
               rowData: importPayload,
             });
+
+            // In approve mode, keep duplicate-related error visible but still store
+            // the row so admin can edit it later from the table.
+            if (forceImportDuplicates) {
+              try {
+                const forcedPayload = {
+                  ...importPayload,
+                  allowDuplicates: true,
+                };
+                const forcedSaved = await clientService.createClient(forcedPayload);
+                successes.push(forcedSaved);
+              } catch (forcedErr) {
+                const forcedMsg =
+                  (forcedErr && forcedErr.message) ||
+                  (typeof forcedErr === "string" ? forcedErr : "") ||
+                  "Failed to store duplicate row";
+                errs.push({
+                  row: i + 2,
+                  reason: forcedMsg,
+                  rowData: importPayload,
+                });
+              }
+            }
           } else {
             errs.push({
               row: i + 2,
-              reason: err?.message || "Server error saving row",
+              reason: msg,
               rowData: importPayload,
             });
           }
@@ -256,12 +422,92 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
       setSuccessCount(successes.length);
       setErrors(errs);
       if (onComplete) onComplete(successes, errs);
-      
     } catch (err) {
-      setErrors([{ row: null, reason: err.message || "Import failed" }]);
+      const msg =
+        (err && err.message) ||
+        (typeof err === "string" ? err : "") ||
+        "Import failed";
+      setErrors([{ row: null, reason: msg }]);
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleStartImport = async () => {
+    if (!selectedFile) {
+      setErrors(["No file selected"]);
+      return;
+    }
+
+    setErrors([]);
+    setSuccessCount(0);
+
+    try {
+      const { items: rows, error: parseErr } = await parseImportFile(selectedFile);
+      if (parseErr) {
+        setErrors([{ row: null, reason: parseErr }]);
+        return;
+      }
+      if (!rows.length) {
+        setErrors([{ row: null, reason: "No data rows to import." }]);
+        return;
+      }
+
+      const { duplicateErrors } = getFileDuplicateInfo(rows, mapRowToPayload);
+      if (duplicateErrors.length > 0) {
+        setDuplicatePreviewErrors(duplicateErrors);
+        setPendingImportRows(rows);
+        setShowDuplicateConfirm(true);
+        return;
+      }
+
+      await runImport(rows, {
+        skipFileDuplicates: false,
+        includeDuplicateWarnings: false,
+        forceImportDuplicates: false,
+      });
+    } catch (err) {
+      const msg =
+        (err && err.message) ||
+        (typeof err === "string" ? err : "") ||
+        "Import failed";
+      setErrors([{ row: null, reason: msg }]);
+    }
+  };
+
+  const handleDuplicateChoiceAllow = async () => {
+    setShowDuplicateConfirm(false);
+    const rows = pendingImportRows;
+    setPendingImportRows(null);
+    setDuplicatePreviewErrors([]);
+    if (!rows || !rows.length) return;
+    await runImport(rows, {
+      skipFileDuplicates: false,
+      includeDuplicateWarnings: true,
+      forceImportDuplicates: true,
+    });
+  };
+
+  const handleDuplicateChoiceReject = async () => {
+    setShowDuplicateConfirm(false);
+    const rows = pendingImportRows;
+    setPendingImportRows(null);
+    const dupErrors = duplicatePreviewErrors;
+    setDuplicatePreviewErrors([]);
+    if (!rows || !rows.length) return;
+    const rejectErrors =
+      dupErrors.length > 0
+        ? dupErrors
+        : [{ row: null, reason: "Import cancelled: duplicate values found in file." }];
+    setSuccessCount(0);
+    setErrors(rejectErrors);
+    if (onComplete) onComplete([], rejectErrors);
+  };
+
+  const handleDuplicateConfirmCancel = () => {
+    setShowDuplicateConfirm(false);
+    setPendingImportRows(null);
+    setDuplicatePreviewErrors([]);
   };
 
   const handleClose = () => {
@@ -273,13 +519,22 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
     setSuccessCount(0);
     setPreviewRows([]);
     setSelectedFile(null);
+    setShowDuplicateConfirm(false);
+    setPendingImportRows(null);
+    setDuplicatePreviewErrors([]);
     onClose && onClose();
   };
 
   const downloadTemplateOption = () => {
-  const fileUrl = `${process.env.REACT_APP_API_URL}/uploads/template/Auxin_CRM_Client_Import_Template.xlsx`;
-  window.open(fileUrl, "_blank");
-};
+    const base = getApiBaseUrl();
+    const fileUrl = `${base}/uploads/template/Auxin_CRM_Client_Import_Template.xlsx`;
+    const a = document.createElement("a");
+    a.href = fileUrl;
+    a.download = "Auxin_CRM_Client_Import_Template.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   const downloadTemplate = () => {
     const headers = [...requiredColumns, ...optionalColumns];
@@ -328,6 +583,7 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
   };
 
   const modalContent = (
+    <>
     <div className="import-modal-backdrop" aria-hidden={!isOpen}>
       <div className="import-modal-container" role="dialog" aria-modal="true">
         
@@ -368,7 +624,7 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
           <label className={`file-upload-zone ${fileName ? 'has-file' : ''}`}>
             <input 
               type="file" 
-              accept=".csv,text/csv" 
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
               onChange={handleFile} 
               className="file-input-hidden"
             />
@@ -379,7 +635,7 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
               {fileName ? `Selected: ${fileName}` : "Click to upload or drag and drop"}
             </div>
             <div className="upload-subtext">
-              {fileName ? `${rowCount} rows found` : "CSV files only (max 5MB)"}
+              {fileName ? `${rowCount} rows found` : "CSV or Excel .xlsx / .xls (use Download Template for column names)"}
             </div>
           </label>
 
@@ -419,7 +675,19 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
                   <ul>
                     {errors.slice(0, 50).map((err, i) => (
                       <li key={i}>
-                        {err.row ? `Row ${err.row}: ` : ""}{err.reason} {err.rowData ? ` — ${err.rowData.companyName || err.rowData.email || ''}` : ''}
+                        {err && typeof err === "object" && err.row
+                          ? `Row ${err.row}: `
+                          : ""}
+                        {err && typeof err === "object"
+                          ? String(err.reason || err.message || "").trim() ||
+                            JSON.stringify(err)
+                          : String(err)}
+                        {err &&
+                        typeof err === "object" &&
+                        err.rowData &&
+                        (err.rowData.companyName || err.rowData.email)
+                          ? ` — ${err.rowData.companyName || ""} ${err.rowData.email || ""}`.trim()
+                          : ""}
                       </li>
                     ))}
                   </ul>
@@ -461,7 +729,7 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
             </button>
             <button
               type="button"
-              onClick={handleImport}
+              onClick={handleStartImport}
               disabled={!isReady || isImporting}
               className="btn btn-primary"
             >
@@ -472,6 +740,83 @@ function ImportCsvModal({ isOpen, onClose, onComplete }) {
 
       </div>
     </div>
+
+    {showDuplicateConfirm && (
+      <div
+        className="import-dup-confirm-backdrop"
+        role="presentation"
+        onClick={handleDuplicateConfirmCancel}
+      >
+        <div
+          className="import-dup-confirm-box"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-dup-confirm-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h4 id="import-dup-confirm-title" className="import-dup-confirm-title">
+            Duplicate values in file
+          </h4>
+          <p className="import-dup-confirm-text">
+            This file contains the same email or phone on more than one row. How should
+            the import run?
+          </p>
+          <ul className="import-dup-confirm-list">
+            <li>
+              <strong>Approve</strong> — import every row in order. The same email/phone
+              may appear on multiple lines; later lines may be rejected by the server if
+              the contact already exists.
+            </li>
+            <li>
+              <strong>Reject</strong> — stop this import. No rows from this file will be
+              imported.
+            </li>
+          </ul>
+          {duplicatePreviewErrors.length > 0 && (
+            <div className="error-list" style={{ maxHeight: 140, marginBottom: 16 }}>
+              <ul>
+                {duplicatePreviewErrors.slice(0, 20).map((err, idx) => (
+                  <li key={`${err.row || "x"}-${idx}`}>
+                    {err.row ? `Row ${err.row}: ` : ""}
+                    {err.reason}
+                    {err.rowData && (err.rowData.companyName || err.rowData.email)
+                      ? ` — ${err.rowData.companyName || ""} ${err.rowData.email || ""}`.trim()
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+              {duplicatePreviewErrors.length > 20 && (
+                <div className="import-modal-too-many">Showing first 20 duplicate errors...</div>
+              )}
+            </div>
+          )}
+          <div className="import-dup-confirm-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDuplicateConfirmCancel}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline import-dup-btn-reject"
+              onClick={handleDuplicateChoiceReject}
+            >
+              Reject duplicates
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleDuplicateChoiceAllow}
+            >
+              Approve
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 
   return typeof document !== "undefined" ? ReactDOM.createPortal(modalContent, document.body) : modalContent;
