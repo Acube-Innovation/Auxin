@@ -15,7 +15,7 @@
 //   4. links login users to their employee record by email (User.employeeId), which "My Tasks",
 //      task assignment and operator access need
 //   5. reports what still needs a person: users without an operations role, clients without the
-//      types the voyage form lists (Charterer, Owner, Agent, Broker), passwords stored in plain text
+//      types the voyage form lists (Charterer, Ship Owners, Broker, Agent, Supplier), passwords stored in plain text
 require('dotenv').config({ quiet: true });
 const path = require('path');
 const fs = require('fs');
@@ -28,7 +28,7 @@ const { ALL_OPS, ADMIN, MANAGERS, OPERATORS, READ_ONLY } = require('../services/
 
 const APPLY = process.argv.includes('--apply');
 const OPS_MODELS_DIR = path.join(__dirname, '..', 'models', 'ops');
-const VOYAGE_FORM_CLIENT_TYPES = ['Charterer', 'Owner', 'Agent', 'Broker'];
+const VOYAGE_FORM_CLIENT_TYPES = ['Charterer', 'Ship Owners', 'Broker', 'Agent', 'Supplier']; // as in VoyageWizard
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 const line = (s = '') => console.log(s);
