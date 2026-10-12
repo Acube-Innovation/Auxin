@@ -12,22 +12,22 @@ const getAuthHeaders = () => {
 };
 
 export const createTask = async (clientId, task) => {
-  const { data } = await axios.post(`${API_URL}/api/clients/${clientId}/tasks`, task, { headers: getAuthHeaders() });
+  const { data } = await axios.post(`${API_URL}/clients/${clientId}/tasks`, task, { headers: getAuthHeaders() });
   return data;
 };
 
 export const getTasksByClient = async (clientId) => {
-  const { data } = await axios.get(`${API_URL}/api/clients/${clientId}/tasks`, { headers: getAuthHeaders() });
+  const { data } = await axios.get(`${API_URL}/clients/${clientId}/tasks`, { headers: getAuthHeaders() });
   return data;
 };
 
 export const updateTask = async (clientId, taskId, update) => {
-  const { data } = await axios.put(`${API_URL}/api/clients/${clientId}/tasks/${taskId}`, update, { headers: getAuthHeaders() });
+  const { data } = await axios.put(`${API_URL}/clients/${clientId}/tasks/${taskId}`, update, { headers: getAuthHeaders() });
   return data;
 };
 
 export const deleteTask = async (clientId, taskId) => {
-  const { data } = await axios.delete(`${API_URL}/api/clients/${clientId}/tasks/${taskId}`, { headers: getAuthHeaders() });
+  const { data } = await axios.delete(`${API_URL}/clients/${clientId}/tasks/${taskId}`, { headers: getAuthHeaders() });
   return data;
 };
 

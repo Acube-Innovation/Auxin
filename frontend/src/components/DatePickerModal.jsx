@@ -3,9 +3,17 @@ import "./DatePickerModal.css";
 import chevrondright from "../assets/dashboard/chevron-right.svg";
 import chevrondleft from "../assets/dashboard/chevron-left.svg";
 
-function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate }) {
+function toYYYYMMDD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate, disabledDates = [], highlightHolidayDates = false }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
+  const disabledSet = React.useMemo(() => new Set(disabledDates || []), [disabledDates]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -46,28 +54,39 @@ function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate }) {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
+  const isDateDisabled = (year, month, day) => {
+    const d = new Date(year, month, day);
+    return disabledSet.has(toYYYYMMDD(d));
+  };
+
+  const holidayClass = (year, month, day) =>
+    highlightHolidayDates && isDateDisabled(year, month, day) ? " holiday-highlight" : "";
+
   const handleDayClick = (day, isCurrentMonth = true, isNextMonth = false) => {
-    if (!isCurrentMonth) {
-      if (isNextMonth) {
-        // Move to next month and select the day
-        const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
-        setCurrentDate(nextMonth);
-        setSelectedDay(day);
-      } else {
-        // Move to previous month and select the day
-        const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, day);
-        setCurrentDate(prevMonth);
-        setSelectedDay(day);
-      }
+    if (isCurrentMonth) {
+      if (isDateDisabled(currentDate.getFullYear(), currentDate.getMonth(), day)) return;
+      setSelectedDay(day);
       return;
     }
-    setSelectedDay(day);
+    if (isNextMonth) {
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
+      if (isDateDisabled(nextMonth.getFullYear(), nextMonth.getMonth(), day)) return;
+      setCurrentDate(nextMonth);
+      setSelectedDay(day);
+    } else {
+      const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, day);
+      if (isDateDisabled(prevMonth.getFullYear(), prevMonth.getMonth(), day)) return;
+      setCurrentDate(prevMonth);
+      setSelectedDay(day);
+    }
   };
 
   const handleApply = () => {
     if (selectedDay) {
       const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay);
-      onSelectDate(selectedDate);
+      if (!isDateDisabled(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())) {
+        onSelectDate(selectedDate);
+      }
     }
     onClose();
   };
@@ -84,14 +103,23 @@ function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate }) {
     const previousMonthDays = getPreviousMonthDays(currentDate);
     const days = [];
 
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
     // Previous month days
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
       const day = previousMonthDays - i;
+      const prevDate = new Date(year, month - 1, day);
+      const py = prevDate.getFullYear();
+      const pm = prevDate.getMonth();
+      const disabled = isDateDisabled(py, pm, day);
+      const hCls = holidayClass(py, pm, day);
       days.push(
         <div
           key={`prev-${day}`}
-          className="calendar-cell previous-month"
-          onClick={() => handleDayClick(day, false, false)}
+          className={`calendar-cell previous-month ${disabled ? "disabled" : ""}${hCls}`}
+          title={hCls ? "Government / public holiday" : undefined}
+          onClick={() => !disabled && handleDayClick(day, false, false)}
         >
           <div className="calendar-day">{day}</div>
         </div>
@@ -103,14 +131,17 @@ function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate }) {
       const isSelected = day === selectedDay;
       const isToday = 
         day === new Date().getDate() && 
-        currentDate.getMonth() === new Date().getMonth() && 
-        currentDate.getFullYear() === new Date().getFullYear();
+        month === new Date().getMonth() && 
+        year === new Date().getFullYear();
+      const disabled = isDateDisabled(year, month, day);
+      const hCls = holidayClass(year, month, day);
 
       days.push(
         <div
           key={`current-${day}`}
-          className={`calendar-cell ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
-          onClick={() => handleDayClick(day, true)}
+          className={`calendar-cell ${isSelected ? "selected" : ""} ${isToday ? "today" : ""} ${disabled ? "disabled" : ""}${hCls}`}
+          title={hCls ? "Government / public holiday" : undefined}
+          onClick={() => !disabled && handleDayClick(day, true)}
         >
           <div className="calendar-day">{day}</div>
         </div>
@@ -121,11 +152,17 @@ function DatePickerModal({ isOpen, onClose, onSelectDate, selectedDate }) {
     const totalCells = 42;
     const remainingCells = totalCells - days.length;
     for (let day = 1; day <= remainingCells; day++) {
+      const nextDate = new Date(year, month + 1, day);
+      const ny = nextDate.getFullYear();
+      const nm = nextDate.getMonth();
+      const disabled = isDateDisabled(ny, nm, day);
+      const hCls = holidayClass(ny, nm, day);
       days.push(
         <div
           key={`next-${day}`}
-          className="calendar-cell next-month"
-          onClick={() => handleDayClick(day, false, true)}
+          className={`calendar-cell next-month ${disabled ? "disabled" : ""}${hCls}`}
+          title={hCls ? "Government / public holiday" : undefined}
+          onClick={() => !disabled && handleDayClick(day, false, true)}
         >
           <div className="calendar-day">{day}</div>
         </div>

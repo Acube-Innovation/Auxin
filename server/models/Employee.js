@@ -32,6 +32,18 @@ const employeeSchema = new mongoose.Schema({
 
   assignedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: "Client" }], // multiple projects can be assigned
 
+  // Admin-editable leave override values for the Leave Management Chart
+  leaveOverride: {
+    sickLeave: { type: Number, default: null },
+    privilegeLeave: { type: Number, default: null },
+    casualLeave: { type: Number, default: null },
+    otherLeave: { type: Number, default: null },
+    totalTaken: { type: Number, default: null },
+    balance: { type: Number, default: null },
+    lastUpdatedBy: { type: String, default: null },
+    lastUpdatedAt: { type: Date, default: null },
+  },
+
   events: [assignEventSchema]
 
 }, { timestamps: true });

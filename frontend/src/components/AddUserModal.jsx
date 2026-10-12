@@ -229,6 +229,7 @@ const AddUserModal = ({ isOpen, onClose, onSubmit }) => {
               </option>
               <option value="sales_executive">Sales Executive</option>
               <option value="admin">Admin</option>
+              <option value="hod">HOD</option>
             </select>
           </div>
 

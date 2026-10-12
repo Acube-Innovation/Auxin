@@ -6,6 +6,8 @@ import ProfilePhotoUpload from "../ProfilePhotoUpload";
 import editIcon from "../../assets/dashboard/pencil-line-blue.svg";
 import employeeService from "../../services/EmployeeService";
 import ClientService from "../../services/ClientService";
+import roleService from "../../services/RoleService";
+import departmentService from "../../services/DepartmentService";
 import Dropdown from "../DropDown";
 import Select from "react-select";
 import ToastContainer from "../Toast";
@@ -17,37 +19,23 @@ import ToastContainer from "../Toast";
     { value: "InActive", label: "InActive" },
   ];
 
- const departmentOptions = [
-    { value: "", label: "-Select-" },
-    { value: "Bulk Sales", label: "Bulk Sales" },
-    { value: "Bulk Operations", label: "Bulk Operations" },
-    { value: "Project Sales", label: "Project Sales" },
-    { value: "Project Operations", label: "Project Operations" },
-    { value: "HR", label: "HR" },
-    { value: "Finance", label: "Finance" },
-    { value: "IT", label: "IT" },
-    { value: "Logistics", label: "Logistics" },
-    { value: "Customer Service", label: "Customer Service" },
+// Original default departments — always shown in the dropdown,
+// even when the API has no custom additions yet.
+const DEFAULT_DEPARTMENTS = [
+  "Bulk Sales",
+  "Bulk Operations",
+  "Project Sales",
+  "Project Operations",
+  "HR",
+  "Finance",
+  "IT",
+  "Logistics",
+  "Customer Service",
 ];
 
-  const roleOptions = [
-    { value: "", label: "-Select-" },
-    { value: "Managing Director", label: "Managing Director" },
-    { value: "Director", label: "Director" },
-    { value: "Business Development Manager", label: "Business Development Manager" },
-    { value: "Sales Executive", label: "Sales Executive" },
-    { value: "Operations Manager", label: "Operations Manager" },
-    { value: "Operations Executive", label: "Operations Executive" },
-    { value: "Pricing Manager", label: "Pricing Manager" },
-    { value: "Pricing Executive", label: "Pricing Executive" },
-    { value: "Logistics Coordinator", label: "Logistics Coordinator" },
-    { value: "Account Manager", label: "Account Manager" },
-    { value: "HR Manager", label: "HR Manager" },
-    { value: "IT Specialist", label: "IT Specialist" },
-    {
-      value: "Customer Service Representative",
-      label: "Customer Service Representative",
-    },
+const buildDefaultDepartmentOptions = () => [
+  { value: "", label: "-Select-" },
+  ...DEFAULT_DEPARTMENTS.map((name) => ({ value: name, label: name })),
 ];
 
 function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
@@ -77,6 +65,12 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
   const [toasts, setToasts] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roleOptions, setRoleOptions] = useState([
+    { value: "", label: "-Select-" },
+  ]);
+  const [departmentOptions, setDepartmentOptions] = useState(
+    buildDefaultDepartmentOptions()
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -95,31 +89,92 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
     }
   };
 
-  // Populate form data when employee prop changes
+  // Populate form when opening; load roles from API then normalize fields
   useEffect(() => {
-    if (employee && isOpen) {
-      console.log("EditEmployeeModal - Employee Data:", employee);
-      console.log("EditEmployeeModal - Role Options:", roleOptions);
-      console.log("EditEmployeeModal - Department Options:", departmentOptions);
+    if (!employee || !isOpen) return;
+    let cancelled = false;
 
-      // Helper to find matching option value
-      const findMatchingValue = (value, options) => {
-        if (!value) return "";
-        const valStr = value.toString().toLowerCase();
-        const match = options.find(
-          (opt) =>
-            opt.value.toLowerCase() === valStr ||
-            opt.label.toLowerCase() === valStr
+    const findMatchingRole = (value, options) => {
+      if (!value) return "";
+      const valStr = value.toString().toLowerCase();
+      const match = options.find(
+        (opt) =>
+          opt.value &&
+          (opt.value.toLowerCase() === valStr ||
+            opt.label.toLowerCase() === valStr)
+      );
+      return match ? match.value : value;
+    };
+
+    const findMatchingDepartment = (value, options) => {
+      if (!value) return "";
+      const valStr = value.toString().toLowerCase();
+      const match = options.find(
+        (opt) =>
+          opt.value.toLowerCase() === valStr ||
+          opt.label.toLowerCase() === valStr
+      );
+      return match ? match.value : value;
+    };
+
+    (async () => {
+      let roleOpts = [{ value: "", label: "-Select-" }];
+      let deptOpts = buildDefaultDepartmentOptions();
+
+      try {
+        const [roles, departments] = await Promise.all([
+          roleService.getRoles().catch((err) => {
+            console.error("Failed to load roles:", err);
+            return [];
+          }),
+          departmentService.getDepartments().catch((err) => {
+            console.error("Failed to load departments:", err);
+            return [];
+          }),
+        ]);
+        if (cancelled) return;
+
+        roleOpts = [
+          { value: "", label: "-Select-" },
+          ...roles.map((r) => ({
+            value: r.name,
+            label: r.name,
+            id: String(r._id),
+          })),
+        ];
+
+        // Always start from the original default list, then append any
+        // additional (custom) departments returned by the API. Defaults stay.
+        const base = buildDefaultDepartmentOptions();
+        const seen = new Set(
+          base.map((o) => (o.value || "").toLowerCase()).filter(Boolean)
         );
-        console.log(`findMatchingValue - Value: ${value}, Match:`, match);
-        return match ? match.value : value;
-      };
+        const extras = departments
+          .filter((d) => {
+            const key = String(d.name || "").trim().toLowerCase();
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map((d) => ({
+            value: d.name,
+            label: d.name,
+            ...(d.isDefault ? {} : { id: String(d._id) }),
+          }));
+        deptOpts = [...base, ...extras];
 
-      const normalizedRole = findMatchingValue(employee.role, roleOptions);
-      const normalizedDepartment = findMatchingValue(employee.department, departmentOptions);
+        setRoleOptions(roleOpts);
+        setDepartmentOptions(deptOpts);
+      } catch (err) {
+        console.error("Failed to load role/department options:", err);
+        if (cancelled) return;
+      }
 
-      console.log("Normalized Role:", normalizedRole);
-      console.log("Normalized Department:", normalizedDepartment);
+      const normalizedRole = findMatchingRole(employee.role, roleOpts);
+      const normalizedDepartment = findMatchingDepartment(
+        employee.department,
+        deptOpts
+      );
 
       setFormData({
         employeeId: employee.employeeId || "",
@@ -138,16 +193,18 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
           : [],
       });
 
-      // Set current profile image URL if exists
       if (employee.profilePhotoUrl) {
         setCurrentProfileImageUrl(employee.profilePhotoUrl);
       }
 
-      // Reset form state
       setCurrentStep(1);
       setProfileImage(null);
       setValidationErrors({});
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [employee, isOpen]);
 
   // Reset form when modal closes
@@ -169,6 +226,8 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
         attendance: "Onsite",
         assignedProjects: [],
       });
+      setRoleOptions([{ value: "", label: "-Select-" }]);
+      setDepartmentOptions(buildDefaultDepartmentOptions());
     }
   }, [isOpen]);
 
@@ -209,6 +268,92 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleAddCustomRole = async (name) => {
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    if (!trimmed) return;
+    try {
+      const created = await roleService.createRole(trimmed);
+      const id = created._id != null ? String(created._id) : "";
+      setRoleOptions((prev) => {
+        const exists = prev.some(
+          (o) =>
+            o.value &&
+            o.value.toLowerCase() === trimmed.toLowerCase()
+        );
+        if (exists) return prev;
+        return [
+          ...prev,
+          {
+            value: created.name,
+            label: created.name,
+            ...(id ? { id } : {}),
+          },
+        ];
+      });
+      handleInputChange("role", created.name);
+    } catch (err) {
+      addToast(err.message || "Failed to save role", "error");
+      throw err;
+    }
+  };
+
+  const handleDeleteRole = async (roleId) => {
+    const target = roleOptions.find((o) => o.id === roleId);
+    const removedValue = target?.value;
+    try {
+      await roleService.deleteRole(roleId);
+      setRoleOptions((prev) => prev.filter((o) => o.id !== roleId));
+      if (removedValue && formData.role === removedValue) {
+        handleInputChange("role", "");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to delete role", "error");
+    }
+  };
+
+  const handleAddCustomDepartment = async (name) => {
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    if (!trimmed) return;
+    try {
+      const created = await departmentService.createDepartment(trimmed);
+      const id = created._id != null ? String(created._id) : "";
+      setDepartmentOptions((prev) => {
+        const exists = prev.some(
+          (o) =>
+            o.value &&
+            o.value.toLowerCase() === trimmed.toLowerCase()
+        );
+        if (exists) return prev;
+        return [
+          ...prev,
+          {
+            value: created.name,
+            label: created.name,
+            ...(id ? { id } : {}),
+          },
+        ];
+      });
+      handleInputChange("department", created.name);
+    } catch (err) {
+      addToast(err.message || "Failed to save department", "error");
+      throw err;
+    }
+  };
+
+  const handleDeleteDepartment = async (departmentId) => {
+    const target = departmentOptions.find((o) => o.id === departmentId);
+    const removedValue = target?.value;
+    try {
+      await departmentService.deleteDepartment(departmentId);
+      setDepartmentOptions((prev) => prev.filter((o) => o.id !== departmentId));
+      if (removedValue && formData.department === removedValue) {
+        handleInputChange("department", "");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to delete department", "error");
+    }
   };
 
   const handlePrevious = () => {
@@ -421,6 +566,10 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
                 value={formData.role}
                 onChange={(e) => handleInputChange("role", e.target.value)}
                 hasError={validationErrors.role}
+                allowAddOption
+                onAddOption={handleAddCustomRole}
+                allowDeleteOption
+                onDeleteOption={handleDeleteRole}
               />
 
               <InputField
@@ -449,6 +598,11 @@ function EditEmployeeModal({ isOpen, onClose, onSubmit, employee }) {
                   handleInputChange("department", e.target.value)
                 }
                 hasError={validationErrors.department}
+                allowAddOption
+                onAddOption={handleAddCustomDepartment}
+                addOptionLabel="Add new department"
+                allowDeleteOption
+                onDeleteOption={handleDeleteDepartment}
               />
 
               <Dropdown

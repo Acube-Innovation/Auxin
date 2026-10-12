@@ -11,12 +11,20 @@ function Dropdown({
   options = [],
   hasError = false,
   disabled = false,
+  allowAddOption = false,
+  onAddOption,
+  addOptionLabel = "Add new role",
+  allowDeleteOption = false,
+  onDeleteOption,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const [isAddInputVisible, setIsAddInputVisible] = useState(false);
+  const [newRoleDraft, setNewRoleDraft] = useState("");
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+  const addRoleInputRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -34,6 +42,19 @@ function Dropdown({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [label]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsAddInputVisible(false);
+      setNewRoleDraft("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && isAddInputVisible && addRoleInputRef.current) {
+      addRoleInputRef.current.focus();
+    }
+  }, [isOpen, isAddInputVisible]);
 
   // Update position when opening
   useEffect(() => {
@@ -94,6 +115,20 @@ function Dropdown({
   const selectedOption = options.find((opt) => opt.value === value);
   const displayText = selectedOption ? selectedOption.label : placeholder;
 
+  const submitNewRole = async () => {
+    const trimmed = newRoleDraft.trim();
+    if (!trimmed) return;
+    try {
+      await Promise.resolve(onAddOption(trimmed));
+      setIsOpen(false);
+      setSearchTerm("");
+      setIsAddInputVisible(false);
+      setNewRoleDraft("");
+    } catch {
+      /* parent may reject on API error; keep menu open */
+    }
+  };
+
   const dropdownMenu = (
     <div
       id={`dropdown-menu-${label || "default"}`}
@@ -118,20 +153,122 @@ function Dropdown({
         />
       </div>
 
+      {allowAddOption && typeof onAddOption === "function" && (
+        isAddInputVisible ? (
+          <div
+            className={styles.addOptionInputBlock}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.addOptionInputRow}>
+              <input
+                ref={addRoleInputRef}
+                type="text"
+                className={styles.addOptionInput}
+                placeholder="Type new role name..."
+                value={newRoleDraft}
+                onChange={(e) => setNewRoleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void submitNewRole();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setIsAddInputVisible(false);
+                    setNewRoleDraft("");
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className={styles.addOptionSubmit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void submitNewRole();
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={styles.addOptionRow}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAddInputVisible(true);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsAddInputVisible(true);
+              }
+            }}
+          >
+            <span className={styles.addOptionIcon} aria-hidden>
+              +
+            </span>
+            <span>{addOptionLabel}</span>
+          </div>
+        )
+      )}
+
       {/* Options List */}
       <div className={styles.optionsList}>
         {filteredOptions.length > 0 ? (
-          filteredOptions.map((option, index) => (
-            <div
-              key={index}
-              className={`${styles.option} ${
-                option.value === value ? styles.optionSelected : ""
-              }`}
-              onClick={() => handleSelect(option.value)}
-            >
-              {option.label}
-            </div>
-          ))
+          filteredOptions.map((option, index) =>
+            allowDeleteOption &&
+            typeof onDeleteOption === "function" &&
+            option.id ? (
+              <div
+                key={option.id || index}
+                className={`${styles.optionRow} ${
+                  option.value === value ? styles.optionRowSelected : ""
+                }`}
+              >
+                <div
+                  className={styles.optionMain}
+                  onClick={() => handleSelect(option.value)}
+                >
+                  {option.label}
+                </div>
+                <button
+                  type="button"
+                  className={styles.optionDeleteBtn}
+                  aria-label="Delete role"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteOption(option.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div
+                key={option.id || `${option.value}-${index}`}
+                className={`${styles.option} ${
+                  option.value === value ? styles.optionSelected : ""
+                }`}
+                onClick={() => handleSelect(option.value)}
+              >
+                {option.label}
+              </div>
+            )
+          )
         ) : (
           <div className={styles.noResults}>
             No options found

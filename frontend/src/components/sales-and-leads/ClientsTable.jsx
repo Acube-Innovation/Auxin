@@ -1,15 +1,15 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./ClientsTable.module.css";
 import DeleteModal from "../delete-modal/DeleteModal";
 import AddClientModal from "./AddClientModal";
 import EditClientModal from "./EditClientModal";
-import FilterDropdown from "../FilterDropdown";
 import { Link } from "react-router-dom";
 import clientService from "../../services/ClientService";
 import config from "../../config/config";
 import plus from "../../assets/dashboard/plus.svg";
 import ImportCsvModal from "./ImportCsvModal";
 import { useToast } from "../../context/ToastContext";
+import { Alert } from "react-bootstrap";
 
 // SVG Components
 const UserPlusIcon = () => (
@@ -64,25 +64,6 @@ const SearchIcon = () => (
       d="M14.4063 14.5938L11.5396 11.7271M13.0729 7.92708C13.0729 10.8726 10.6851 13.2604 7.73958 13.2604C4.79406 13.2604 2.40625 10.8726 2.40625 7.92708C2.40625 4.98156 4.79406 2.59375 7.73958 2.59375C10.6851 2.59375 13.0729 4.98156 13.0729 7.92708Z"
       stroke="#98A1B0"
       strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const FilterIcon = () => (
-  <svg
-    width="32"
-    height="32"
-    viewBox="0 0 32 33"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={styles.filterIcon}
-  >
-    <path
-      d="M4 8.59375H28M9.33333 16.5938H22.6667M13.3333 24.5938H18.6667"
-      stroke="#98A1B0"
-      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -151,22 +132,21 @@ function ClientsTable() {
   const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
-  // Which field the search term applies to, set via FilterDropdown
-  const [activeSearchField, setActiveSearchField] = useState("company-name");
+  const activeSearchField = "company-name";
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState(null);
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [clientsData, setClientsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const filterButtonRef = useRef(null);
+  const [selectedClientType, setSelectedClientType] = useState("");
+  const [selectedIndustryType, setSelectedIndustryType] = useState("");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [importErrorDetails, setImportErrorDetails] = useState([]);
   const [selectedClientIds, setSelectedClientIds] = useState([]);
 
   // Pagination
@@ -317,47 +297,55 @@ function ClientsTable() {
     }
   };
 
-  const handleFilterClick = (event) => {
-    if (filterButtonRef.current) {
-      const rect = filterButtonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 8,
-        left: rect.left - 200,
-      });
-    }
-    setIsFilterDropdownOpen(!isFilterDropdownOpen);
-  };
+  const clientTypeOptions = Array.from(
+    new Set(
+      clientsData
+        .map((client) => (client?.clientType != null ? String(client.clientType).trim() : ""))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
-  const handleFilterDropdownClose = () => {
-    setIsFilterDropdownOpen(false);
-  };
-
-  const handleFilterSelect = (option) => {
-    // option example: { id: 'company-name', label: 'Company Name', ... }
-    if (option && option.id) {
-      setActiveSearchField(option.id);
-    }
-  };
+  const industryTypeOptions = Array.from(
+    new Set(
+      clientsData
+        .map((client) => (client?.industryType != null ? String(client.industryType).trim() : ""))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   const filteredData = clientsData.filter((client) => {
     let matchesFilter = true;
-    // if (activeFilter === "Clients") {
-    //   matchesFilter =
-    //     client.leadType === "Client" || client.relationshipStatus === "Active";
-    // } else if (activeFilter === "Leads") {
-    //   matchesFilter =
-    //     client.leadType === "Lead" || client.relationshipStatus === "Prospect";
-    // }
+    const leadTypeRaw = (client.leadType || "").toString().trim().toLowerCase();
+    const relationshipRaw = (client.relationshipStatus || "").toString().trim().toLowerCase();
+    const currentStatusRaw =
+      typeof client.currentStatus === "string"
+        ? client.currentStatus.trim().toLowerCase()
+        : "";
 
-     if (activeFilter === "Clients") {
+    if (activeFilter === "Clients") {
+      // Match explicit leadType "Client" (case-insensitive). When leadType is
+      // not set on legacy records, fall back to relationshipStatus/currentStatus
+      // signals that indicate an active client relationship.
       matchesFilter =
-        client.leadType === "Client" ;
+        leadTypeRaw === "client" ||
+        (!leadTypeRaw &&
+          (relationshipRaw === "active" ||
+            relationshipRaw === "dormant" ||
+            currentStatusRaw === "won"));
     } else if (activeFilter === "Leads") {
+      // Match explicit leadType "Lead" (case-insensitive). When leadType is
+      // not set on legacy records, fall back to status signals indicating a
+      // lead/prospect (or simply any record that isn't an active client).
       matchesFilter =
-        client.leadType === "Lead";
+        leadTypeRaw === "lead" ||
+        (!leadTypeRaw &&
+          (relationshipRaw === "prospect" ||
+            relationshipRaw === "lost" ||
+            ["lead", "quoted", "negotiation", "lost"].includes(currentStatusRaw) ||
+            (relationshipRaw === "" && currentStatusRaw === "")));
     }
 
-     
+
     // Apply searchTerm based on the selected field
     const term = (searchTerm || "").toLowerCase();
     let matchesSearch = true;
@@ -366,7 +354,8 @@ function ClientsTable() {
         case "company-name": {
           matchesSearch =
             (client.companyName || "").toLowerCase().includes(term) ||
-            (client.email || "").toLowerCase().includes(term);
+            (client.email || "").toLowerCase().includes(term) ||
+            (client.createdByUsername || "").toLowerCase().includes(term);
           break;
         }
         case "phone-number": {
@@ -417,7 +406,14 @@ function ClientsTable() {
       }
     }
 
-    return matchesFilter && matchesSearch;
+    const matchesClientType =
+      !selectedClientType ||
+      (client.clientType || "").toLowerCase() === selectedClientType.toLowerCase();
+    const matchesIndustryType =
+      !selectedIndustryType ||
+      (client.industryType || "").toLowerCase() === selectedIndustryType.toLowerCase();
+
+    return matchesFilter && matchesSearch && matchesClientType && matchesIndustryType;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
@@ -428,28 +424,72 @@ function ClientsTable() {
   const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
   // Reset to first page when filters/search change
-  useEffect(() => { setCurrentPage(1); }, [activeFilter, activeSearchField, searchTerm, clientsData.length]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchTerm, selectedClientType, selectedIndustryType, clientsData.length]);
 
   const triggerImport = () => {
     console.log("Import button clicked, opening modal");
     setImportError("");
+    setImportErrorDetails([]);
     setIsImportModalOpen(true);
   };
 
   // handle modal result: refresh authoritative list so new server IDs/fields appear
+  const formatImportErrorLine = (err) => {
+    if (err == null) return "";
+    if (typeof err === "string") return err;
+    if (typeof err === "object") {
+      const rowPart = err.row != null ? `Row ${err.row}: ` : "";
+      const reason = String(
+        err.reason || err.message || (err.error ? err.error : "")
+      ).trim();
+      const extra =
+        err.rowData &&
+          (err.rowData.companyName || err.rowData.email)
+          ? ` — ${(err.rowData.companyName || "").trim()} ${(
+            err.rowData.email || ""
+          ).trim()}`.trim()
+          : "";
+      const line = `${rowPart}${reason}${extra}`.trim();
+      return line || JSON.stringify(err);
+    }
+    return String(err);
+  };
+
+  const formatImportErrorDisplay = (line) => {
+    const text = String(line || "").trim();
+    const rowMatch = text.match(/^Row\s+(\d+):\s*(.*)$/i);
+    if (!rowMatch) {
+      return { rowLabel: "", message: text };
+    }
+    return {
+      rowLabel: `Row ${rowMatch[1]}`,
+      message: rowMatch[2] || "",
+    };
+  };
+
   const handleImportComplete = async (importedClients = [], importErrors = []) => {
     try {
       await fetchClients();
       if (importErrors && importErrors.length > 0) {
-        setImportError(`${importErrors.length} errors occurred during import. Check modal for details.`);
+        const lines = importErrors.map(formatImportErrorLine).filter(Boolean);
+        setImportError("Some rows could not be imported:");
+        setImportErrorDetails(lines);
+        // Keep modal open so row-level error details remain visible to user.
+        setIsImportModalOpen(true);
       } else {
         setImportError("");
+        setImportErrorDetails([]);
+        // Auto-close only when everything imported successfully.
+        setIsImportModalOpen(false);
       }
     } catch (e) {
       console.error("Error refreshing after import:", e);
       setImportError("Import completed but failed to refresh list. Try refreshing page.");
-    } finally {
-      setIsImportModalOpen(false);
+      setImportErrorDetails([]);
+      // Keep modal open so user can retry or inspect current import state.
+      setIsImportModalOpen(true);
     }
   };
 
@@ -479,8 +519,8 @@ function ClientsTable() {
           <h2 className={styles.tableTitle}>Clients and Leads</h2>
           <div className={styles.actionButtons}>
             {selectedClientIds.length > 0 && (
-              <button 
-                className={`${styles.deleteButton} ${styles.bulkDeleteButton}`} 
+              <button
+                className={`${styles.deleteButton} ${styles.bulkDeleteButton}`}
                 onClick={handleBulkDelete}
               >
                 <DeleteIcon />
@@ -505,25 +545,22 @@ function ClientsTable() {
         <div className={styles.controlsSection}>
           <div className={styles.segmentedControl}>
             <button
-              className={`${styles.toggleButton} ${
-                activeFilter === "All" ? styles.activeAll : ""
-              }`}
+              className={`${styles.toggleButton} ${activeFilter === "All" ? styles.activeAll : ""
+                }`}
               onClick={() => setActiveFilter("All")}
             >
               All
             </button>
             <button
-              className={`${styles.toggleButton} ${
-                activeFilter === "Clients" ? styles.active : ""
-              }`}
+              className={`${styles.toggleButton} ${activeFilter === "Clients" ? styles.active : ""
+                }`}
               onClick={() => setActiveFilter("Clients")}
             >
               Clients
             </button>
             <button
-              className={`${styles.toggleButton} ${
-                activeFilter === "Leads" ? styles.active : ""
-              }`}
+              className={`${styles.toggleButton} ${activeFilter === "Leads" ? styles.active : ""
+                }`}
               onClick={() => setActiveFilter("Leads")}
             >
               Leads
@@ -541,20 +578,58 @@ function ClientsTable() {
               />
               <SearchIcon />
             </div>
-            <button
-              ref={filterButtonRef}
-              className={styles.filterButton}
-              onClick={handleFilterClick}
+            <select
+              value={selectedClientType}
+              onChange={(e) => setSelectedClientType(e.target.value)}
+              className={styles.filterSelect}
             >
-                  {/* <FilterIcon /> */}
-            </button>
+              <option value="">Client Type</option>
+              {clientTypeOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedIndustryType}
+              onChange={(e) => setSelectedIndustryType(e.target.value)}
+              className={`${styles.filterSelect} ${styles.filterSelectIndustry}`}
+            >
+              <option value="">Industry Type</option>
+              {industryTypeOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
 
       <div className={styles.tableSection}>
         {importError && (
-          <div className={styles.errorState} style={{ marginBottom: 8 }}>{importError}</div>
+          <div className={styles.errorState} style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 600 }}>{importError}</div>
+            {importErrorDetails.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+                {importErrorDetails.map((line, idx) => {
+                  const display = formatImportErrorDisplay(line);
+                  return (
+                    <li key={`${line}-${idx}`} style={{ marginBottom: 4 }}>
+                      {display.rowLabel ? (
+                        <>
+                          <span style={{ fontWeight: 700 }}>{display.rowLabel}</span>
+                          <span>: {display.message}</span>
+                        </>
+                      ) : (
+                        <span>{display.message}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         )}
         <div className={styles.tableWrapper}>
           <div className={styles.tableColumns}>
@@ -737,6 +812,27 @@ function ClientsTable() {
               ))}
             </div>
 
+            {/* Created By Column */}
+            <div className={`${styles.tableColumn} ${styles.createdByColumn}`}>
+              <div className={styles.tableHeader}>
+                <div className={styles.tableHeaderCell}>
+                  <div className={styles.headerContent}>
+                    <span className={styles.headerText}>Created By</span>
+                    <SortIcon />
+                  </div>
+                </div>
+              </div>
+              {pagedData.map((client) => (
+                <div key={client._id} className={`${styles.tableCell} ${styles.createdByCell}`}>
+                  <div className={styles.createdByInfo}>
+                    <div className={styles.createdByName}>
+                      {client.createdByUsername || 'Unknown'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {/* Edit Actions Column */}
             <div className={`${styles.tableColumn} ${styles.editActionsColumn}`}>
               <div className={styles.tableHeader}>
@@ -810,13 +906,6 @@ function ClientsTable() {
         onClose={handleEditClientClose}
         onSubmit={handleEditClientSubmit}
         clientData={clientToEdit}
-      />
-
-      <FilterDropdown
-        isOpen={isFilterDropdownOpen}
-        onClose={handleFilterDropdownClose}
-        onFilterSelect={handleFilterSelect}
-        position={dropdownPosition}
       />
 
       {/* Import Modal */}

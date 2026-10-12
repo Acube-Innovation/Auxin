@@ -20,6 +20,8 @@ import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceManagement from "./pages/team-management/AttendanceManagement";
 import HelpSupport from "./pages/HelpSupport";
+import LeaveRequests from "./pages/LeaveRequests";
+import SalarySlips from "./pages/SalarySlips";
 import OpsMasters from "./pages/operations/OpsMasters";
 import VoyageList from "./pages/operations/VoyageList";
 import VoyageWizard from "./pages/operations/wizard/VoyageWizard";
@@ -85,6 +87,10 @@ function App() {
 
           <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
 
+          <Route path="/leave-requests" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
+
+          <Route path="/salary-slips" element={<ProtectedRoute><SalarySlips /></ProtectedRoute>} />
+
           {/* Vessel Operations (Phase 2) */}
           <Route path="/operations" element={<ProtectedRoute roles={ALL_OPS_ROLES}><OpsDashboard /></ProtectedRoute>} />
           <Route path="/operations/voyages" element={<ProtectedRoute roles={ALL_OPS_ROLES}><VoyageList /></ProtectedRoute>} />
@@ -98,6 +104,7 @@ function App() {
           <Route path="/operations/settings" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsSettings /></ProtectedRoute>} />
 
           <Route path="/venkat" element={<ProtectedRoute><Venkat /></ProtectedRoute>} />
+
           <Route path="/example" element={<Example />} />
 
         </Routes>

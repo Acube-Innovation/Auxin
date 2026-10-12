@@ -1,0 +1,1119 @@
+.container {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e4e4e4;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #e4e4e4;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.subtitle {
+    margin: 4px 0 0 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.importWrapper {
+    position: relative;
+}
+
+.fileInput {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.importButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.addBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #fff;
+    color: #007aff;
+    border: 1px solid #007aff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.addBtn:hover {
+    background: #f0f7ff;
+}
+
+.addBtnIcon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) saturate(100%) invert(38%) sepia(93%) saturate(1352%) hue-rotate(196deg) brightness(103%) contrast(106%);
+}
+
+.importButton:hover {
+    background: #0066d6;
+}
+
+.importButton:active {
+    transform: scale(0.98);
+}
+
+.plusIcon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}
+
+.tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.table th {
+    padding: 16px 24px;
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 1px solid #e4e4e4;
+    /* ₹ (U+20B9): avoid missing glyph when Inter subset omits currency symbols */
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.table td {
+    padding: 16px 24px;
+    color: #1f2937;
+    font-size: 14px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.table tr:hover {
+    background: #f9fafb;
+}
+
+.empId {
+    font-family: monospace;
+    color: #007aff;
+    font-weight: 600;
+}
+
+.empName {
+    font-weight: 550;
+}
+
+.monthYear {
+    font-weight: 600;
+    color: #111;
+}
+
+.netSal {
+    font-weight: 600;
+    color: #16a34a;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.actionsColumn {
+    text-align: right;
+}
+
+.rowActions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.downloadBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.downloadBtn:hover {
+    background: #e5e7eb;
+    color: #111;
+}
+
+.editBtn {
+    padding: 6px;
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editBtn:hover {
+    background: #bae6fd;
+}
+
+.deleteBtn {
+    padding: 6px;
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+    background: #fecaca;
+}
+
+.noData {
+    padding: 40px;
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.filters {
+    display: flex;
+    gap: 12px;
+}
+
+.select {
+    padding: 8px 12px;
+    border: 1px solid #e4e4e4;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+    color: #1a1a1a;
+}
+
+.select:focus {
+    outline: none;
+    border-color: #007aff;
+}
+
+.loading {
+    padding: 100px;
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+}
+
+/* Employee Tab Controls */
+.tabControls {
+    padding: 0 24px 16px;
+}
+
+.tabButtons {
+    display: inline-flex;
+    background: #f5f5f5;
+    padding: 4px;
+    border-radius: 100px;
+    gap: 4px;
+}
+
+.tabButton {
+    padding: 10px 24px;
+    border-radius: 100px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.tabButton:hover {
+    color: #333;
+}
+
+.tabButtonActive {
+    background: white;
+    color: #007aff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Description Cell */
+.descriptionCell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid #e4e4e4;
+    background: #f9fafb;
+}
+
+.paginationInfo {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.paginationControls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pageBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.pageBtn:disabled {
+    background: #f9fafb;
+    color: #d1d5db;
+    cursor: not-allowed;
+}
+
+.pageBtnActive {
+    background: #007aff;
+    color: #fff;
+    border-color: #007aff;
+}
+
+.pageBtnActive:hover {
+    background: #0066d6;
+    border-color: #0066d6;
+}
+
+.pageEllipsis {
+    padding: 0 8px;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* Delete Confirmation Dialog Styles */
+.dialogOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.dialogContent {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.dialogIcon {
+    margin-bottom: 16px;
+}
+
+.dialogTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 12px 0;
+}
+
+.dialogMessage {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
+.dialogMessage strong {
+    color: #1f2937;
+}
+
+.dialogActions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.dialogCancelBtn {
+    padding: 10px 24px;
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dialogCancelBtn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.dialogDeleteBtn {
+    padding: 10px 24px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dialogDeleteBtn:hover {
+    background: #b91c1c;
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .actions {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .filters {
+        display: flex;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .select {
+        flex: 1;
+    }
+
+    .importButton {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .paginationInfo {
+        text-align: center;
+    }
+
+    .dialogContent {
+        padding: 24px;
+    }
+
+    .dialogActions {
+        flex-direction: column;
+    }
+
+    .dialogCancelBtn,
+    .dialogDeleteBtn {
+        width: 100%;
+    }
+}
+
+/* Expense Button Styles */
+.expenseBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+.expenseBtn:hover {
+    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+}
+
+.expenseBtn:active {
+    transform: scale(0.98);
+}
+
+.expenseBtn svg {
+    stroke: currentColor;
+}
+
+/* Expense Modal Styles */
+.expenseModalContent {
+    background: #fff;
+    border-radius: 16px;
+    padding: 0;
+    max-width: 500px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideIn 0.25s ease-out;
+}
+
+.expenseModalHeader {
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.expenseModalIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    margin-bottom: 16px;
+}
+
+.expenseModalTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 6px 0;
+}
+
+.expenseModalSubtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.expenseForm {
+    padding: 24px 28px 28px;
+}
+
+.formGroup {
+    margin-bottom: 18px;
+}
+
+.formLabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.formInput {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.formInput:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.formInput::placeholder {
+    color: #9ca3af;
+}
+
+.formTextarea {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.formTextarea:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.formTextarea::placeholder {
+    color: #9ca3af;
+}
+
+.formSelect {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.formSelect:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.fileUploadWrapper {
+    position: relative;
+}
+
+.fileInput {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.fileUploadLabel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.fileUploadLabel:hover {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.fileUploadLabel svg {
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+
+.fileUploadLabel span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.expenseNote {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #166534;
+}
+
+.expenseNote svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    stroke: #16a34a;
+}
+
+.expenseModalActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.expenseSubmitBtn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.expenseSubmitBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+}
+
+.expenseSubmitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Category Dropdown with Checkboxes Styles */
+.categoryDropdownWrapper {
+    position: relative;
+}
+
+.categoryDropdownTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.categoryDropdownTrigger:hover {
+    border-color: #9ca3af;
+}
+
+.categoryDropdownTriggerOpen {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.categoryDropdownText {
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.categoryDropdownPlaceholder {
+    color: #9ca3af;
+}
+
+.categoryDropdownArrow {
+    color: #6b7280;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.categoryDropdownArrowOpen {
+    transform: rotate(180deg);
+}
+
+.categoryDropdownMenu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    animation: dropdownSlideIn 0.15s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.categoryCheckboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    user-select: none;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.categoryCheckboxLabel:last-child {
+    border-bottom: none;
+}
+
+.categoryCheckboxLabel:hover {
+    background: #f0fdf4;
+}
+
+.categoryCheckbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #16a34a;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.categoryCheckbox:checked+.categoryCheckboxText {
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.categoryCheckboxText {
+    font-size: 14px;
+    color: #374151;
+    transition: color 0.15s;
+}
+
+/* Filter Styles */
+.filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.select {
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    min-width: 100px;
+    transition: border-color 0.2s;
+}
+
+.select:focus {
+    outline: none;
+    border-color: #0078d4;
+}
+
+.reportTypeSelect {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid #0078d4;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+    color: #0078d4;
+    cursor: pointer;
+    min-width: 140px;
+    transition: all 0.2s;
+}
+
+.reportTypeSelect:hover {
+    background: linear-gradient(135deg, #e6f2ff 0%, #d9ebff 100%);
+}
+
+.reportTypeSelect:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+/* Status Badge Styles for Expense Table */
+.statusBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 20px;
+    text-transform: capitalize;
+}
+
+.statusPending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.statusHODApproved {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.statusApproved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.statusRejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Category Badge */
+.categoryBadge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f3f4f6;
+    color: #4b5563;
+    border-radius: 4px;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Expense Amount */
+.expenseAmount {
+    font-weight: 600;
+    color: #16a34a;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* View Button */
+.viewBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: #f0f7ff;
+    border: 1px solid #0078d4;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viewBtn svg {
+    stroke: #0078d4;
+}
+
+.viewBtn:hover {
+    background: #0078d4;
+}
+
+.viewBtn:hover svg {
+    stroke: #fff;
+}
+
+/* Approve Button */
+.approveBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: #f0fdf4;
+    border: 1px solid #22c55e;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #16a34a;
+}
+
+.approveBtn:hover {
+    background: #22c55e;
+    color: #fff;
+}
+
+.approveBtn:hover svg {
+    stroke: #fff;
+}
+
+/* Reject Button */
+.rejectBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: #fef2f2;
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #dc2626;
+}
+
+.rejectBtn:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+.rejectBtn:hover svg {
+    stroke: #fff;
+}
+
+/* No Action */
+.noAction {
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+/* No Document */
+.noDocument {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .expenseBtn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .expenseModalContent {
+        max-width: 100%;
+        margin: 16px;
+        max-height: calc(100vh - 32px);
+    }
+
+    .expenseModalHeader {
+        padding: 20px 20px 16px;
+    }
+
+    .expenseForm {
+        padding: 20px;
+    }
+
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+
+    .expenseModalActions {
+        flex-direction: column;
+    }
+
+    .expenseSubmitBtn,
+    .expenseModalActions .dialogCancelBtn {
+        width: 100%;
+    }
+
+    .filters {
+        flex-wrap: wrap;
+    }
+
+    .reportTypeSelect,
+    .select {
+        min-width: auto;
+        flex: 1;
+    }
+}

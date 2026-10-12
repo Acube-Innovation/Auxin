@@ -1,0 +1,299 @@
+.container {
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e4e4e4;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #161616;
+    margin: 0;
+}
+
+.addButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #007aff;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.controls {
+    padding: 0 24px;
+}
+
+.segmentedControl {
+    display: flex;
+    background: #f5f5f5;
+    padding: 4px;
+    border-radius: 100px;
+    width: fit-content;
+}
+
+.filterButton {
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.filterButton.active {
+    background: white;
+    color: #007aff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tableWrapper {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px 24px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e4e4e4;
+    color: #161616;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e4e4e4;
+    color: #4b5563;
+    font-size: 0.938rem;
+}
+
+.employeeName {
+    font-weight: 500;
+    color: #111827;
+}
+
+.statusChip {
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.statusChip.pending {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.statusChip.approved {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.statusChip.rejected {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.statusChip.hod_approved {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.rowActions {
+    display: flex;
+    gap: 8px;
+}
+
+.iconButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #8c8e90;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iconButton:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.holidaysHeading {
+    padding: 0 24px 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #161616;
+}
+
+.noData {
+    text-align: center;
+    padding: 40px !important;
+    color: #9ca3af;
+}
+
+.loading {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+}
+
+.approveButton {
+    color: #16a34a;
+}
+
+.approveButton:hover {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.rejectButton {
+    color: #dc2626;
+}
+
+.rejectButton:hover {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.noAction {
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid #e4e4e4;
+}
+
+.paginationInfo {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.paginationControls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.pageButton {
+    padding: 8px 12px;
+    border: 1px solid #e4e4e4;
+    background: white;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pageButton:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.pageButton:disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+    background: #f9fafb;
+}
+
+.pageButton.activePage {
+    background: #007aff;
+    color: white;
+    border-color: #007aff;
+}
+
+.pageButton.activePage:hover {
+    background: #0066dd;
+}
+
+.pageButton.ellipsis {
+    border: none;
+    background: transparent;
+    cursor: default;
+    padding: 8px 6px;
+}
+
+.pageButton.ellipsis:hover {
+    background: transparent;
+}
+
+/* Leave Chart Inline Edit Styles */
+.leaveEditInput {
+    width: 60px;
+    padding: 4px 6px;
+    border: 1.5px solid #007aff;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #161616;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #f0f7ff;
+}
+
+.leaveEditInput:focus {
+    border-color: #0055cc;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+
+/* Remove number input arrows */
+.leaveEditInput::-webkit-outer-spin-button,
+.leaveEditInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.leaveEditInput[type=number] {
+    -moz-appearance: textfield;
+}
+
+.overrideRow {
+    background: #fffef0;
+}
+
+.overrideRow:hover {
+    background: #fffde6;
+}
+
+.overrideDot {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.75rem;
+    color: #b45309;
+    cursor: default;
+}

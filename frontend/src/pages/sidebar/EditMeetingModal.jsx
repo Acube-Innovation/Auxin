@@ -4,9 +4,11 @@ import "../../components/sales-and-leads/CreateEventModal.css";
 import DatePickerModal from "../../components/DatePickerModal";
 import calendarIcon from "../../assets/dashboard/calendar.svg";
 import MeetingService from "../../services/MeetingService";
+import { updateEvent as updateClientEvent } from "../../services/CreateEventService";
 import employeeService from "../../services/EmployeeService";
 import clientService from "../../services/ClientService";
 import Select from "react-select";
+import { OFFICIAL_HOLIDAYS_2026 } from "../../utils/leaveHolidays";
 
 /*
  Props:
@@ -119,8 +121,8 @@ function EditMeetingModal({ isOpen, onClose, meeting = null, onEventUpdated }) {
     try {
       const payload = {
         title: formData.title,
+        eventName: formData.title,
         type: formData.type,
-        // send ISO date or date string backend accepts
         date: (formData.date && formData.time) ? new Date(`${formData.date}T${formData.time}:00`).toISOString() : formData.date,
         time: formData.time,
         clientId: formData.clientId || null,
@@ -131,7 +133,15 @@ function EditMeetingModal({ isOpen, onClose, meeting = null, onEventUpdated }) {
         reminders: formData.reminders || []
       };
       const id = meeting._id || meeting.id || meeting.eventId;
-      const updated = await MeetingService.updateMeeting(id, payload);
+      const clientId = meeting.clientId || meeting.meta?.event?.clientId;
+      const isClientEvent = clientId && !meeting.meta?.meeting;
+      let updated;
+      if (isClientEvent) {
+        updated = await updateClientEvent(clientId, id, payload);
+        if (updated?.event) updated = updated.event;
+      } else {
+        updated = await MeetingService.updateMeeting(id, payload);
+      }
       onEventUpdated && onEventUpdated(updated);
       onClose && onClose();
     } catch (err) {
@@ -297,7 +307,14 @@ function EditMeetingModal({ isOpen, onClose, meeting = null, onEventUpdated }) {
           </div>
         </div>
 
-        <DatePickerModal isOpen={isDatePickerOpen} onClose={() => setIsDatePickerOpen(false)} onSelectDate={handleDateSelect} selectedDate={formData.date ? new Date(formData.date) : null} />
+        <DatePickerModal
+          isOpen={isDatePickerOpen}
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelectDate={handleDateSelect}
+          selectedDate={formData.date ? new Date(`${formData.date}T12:00:00`) : null}
+          disabledDates={OFFICIAL_HOLIDAYS_2026}
+          highlightHolidayDates
+        />
       </div>
     </div>
   );

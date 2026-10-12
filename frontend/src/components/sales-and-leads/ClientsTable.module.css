@@ -165,6 +165,37 @@
   color: #b3b9c4;
 }
 
+/* Client Type / Industry Type dropdowns (visible filters next to search) */
+.filterSelect {
+  flex: 0 0 auto;
+  min-width: 140px;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+  border: 1px solid #000;
+  border-radius: 6.188rem;
+  background: #fff;
+  color: #000;
+  letter-spacing: -0.008rem;
+  font: 500 clamp(0.75rem, 0.813vw, 0.813rem)/1.5 Inter, sans-serif;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  padding-right: 2rem;
+}
+
+.filterSelect:focus {
+  border-color: #000;
+}
+
+.filterSelectIndustry {
+  min-width: 150px;
+}
+
 .filterButton {
   width: 2rem;
   height: 2rem;
@@ -266,6 +297,14 @@
   min-width: clamp(9rem, 12vw, 12rem);
 }
 
+.createdByColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  min-width: clamp(9rem, 12vw, 12rem);
+}
+
 .editActionsColumn,
 .deleteActionsColumn {
   display: flex;
@@ -329,7 +368,7 @@
   padding: clamp(0.75rem, 1.25vw, 1.25rem) 0;
 }
 
-.companyCell, .typeCell, .assignedCell, .categoriesCell, .phoneCell {
+.companyCell, .typeCell, .assignedCell, .categoriesCell, .phoneCell, .createdByCell {
   padding: clamp(0.75rem, 1.25vw, 1.25rem);
   gap: 1rem;
 }
@@ -370,7 +409,7 @@
   background-color: #606060;
 }
 
-.companyinfo, .assignedInfo, .categoryInfo, .phoneInfo {
+.companyinfo, .assignedInfo, .categoryInfo, .phoneInfo, .createdByInfo {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -379,7 +418,7 @@
   overflow: hidden;
 }
 
-.companyName, .assignedName, .categoryText, .phoneText {
+.companyName, .assignedName, .categoryText, .phoneText, .createdByName {
   color: #161616;
   font: 500 clamp(0.9rem, 1.063vw, 1.063rem)/1.2 "Inter Tight", sans-serif;
   white-space: nowrap;

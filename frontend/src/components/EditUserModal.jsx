@@ -56,7 +56,7 @@ const EditUserModal = ({ isOpen, onClose, onSubmit, userToEdit }) => {
         throw new Error("Username is required");
       }
       if (formData.password && formData.password.length < 6) {
-         throw new Error("Password must be at least 6 characters long");
+        throw new Error("Password must be at least 6 characters long");
       }
       if (formData.emailId && !/\S+@\S+\.\S+/.test(formData.emailId)) {
         throw new Error("Please enter a valid email address");
@@ -194,11 +194,12 @@ const EditUserModal = ({ isOpen, onClose, onSubmit, userToEdit }) => {
               <option value="operations_pricing_manager">
                 Pricing Manager
               </option>
-               <option value="operations_pricing_manager">
+              <option value="operations_pricing_manager">
                 Pricing Executive
               </option>
               <option value="sales_executive">Sales Executive</option>
               <option value="admin">Admin</option>
+              <option value="hod">HOD</option>
             </select>
           </div>
 

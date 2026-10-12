@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const Employee = require('../models/Employee');
 const Client = require('../models/Client');
 const nodemailer = require('nodemailer');
+const { sendEventAssignedTemplate } = require('../services/interaktWhatsAppService');
 
 // Email notification functions for meetings
 async function sendMeetingEmailsInBackground(meetingData, actionType, assignedBy) {
@@ -81,6 +82,60 @@ async function sendMeetingEmailsInBackground(meetingData, actionType, assignedBy
     }
   } catch (emailError) {
     console.error(`? Background meeting email error for ${actionType}:`, emailError);
+  }
+}
+
+// Send WhatsApp template to each assigned team member (one message per member).
+async function sendMeetingWhatsAppInBackground(meetingData, assignedBy) {
+  const assignedUserIds = Array.isArray(meetingData.assignedTeamMembers) ? meetingData.assignedTeamMembers : [];
+  if (assignedUserIds.length === 0) return;
+  let clientName = 'N/A';
+  if (meetingData.clientId) {
+    try {
+      const client = await Client.findById(meetingData.clientId);
+      clientName = client ? (client.clientName || client.companyName || 'Client') : 'N/A';
+    } catch (e) {
+      // ignore
+    }
+  }
+  const eventPayload = {
+    eventName: meetingData.title,
+    title: meetingData.title,
+    date: meetingData.date,
+    time: meetingData.time,
+    notes: meetingData.notes,
+    link: meetingData.link,
+  };
+  try {
+    for (const userId of assignedUserIds) {
+      try {
+        const member = await Employee.findById(userId);
+        if (!member) {
+          console.warn('[WhatsApp] Skipped – no employee found for id:', userId);
+          continue;
+        }
+        if (!member.mobile) {
+          console.warn('[WhatsApp] Skipped – no mobile for', member.employeeName, '(id:', userId, ')');
+          continue;
+        }
+        const result = await sendEventAssignedTemplate(
+          member.mobile,
+          member.employeeName || 'Team Member',
+          eventPayload,
+          clientName,
+          assignedBy
+        );
+        if (result.success) {
+          console.log(`[WhatsApp] Meeting template sent to ${member.employeeName} (${member.mobile})`);
+        } else {
+          console.warn(`[WhatsApp] Failed for ${member.employeeName}:`, result.error);
+        }
+      } catch (err) {
+        console.error(`[WhatsApp] Error sending to member ${userId}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Meeting background send error:', err);
   }
 }
 
@@ -230,6 +285,11 @@ router.post('/', authMiddleware, async (req, res) => {
       .then(() => console.log("Meeting creation email process completed"))
       .catch(err => console.error("Meeting creation email process failed:", err));
 
+    // Send WhatsApp to each assigned team member (non-blocking)
+    sendMeetingWhatsAppInBackground(saved, assignedBy)
+      .then(() => console.log("Meeting WhatsApp process completed"))
+      .catch(err => console.error("Meeting WhatsApp process failed:", err));
+
     // Build notification payload and emit (background)
     try {
       const io = req.app.get('io');
@@ -293,6 +353,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
     sendMeetingEmailsInBackground(saved, 'updated', assignedBy)
       .then(() => console.log("Meeting update email process completed"))
       .catch(err => console.error("Meeting update email process failed:", err));
+
+    // Send WhatsApp template with updated meeting data to assigned team members
+    sendMeetingWhatsAppInBackground(saved, assignedBy)
+      .then(() => console.log("Meeting update WhatsApp process completed"))
+      .catch(err => console.error("Meeting update WhatsApp process failed:", err));
 
     // Schedule reminders for updated meeting
     if (saved.reminders && saved.reminders.length > 0) {

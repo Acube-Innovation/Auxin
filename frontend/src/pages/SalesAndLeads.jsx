@@ -73,16 +73,31 @@ function SalesAndLeads() {
         return createdDate >= lastMonth && createdDate < thisMonth;
       }).length;
 
-      const monthlyGrowth = lastMonthCount > 0 ?
-        (((thisMonthCount - lastMonthCount) / lastMonthCount) * 100).toFixed(1) : 0;
+      const monthlyGrowth = lastMonthCount > 0
+        ? (((thisMonthCount - lastMonthCount) / lastMonthCount) * 100).toFixed(1)
+        : (thisMonthCount > 0 ? 100 : 0);
 
-      console.log('Monthly growth:', monthlyGrowth);
+      // Won-specific: count of Won status this month vs last month (for Total Won card)
+      const thisMonthWon = clientsArray.filter(c => {
+        if (c.currentStatus !== 'Won' || !c.createdAt) return false;
+        const d = new Date(c.createdAt);
+        return d >= thisMonth;
+      }).length;
+      const lastMonthWon = clientsArray.filter(c => {
+        if (c.currentStatus !== 'Won' || !c.createdAt) return false;
+        const d = new Date(c.createdAt);
+        return d >= lastMonth && d < thisMonth;
+      }).length;
+      const wonMonthlyGrowth = lastMonthWon > 0
+        ? (((thisMonthWon - lastMonthWon) / lastMonthWon) * 100).toFixed(1)
+        : (thisMonthWon > 0 ? 100 : 0);
 
       setSalesMetrics({
         totalSalesAndLeads,
         totalWon,
         totalOpportunityValue,
-        monthlyGrowth: parseFloat(monthlyGrowth)
+        monthlyGrowth: parseFloat(monthlyGrowth),
+        wonMonthlyGrowth: parseFloat(wonMonthlyGrowth)
       });
     } catch (error) {
       console.error('Error calculating sales metrics:', error);
@@ -161,7 +176,7 @@ function SalesAndLeads() {
               </div>
               <h2>{isLoadingMetrics ? '--' : salesMetrics.totalWon}</h2>
               <p className={styles.cardfail}>
-                {isLoadingMetrics ? '--' : `${salesMetrics.monthlyGrowth >= 0 ? '+' : ''}${salesMetrics.monthlyGrowth}%`} <span>from last month</span>
+                {isLoadingMetrics ? '--' : `${salesMetrics.wonMonthlyGrowth >= 0 ? '+' : ''}${salesMetrics.wonMonthlyGrowth}%`} <span>from last month</span>
               </p>
             </div>
           </div>

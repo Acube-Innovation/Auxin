@@ -1,0 +1,349 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modalContent {
+    background: #fff;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.modalHeader {
+    padding: 24px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modalHeader h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.closeBtn {
+    background: #f1f5f9;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 80px;
+}
+
+.stepIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #fff;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #e2e8f0;
+    font-size: 18px;
+    transition: all 0.3s;
+}
+
+.step span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.active .stepIcon {
+    border-color: #007aff;
+    color: #007aff;
+    background: #eff6ff;
+    transform: scale(1.1);
+}
+
+.active span {
+    color: #007aff;
+}
+
+.stepLine {
+    flex: 1;
+    max-width: 100px;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 8px;
+    margin-bottom: 24px;
+}
+
+.stepLine.active {
+    background: #007aff;
+}
+
+.stepContent {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+}
+
+.uploadStep {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.templateSection h3,
+.uploadSection h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #334155;
+}
+
+.templateBtns {
+    display: flex;
+    gap: 12px;
+}
+
+.templateBtns button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.templateBtns button:hover {
+    border-color: #007aff;
+    color: #007aff;
+    background: #f0f7ff;
+}
+
+.dropzone {
+    border: 2px dashed #e2e8f0;
+    border-radius: 16px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+}
+
+.dropzone:hover {
+    border-color: #007aff;
+    background: #f8fafc;
+}
+
+.uploadIcon {
+    font-size: 40px;
+    color: #007aff;
+    margin-bottom: 8px;
+}
+
+.dropzone p {
+    margin: 0;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.dropzone span {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.hiddenInput {
+    display: none;
+}
+
+.infoBar {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 12px 16px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    color: #1e40af;
+    font-size: 14px;
+}
+
+.tableWrapper {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.previewTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.previewTable th {
+    background: #f8fafc;
+    padding: 12px 16px;
+    text-align: left;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.previewTable td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.tableNote {
+    padding: 8px;
+    text-align: center;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.errorSection {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.errorMessage {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    padding: 12px;
+    border-radius: 8px;
+    color: #be123c;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.successStep {
+    text-align: center;
+    padding: 24px;
+}
+
+.successIcon {
+    width: 80px;
+    height: 80px;
+    background: #dcfce7;
+    color: #16a34a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin: 0 auto 24px;
+}
+
+.successStep h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: #0f172a;
+}
+
+.finishBtn {
+    margin-top: 24px;
+    padding: 12px 32px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.modalFooter {
+    padding: 20px 32px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+}
+
+.cancelBtn {
+    padding: 10px 24px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.importBtn {
+    padding: 10px 32px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spin {
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

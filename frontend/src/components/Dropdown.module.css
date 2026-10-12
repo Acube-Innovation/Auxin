@@ -139,6 +139,55 @@
   color: #1a73e8;
 }
 
+.optionRow {
+  display: flex;
+  align-items: stretch;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.optionRow:hover {
+  background-color: #f5f7fa;
+}
+
+.optionRowSelected {
+  background-color: #e8f0fe;
+}
+
+.optionRowSelected .optionMain {
+  color: #1a73e8;
+}
+
+.optionMain {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 8px 10px 16px;
+  cursor: pointer;
+  color: #000;
+  font-family: Inter, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.optionDeleteBtn {
+  flex-shrink: 0;
+  width: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #98a1b0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.optionDeleteBtn:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+
 .option:first-child {
   border-radius: 4px 4px 0 0;
 }
@@ -169,6 +218,82 @@
 .searchContainer {
   padding: 8px 12px;
   border-bottom: 1px solid #e1e5e9;
+}
+
+.addOptionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #1a73e8;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid #e1e5e9;
+  user-select: none;
+}
+
+.addOptionRow:hover {
+  background-color: #f5f7fa;
+}
+
+.addOptionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1.5px solid #1a73e8;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.addOptionInputBlock {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.addOptionInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addOptionInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: Inter, sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.addOptionInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.addOptionSubmit {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #1a73e8;
+  color: #fff;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.addOptionSubmit:hover {
+  background: #1557b0;
 }
 
 .searchInput {
