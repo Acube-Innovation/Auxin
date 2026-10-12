@@ -85,7 +85,7 @@ async function main() {
     process.stdout.write(r.stdout.split('\n').map((l) => (l ? `   ${l}` : l)).join('\n'));
     if (r.status !== 0) throw new Error(`seedOps.js failed: ${r.stderr || r.stdout}`);
   } else if (counts.tasktemplates === 0) {
-    line('   Will seed: 19 stages, 127 task templates, daily check sets, ports and the sample vessel');
+    line('   Will seed: the stages, 127 task templates, daily check sets, ports and the sample vessel');
   } else {
     line('   Will add only what is missing (edits made in the app are kept)');
   }
@@ -107,7 +107,7 @@ async function main() {
     if (e && !takenEmployees.has(String(e._id))) {
       links.push({ user: u, employee: e });
       takenEmployees.add(String(e._id));
-    } else if (ALL_OPS.includes(u.role) && !ADMIN.includes(u.role)) {
+    } else if ([...MANAGERS, ...OPERATORS].includes(u.role)) { // admin and read-only users are never assigned tasks
       unlinkedOps.push({ user: u, why: !norm(u.emailId) ? 'user has no email' : e === null ? 'several employees share the email' : e ? 'employee already linked to another user' : 'no employee with that email' });
     }
   }
