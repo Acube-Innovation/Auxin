@@ -107,7 +107,7 @@ router.post('/bulk', async (req, res) => {
           }
           const changes = await applyTaskPatch(task, p, { session });
           if (changes.length) {
-            changes.forEach((c) => task.history.push({ at: new Date(), by: req.user._id, ...c, note: 'Bulk change' }));
+            changes.forEach((c) => task.history.push({ at: new Date(), by: req.user._id, ...c, note: c.note || 'Bulk change' }));
             await task.save({ session });
             updated.push(String(task._id));
             voyages.set(String(voyage._id), true);
@@ -157,7 +157,7 @@ router.patch('/:taskId', async (req, res) => {
         if (linked && linked.revision) changes.push({ field: 'linkedValue', from: linked.revision.from, to: linked.revision.to });
       }
       if (!changes.length) return { task, voyage, movedTasks: [], dueSoon: [] };
-      changes.forEach((c) => task.history.push({ at: new Date(), by: req.user._id, ...c, note: req.body.note || undefined }));
+      changes.forEach((c) => task.history.push({ at: new Date(), by: req.user._id, ...c, note: req.body.note || c.note }));
       await task.save({ session });
 
       let recalc = { movedTasks: [], dueSoon: [] };
