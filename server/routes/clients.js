@@ -6,6 +6,7 @@ const Employee = require('../models/Employee');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
+const { clientUsage } = require('../services/ops/references');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require("nodemailer");
@@ -211,6 +212,12 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
 
     console.log(`Bulk deleting clients: ${ids.length} IDs provided`);
 
+    // Vessel Operations: refuse while a voyage / vessel / port uses any of these clients
+    const usage = await clientUsage(ids);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. Nothing was deleted.` });
+    }
+
     // 1. Delete related Documents
     // We need to require the Document model if not already imported
     const Document = require('../models/Documents');
@@ -347,7 +354,8 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// Get all events from all clients (must be before /:id routes)
+// Get all events across all clients (flattened with clientId / clientName).
+// Must stay above GET /:id, otherwise "/events" is matched as a client id.
 router.get('/events', authMiddleware, async (req, res) => {
   try {
     const clients = await Client.find({}, { companyName: 1, events: 1 }).lean();
@@ -629,6 +637,12 @@ router.put('/:id', authMiddleware, // keep sales_executive also admin separately
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const clientId = req.params.id;
+
+    // Vessel Operations: refuse while a voyage / vessel / port uses this client
+    const usage = await clientUsage(clientId);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. It cannot be deleted.` });
+    }
 
     // 1. Delete related Documents
     const Document = require('../models/Documents');

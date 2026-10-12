@@ -150,3 +150,12 @@ client/node_modules/.cache/
 
 # Upload directories
 server/uploads/expense-documents/
+
+# Phase 2 private files (task attachments, documents)
+server/storage/
+
+# Never commit database dumps or employee data exports
+*.sql
+*.dump
+server/uploads/employeedocuments/*.xlsx
+server/uploads/employeedocuments/*.csv

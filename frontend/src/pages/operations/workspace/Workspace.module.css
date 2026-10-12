@@ -1,0 +1,141 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.vessel {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0b3a6f;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 640px;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  color: #0b3a6f;
+  margin-bottom: 8px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kv {
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 0.88rem;
+}
+
+.kv > div:first-child {
+  width: 130px;
+  flex-shrink: 0;
+  color: #7a8699;
+}
+
+.bucketRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bucketCard {
+  min-width: 120px;
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.bucketCount {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.actualGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
+.actualSet,
+.actualEmpty {
+  border-radius: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e4e7ec;
+}
+
+.actualSet {
+  background: #f0fdf4;
+  border-color: #abefc6;
+}
+
+.actualEmpty {
+  color: #98a2b3;
+}
+
+.actualLabel {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #475467;
+}
+
+.activity {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity li {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f1f3;
+  font-size: 0.9rem;
+}
+
+.activityKind {
+  flex: 0 0 96px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 1px 8px;
+  height: fit-content;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+  .actualGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

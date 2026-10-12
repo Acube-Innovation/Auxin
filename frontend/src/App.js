@@ -22,7 +22,15 @@ import AttendanceManagement from "./pages/team-management/AttendanceManagement";
 import HelpSupport from "./pages/HelpSupport";
 import LeaveRequests from "./pages/LeaveRequests";
 import SalarySlips from "./pages/SalarySlips";
-
+import OpsMasters from "./pages/operations/OpsMasters";
+import VoyageList from "./pages/operations/VoyageList";
+import VoyageWizard from "./pages/operations/wizard/VoyageWizard";
+import VoyageWorkspace from "./pages/operations/workspace/VoyageWorkspace";
+import MyTasks from "./pages/operations/MyTasks";
+import OpsDashboard from "./pages/operations/OpsDashboard";
+import OpsReports from "./pages/operations/OpsReports";
+import OpsSettings from "./pages/operations/OpsSettings";
+import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "./config/opsRoles";
 
 
 
@@ -82,6 +90,18 @@ function App() {
           <Route path="/leave-requests" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
 
           <Route path="/salary-slips" element={<ProtectedRoute><SalarySlips /></ProtectedRoute>} />
+
+          {/* Vessel Operations (Phase 2) */}
+          <Route path="/operations" element={<ProtectedRoute roles={ALL_OPS_ROLES}><OpsDashboard /></ProtectedRoute>} />
+          <Route path="/operations/voyages" element={<ProtectedRoute roles={ALL_OPS_ROLES}><VoyageList /></ProtectedRoute>} />
+          <Route path="/operations/voyages/new" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />
+          <Route path="/operations/voyages/:id/edit" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><VoyageWizard /></ProtectedRoute>} />
+          <Route path="/operations/voyages/:id" element={<ProtectedRoute roles={ALL_OPS_ROLES}><VoyageWorkspace /></ProtectedRoute>} />
+          <Route path="/operations/my-tasks" element={<ProtectedRoute roles={OPS_EDITOR_ROLES}><MyTasks /></ProtectedRoute>} />
+          <Route path="/operations/reports" element={<ProtectedRoute roles={ALL_OPS_ROLES}><OpsReports /></ProtectedRoute>} />
+          <Route path="/operations/masters" element={<Navigate to="/operations/masters/vessels" replace />} />
+          <Route path="/operations/masters/:master" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsMasters /></ProtectedRoute>} />
+          <Route path="/operations/settings" element={<ProtectedRoute roles={OPS_MASTERS_ROLES}><OpsSettings /></ProtectedRoute>} />
 
           <Route path="/venkat" element={<ProtectedRoute><Venkat /></ProtectedRoute>} />
 

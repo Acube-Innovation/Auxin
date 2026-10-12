@@ -202,6 +202,18 @@ io.on("connection", (socket) => {
     console.log(`Socket ${socket.id} joined client room: client-${clientId}`);
   });
 
+  // Vessel Operations: live refresh of an open voyage workspace
+  socket.on('join-voyage', (voyageId) => {
+    if (!voyageId) return;
+    socket.join(`voyage-${voyageId}`);
+    console.log(`Socket ${socket.id} joined voyage room: voyage-${voyageId}`);
+  });
+
+  socket.on('leave-voyage', (voyageId) => {
+    if (!voyageId) return;
+    socket.leave(`voyage-${voyageId}`);
+  });
+
   // Allow client to check connection status
   socket.on('ping', (callback) => {
     if (typeof callback === 'function') {
@@ -309,10 +321,14 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/departments', departmentRoutes);
 
+app.use('/api/ops', require('./routes/ops'));
 
 // ====== DATABASE CONNECTION ======
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected'))
+  .then(() => {
+    console.log('✅ MongoDB connected');
+    require('./jobs/ops/scheduler').start(io); // Vessel Operations reminders, digest, escalation, daily checks
+  })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ====== SERVE FRONTEND ======
@@ -320,47 +336,21 @@ const frontendPath = path.join(__dirname, '../frontend/build');
 app.use(express.static(frontendPath));
 
 // ====== REACT ROUTES CONFIG ======
-// Fixed: Use proper Express route patterns without colons in array
-const reactRoutes = [
-  '/',
-  '/login',
-  '/forgotpassword',
-  '/dashboard',
-  '/salesandleads',
-  '/reports',
-  '/profile',
-  '/yourcalendar',
-  '/documents',
-  '/teammanagement',
-  '/venkat',
-  '/leave-requests',
-  '/example'
-];
-
-
-// Serve index.html for basic React routes
-reactRoutes.forEach(route => {
-  app.get(route, (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
+// Unknown API paths return JSON 404 instead of the React page
+app.use('/api', (req, res) => {
+  res.status(404).json({ message: `API route not found: ${req.method} ${req.originalUrl}` });
 });
 
-// Handle parameterized routes separately with proper Express syntax
-app.get('/salesandleadsclient/:id', (req, res) => {
+// Every other GET is a React route: serve index.html so a page refresh works on any URL
+// (Express 5 wildcard syntax). Missing files under /uploads still return 404.
+app.get('/{*splat}', (req, res, next) => {
+  if (req.path.startsWith('/uploads/')) return next();
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
-
-app.get('/teammanagement_salesleads/:id', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
-
-// Catch-all route for all other requests - serve React app
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(frontendPath, 'index.html'));
-// });
 
 // ====== START SERVER ======
-server.listen(PORT, '0.0.0.0', () => {
+// HOST=127.0.0.1 keeps a test copy reachable only from the server itself
+server.listen(PORT, process.env.HOST || '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.io is enabled and listening for connections`);
 });

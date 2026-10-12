@@ -1,0 +1,131 @@
+.layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  background-color: #fafbfb;
+}
+
+.desktopSidebar {
+  display: flex;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+  border-bottom: 0.075rem solid #e4e4e4;
+  background: #fff;
+}
+
+.title {
+  color: #161616;
+  font-family: Inter, sans-serif;
+  font-size: clamp(1.5rem, 1.8vw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.075rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 0.9375rem;
+}
+
+.profileColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profileName {
+  color: #161616;
+  font: 500 clamp(0.9rem, 1.125vw, 1.125rem) / 116% "Inter Tight", sans-serif;
+  white-space: nowrap;
+}
+
+.profileType {
+  color: rgba(22, 22, 22, 0.8);
+  font: 400 clamp(0.75rem, 0.875vw, 0.875rem) / 116% "Inter Tight", sans-serif;
+  white-space: nowrap;
+}
+
+.breadcrumbBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.625rem clamp(1.5rem, 2vw, 2rem);
+  border-bottom: 0.0625rem solid #e4e4e4;
+  background: #fff;
+  min-height: 3rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: Inter, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.03rem;
+  flex-wrap: wrap;
+}
+
+.crumbLink {
+  color: #007aff;
+  text-decoration: none;
+}
+
+.crumbText {
+  color: #3e4c63;
+}
+
+.crumbActive {
+  color: #7a8699;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.content {
+  flex: 1;
+  padding: clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+  padding-bottom: 6rem;
+}
+
+@media (max-width: 768px) {
+  .desktopSidebar {
+    display: none;
+  }
+  .header {
+    padding: 1rem;
+  }
+  .title {
+    font-size: 1.25rem;
+  }
+  .profileColumn {
+    display: none;
+  }
+  .breadcrumbBar,
+  .content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

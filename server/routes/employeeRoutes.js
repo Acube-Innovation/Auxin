@@ -4,6 +4,7 @@ const Employee = require('../models/Employee');
 const User = require('../models/User');
 const EmployeeRemark = require('../models/EmployeeRemark');
 const authMiddleware = require('../middleware/authMiddleware');
+const { employeeUsage } = require('../services/ops/references');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require("nodemailer");
@@ -383,6 +384,12 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
 
     console.log(`Bulk deleting employees: ${ids.length} IDs provided`);
 
+    // Vessel Operations: refuse while any of these employees operates a voyage
+    const usage = await employeeUsage(ids);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. Nothing was deleted.` });
+    }
+
     // 1. Delete related EmployeeDocuments
     const EmployeeDocument = require('../models/EmployeeDocuments');
     const docResult = await EmployeeDocument.deleteMany({ employeeId: { $in: ids } });
@@ -600,6 +607,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Vessel Operations: refuse while this employee operates a voyage
+    const usage = await employeeUsage(id);
+    if (usage) {
+      return res.status(400).json({ message: `${usage}. It cannot be deleted.` });
+    }
 
     // 1. Delete related EmployeeDocuments
     const EmployeeDocument = require('../models/EmployeeDocuments');
