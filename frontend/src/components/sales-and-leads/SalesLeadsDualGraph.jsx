@@ -119,6 +119,7 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
   const { labels, starts, ends } = useMemo(getMonthBuckets, []);
   const [mode, setMode] = useState("Sales/Revenue");
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [hidden, setHidden] = useState({ a: false, b: false }); // series switched off from the legend
   
   // Employee Filter State
   const [users, setUsers] = useState([]);
@@ -176,7 +177,8 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
   // Filter clients based on selected employee
   const filteredClients = useMemo(() => {
     if (!selectedUser) return clients;
-    return clients.filter(c => c.assignedTo === selectedUser);
+    // assignedTo is { _id, username } for admin and a plain id otherwise
+    return clients.filter(c => String(c.assignedTo && c.assignedTo._id ? c.assignedTo._id : c.assignedTo) === selectedUser);
   }, [clients, selectedUser]);
   
   const data = useMemo(() => {
@@ -203,6 +205,9 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
     return `${change >= 0 ? '+' : ''}${Math.round(change)}%`;
   };
 
+  const trendClass = (p) => (p.startsWith("+") || p === "New" ? styles.trendPositive : p.startsWith("-") ? styles.trendNegative : styles.trendNeutral);
+  const toggleSeries = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
+
   const percentageA = calculatePercentageChange(data.a);
   const percentageB = calculatePercentageChange(data.b);
 
@@ -213,7 +218,9 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
   const isMobile = containerWidth < 768;
   const chartLeft = isMobile ? 40 : 129;
   
-  const maxVal = Math.max(...data.a, ...data.b, 1);
+  // Scale to the visible series only
+  const maxVal = Math.max(...(hidden.a ? [] : data.a), ...(hidden.b ? [] : data.b), 1);
+  const axisLabel = (v) => (Number.isInteger(v) || v >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1));
   
   const pathA = useMemo(() => generateSmoothPath(data.a, chartWidth, chartHeight, maxVal), [data.a, maxVal, chartHeight, chartWidth]);
   const pathB = useMemo(() => generateSmoothPath(data.b, chartWidth, chartHeight, maxVal), [data.b, maxVal, chartHeight, chartWidth]);
@@ -319,7 +326,7 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
           <div className={styles.indicatorInfo}>
             <div className={styles.indicatorTitle}>{data.legendA}</div>
             <div className={styles.indicatorSubtitle}>
-               <span className={percentageA.includes('+') ? styles.trendPositive : styles.trendNegative}>
+               <span className={trendClass(percentageA)}>
                  {percentageA}
                </span> vs last month
             </div>
@@ -332,7 +339,7 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
           <div className={styles.indicatorInfo}>
             <div className={styles.indicatorTitle}>{data.legendB}</div>
             <div className={styles.indicatorSubtitle}>
-               <span className={percentageB.includes('+') ? styles.trendPositive : styles.trendNegative}>
+               <span className={trendClass(percentageB)}>
                  {percentageB}
                </span> vs last month
             </div>
@@ -344,8 +351,8 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
       <div className={styles.chartSectionWrapper}>
         {/* Y-axis labels */}
         <div className={styles.yAxisLabels} style={{ height: chartHeight }}>
-          <span className={styles.yAxisLabel}>{Math.round(maxVal)}</span>
-          <span className={styles.yAxisLabel}>{Math.round(maxVal / 2)}</span>
+          <span className={styles.yAxisLabel}>{axisLabel(maxVal)}</span>
+          <span className={styles.yAxisLabel}>{axisLabel(maxVal / 2)}</span>
           <span className={styles.yAxisLabel}>0</span>
         </div>
 
@@ -368,11 +375,11 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
           {/* Chart background */}
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" fill="none">
-              <path
+              {!hidden.a && <path
                 d={`${pathA.d} L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`}
                 fill="url(#paint0_linear_chart)"
                 opacity="0.5"
-              />
+              />}
               <defs>
                 <linearGradient
                   id="paint0_linear_chart"
@@ -392,18 +399,18 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
           {/* Chart lines */}
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" fill="none">
-              <path d={pathA.d} stroke="#334AFA" strokeWidth="3" strokeLinecap="round" fill="none" />
+              {!hidden.a && <path d={pathA.d} stroke="#334AFA" strokeWidth="3" strokeLinecap="round" fill="none" />}
             </svg>
           </div>
 
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" fill="none">
-              <path d={pathB.d} stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" fill="none" />
+              {!hidden.b && <path d={pathB.d} stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" fill="none" />}
             </svg>
           </div>
 
           {/* Data Points A */}
-          {pathA.coords && pathA.coords.map((coord, i) => (
+          {!hidden.a && pathA.coords && pathA.coords.map((coord, i) => (
             <div key={`a-${i}`} style={{ position: 'absolute', left: `${(coord.x / chartWidth) * 100}%`, top: `${(coord.y / chartHeight) * 100}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                 <circle cx="4" cy="4" r="4" fill="#334AFA" />
@@ -412,7 +419,7 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
           ))}
 
           {/* Data Points B */}
-          {pathB.coords && pathB.coords.map((coord, i) => (
+          {!hidden.b && pathB.coords && pathB.coords.map((coord, i) => (
             <div key={`b-${i}`} style={{ position: 'absolute', left: `${(coord.x / chartWidth) * 100}%`, top: `${(coord.y / chartHeight) * 100}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                 <circle cx="4" cy="4" r="4" fill="#06b6d4" />
@@ -432,14 +439,14 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
 
       {/* Legend - Moved to bottom */}
       <div className={styles.legend} style={{ marginLeft: isMobile ? '40px' : '129px' }}>
-        <div className={styles.legendItem}>
+        <button type="button" className={`${styles.legendItem} ${hidden.a ? styles.legendOff : ""}`} onClick={() => toggleSeries("a")} aria-pressed={!hidden.a} title={hidden.a ? "Show" : "Hide"}>
           <div className={styles.legendDotA}></div>
           <span>{data.legendA}</span>
-        </div>
-        <div className={styles.legendItem}>
+        </button>
+        <button type="button" className={`${styles.legendItem} ${hidden.b ? styles.legendOff : ""}`} onClick={() => toggleSeries("b")} aria-pressed={!hidden.b} title={hidden.b ? "Show" : "Hide"}>
           <div className={styles.legendDotB}></div>
           <span>{data.legendB}</span>
-        </div>
+        </button>
       </div>
 
       {/* Tooltip */}
@@ -452,7 +459,7 @@ export default function SalesLeadsDualGraph({ clients = [], isLoading = false })
             {isLoading ? '--' : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                  <span style={{ color: '#334AFA', fontSize: '14px' }}>
-                    {data.legendA}: {mode === "Sales/Revenue" ? `${currentTooltipData.valueA.toLocaleString()}` : currentTooltipData.valueA}
+                    {data.legendA}: {mode === "Sales/Revenue" ? `₹${currentTooltipData.valueA.toLocaleString()}` : currentTooltipData.valueA}
                  </span>
                  <span style={{ color: '#06b6d4', fontSize: '14px' }}>
                     {data.legendB}: {currentTooltipData.valueB}
