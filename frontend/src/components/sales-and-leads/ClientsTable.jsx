@@ -3,7 +3,7 @@ import styles from "./ClientsTable.module.css";
 import DeleteModal from "../delete-modal/DeleteModal";
 import AddClientModal from "./AddClientModal";
 import EditClientModal from "./EditClientModal";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import clientService from "../../services/ClientService";
 import config from "../../config/config";
 import plus from "../../assets/dashboard/plus.svg";
@@ -128,9 +128,15 @@ const DeleteIcon = () => (
   </svg>
 );
 
+// Lead status filter from the dashboard pipeline (?status=<lead status>, "none" = no status)
+const NO_STAGE = "none";
+
 function ClientsTable() {
   const { showToast } = useToast();
-  const [activeFilter, setActiveFilter] = useState("All");
+  // The dashboard links here with ?filter=Clients|Leads, ?status=<lead status> or ?add=1
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeFilter, setActiveFilterState] = useState(() => (["Clients", "Leads"].includes(searchParams.get("filter")) ? searchParams.get("filter") : "All"));
+  const stageFilter = searchParams.get("status") || "";
   const [searchTerm, setSearchTerm] = useState("");
   const activeSearchField = "company-name";
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -172,6 +178,36 @@ function ClientsTable() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  // Keep the URL in step with the All / Clients / Leads switch
+  const setActiveFilter = (f) => {
+    setActiveFilterState(f);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (f === "All") next.delete("filter"); else next.set("filter", f);
+      return next;
+    }, { replace: true });
+  };
+
+  const clearStageFilter = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("status");
+      return next;
+    }, { replace: true });
+  };
+
+  // ?add=1 opens the Add Client/Lead form once
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setIsAddClientModalOpen(true);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("add");
+        return next;
+      }, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEdit = (id) => {
     const client = clientsData.find((c) => c._id === id);
@@ -344,6 +380,9 @@ function ClientsTable() {
             ["lead", "quoted", "negotiation", "lost"].includes(currentStatusRaw) ||
             (relationshipRaw === "" && currentStatusRaw === "")));
     }
+    if (stageFilter) {
+      matchesFilter = matchesFilter && (stageFilter === NO_STAGE ? !client.currentStatus : client.currentStatus === stageFilter);
+    }
 
 
     // Apply searchTerm based on the selected field
@@ -426,7 +465,7 @@ function ClientsTable() {
   // Reset to first page when filters/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, searchTerm, selectedClientType, selectedIndustryType, clientsData.length]);
+  }, [activeFilter, stageFilter, searchTerm, selectedClientType, selectedIndustryType, clientsData.length]);
 
   const triggerImport = () => {
     console.log("Import button clicked, opening modal");
@@ -566,6 +605,11 @@ function ClientsTable() {
               Leads
             </button>
           </div>
+          {stageFilter && (
+            <button className={styles.stageChip} onClick={clearStageFilter} title="Clear stage filter">
+              Stage: {stageFilter === NO_STAGE ? "No stage" : stageFilter} <span aria-hidden="true">✕</span>
+            </button>
+          )}
 
           <div className={styles.searchAndFilter}>
             <div className={styles.searchContainer}>

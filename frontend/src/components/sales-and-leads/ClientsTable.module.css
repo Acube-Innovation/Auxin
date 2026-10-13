@@ -776,3 +776,22 @@
   .controlsSection { padding: 0 0.75rem; }
   .searchContainer { width: 100%; }
 }
+/* Stage filter set from the dashboard pipeline */
+.stageChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #c9ccf2;
+  background: #f3f4fc;
+  color: #4a53cf;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stageChip:hover {
+  background: #e2e4f8;
+}

@@ -134,6 +134,11 @@
   font-weight: 600;
 }
 
+.trendNeutral {
+  color: #667085;
+  font-weight: 600;
+}
+
 .chartSectionWrapper {
   position: relative;
   flex: 1;
@@ -564,4 +569,22 @@
   .chartSectionWrapper {
     margin-top: 20px;
   }
+}
+/* legend entries switch a series on / off */
+button.legendItem {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.legendItem:hover {
+  background: rgba(51, 74, 250, 0.06);
+}
+
+.legendOff {
+  opacity: 0.4;
+  text-decoration: line-through;
 }
