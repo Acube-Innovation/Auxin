@@ -23,6 +23,16 @@
     margin: 0;
 }
 
+.scopeNote {
+    margin-top: 4px;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.scopeWarning {
+    color: #b45309;
+}
+
 .addButton {
     display: flex;
     align-items: center;

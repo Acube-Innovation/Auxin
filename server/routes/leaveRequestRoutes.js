@@ -6,6 +6,8 @@ const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const { hasOfficialHolidayOnStartOrEnd, calculateWorkingDays } = require('../utils/leaveUtils');
 const Employee = require('../models/Employee');
+const { departmentOfUser, departmentOfLeaveEmployee, leaveEmployeeIdsInDepartment, hodsOfDepartment } = require('../utils/leaveScope');
+const Notification = require('../models/Notification');
 
 /**
  * Map a leave type string to the corresponding leaveOverride field key.
@@ -124,19 +126,48 @@ function getLeaveTransporter() {
     });
 }
 
-/** Flow: Employee submits leave → email to HOD and HR Admin (both receive). All emails FROM EMAIL_USER. */
-async function sendLeaveRequestToHodAndAdmin(leaveRequest) {
+/**
+ * Flow: Employee submits leave → bell notification to the HOD(s) of the employee's department.
+ * Sent live to HODs who are online (socket room user-<id>); the others get it from the Notification
+ * collection when they next open the app.
+ */
+async function notifyDepartmentHods(io, hodUsers, leaveRequest) {
+    if (!hodUsers.length) {
+        console.warn(`[Leave] No HOD for department "${leaveRequest.department || '(none)'}" – only Admin can approve this request.`);
+        return;
+    }
+    const startStr = new Date(leaveRequest.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    const endStr = new Date(leaveRequest.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const url = '/leave-requests';
+    for (const hod of hodUsers) {
+        const payload = {
+            id: `leave-request-${leaveRequest._id}:${hod._id}`,
+            type: 'leave-request',
+            title: `Leave request from ${leaveRequest.employeeName || 'an employee'}`,
+            body: `${leaveRequest.leaveType || 'Leave'}, ${startStr} – ${endStr}. Waiting for your approval.`,
+            url,
+            meta: { url, kind: 'leave-request' },
+            timestamp: new Date(),
+        };
+        let online = false;
+        if (io) {
+            try { online = (await io.in(`user-${hod._id}`).fetchSockets()).length > 0; } catch (e) { online = false; }
+            if (online) io.to(`user-${hod._id}`).emit('notification', payload);
+        }
+        await Notification.create({ title: payload.title, body: payload.body, payload, userId: hod._id, deliveredTo: online ? [hod._id] : [] });
+    }
+}
+
+/** Flow: Employee submits leave → email to the HOD(s) of the employee's department and HR Admin. All emails FROM EMAIL_USER. */
+async function sendLeaveRequestToHodAndAdmin(leaveRequest, hodUsers) {
     const transporter = getLeaveTransporter();
     if (!transporter) return;
     try {
-        const [hodUsers, adminUsers] = await Promise.all([
-            User.find({ role: 'hod' }, 'emailId username').lean(),
-            User.find({ role: 'admin' }, 'emailId username').lean(),
-        ]);
+        const adminUsers = await User.find({ role: 'admin' }, 'emailId username').lean();
         const toHod = hodUsers.map(u => (u.emailId && String(u.emailId).trim()) || null).filter(Boolean);
         const toAdmin = adminUsers.map(u => (u.emailId && String(u.emailId).trim()) || null).filter(Boolean);
         if (toHod.length === 0 && toAdmin.length === 0) {
-            console.warn('[Leave] No HOD or Admin with emailId. Set emailId for users with role "hod" and "admin".');
+            console.warn('[Leave] No department HOD or Admin with emailId. Set emailId for users with role "hod" and "admin".');
             return;
         }
         if (toAdmin.length === 0) {
@@ -289,6 +320,18 @@ router.get('/balance', authMiddleware, async (req, res) => {
     }
 });
 
+// Which leave requests the current user sees: all (admin), one department (HOD) or their own
+router.get('/scope', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role === 'admin') return res.json({ scope: 'all', department: null });
+        if (req.user.role === 'hod') return res.json({ scope: 'department', department: await departmentOfUser(req.user) });
+        res.json({ scope: 'own', department: null });
+    } catch (error) {
+        console.error('Error fetching leave scope:', error);
+        res.status(500).json({ message: 'Error fetching leave scope', error: error.message });
+    }
+});
+
 // Get all leave requests
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -296,17 +339,18 @@ router.get('/', authMiddleware, async (req, res) => {
         const filter = {};
 
         if (req.user.role === 'hod') {
-            // HOD sees only Pending requests (waiting for HOD approval)
-            // and also sees requests they have already processed (HOD Approved, Approved, Rejected)
+            // HOD sees the requests of their own department only (Pending ones to approve, and the processed ones)
             if (status && status !== 'All') {
                 filter.status = status;
             } else {
                 // Default: show Pending (for approval) and completed ones
                 filter.status = { $in: ['Pending', 'HOD Approved', 'Approved', 'Rejected'] };
             }
-            if (employeeId) {
-                filter.employee = employeeId;
-            }
+            const department = await departmentOfUser(req.user);
+            const departmentIds = await leaveEmployeeIdsInDepartment(department);
+            filter.employee = employeeId
+                ? (departmentIds.includes(String(employeeId)) ? employeeId : { $in: [] })
+                : { $in: departmentIds };
         } else if (req.user.role === 'admin') {
             // Admin sees Pending and HOD Approved requests (waiting for admin approval)
             // and also sees requests they have already processed (Approved, Rejected)
@@ -458,9 +502,14 @@ router.post('/', authMiddleware, async (req, res) => {
             reason: savedRequest.reason,
             appliedOn: savedRequest.appliedOn,
         };
-        sendLeaveRequestToHodAndAdmin(leaveSnapshot)
-            .then(() => console.log('[Leave] HOD/Admin email sent'))
-            .catch(e => console.error('[Leave] HOD/Admin email error:', e));
+        (async () => {
+            leaveSnapshot.department = await departmentOfLeaveEmployee(savedRequest.employee);
+            const hodUsers = await hodsOfDepartment(leaveSnapshot.department);
+            await notifyDepartmentHods(req.app.get('io'), hodUsers, { ...leaveSnapshot, _id: savedRequest._id });
+            await sendLeaveRequestToHodAndAdmin(leaveSnapshot, hodUsers);
+        })()
+            .then(() => console.log('[Leave] HOD notification / HOD-Admin email sent'))
+            .catch(e => console.error('[Leave] HOD notification / HOD-Admin email error:', e));
     } catch (error) {
         console.error('Error creating leave request:', error);
         res.status(400).json({ message: 'Error creating leave request', error: error.message });
@@ -479,12 +528,26 @@ router.put('/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Leave request not found' });
         }
 
+        // HOD acts only on the requests of their own department, and never on their own
+        if (req.user.role === 'hod') {
+            const department = await departmentOfUser(req.user);
+            if (!department) {
+                return res.status(403).json({ message: 'Your login is not linked to an employee with a department. Ask Admin to link it.' });
+            }
+            if (!(await leaveEmployeeIdsInDepartment(department)).includes(String(oldRequest.employee))) {
+                return res.status(403).json({ message: `This leave request is not from your department (${department}).` });
+            }
+            if (String(oldRequest.employee) === String(req.user._id)) {
+                return res.status(403).json({ message: 'You cannot approve or reject your own leave request.' });
+            }
+        }
+
         // Handle status update (approval/rejection)
         if (status) {
             const userRole = req.user.role;
             const currentStatus = oldRequest.status;
 
-            // HOD Approval Logic — HOD can fully approve OR reject any Pending request
+            // HOD Approval Logic — HOD can fully approve OR reject any Pending request of their department
             if (userRole === 'hod') {
                 if (status === 'Approved' || status === 'HOD Approved') {
                     if (currentStatus !== 'Pending') {
