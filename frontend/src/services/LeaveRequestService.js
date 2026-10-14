@@ -25,6 +25,14 @@ const getLeaveBalance = async () => {
     return response.data;
 };
 
+// { scope: 'all' | 'department' | 'own', department }: HODs see only their own department
+const getLeaveScope = async () => {
+    const response = await axios.get(`${API_URL}/scope`, {
+        headers: getAuthHeader()
+    });
+    return response.data;
+};
+
 const createLeaveRequest = async (data) => {
     const response = await axios.post(API_URL, data, {
         headers: getAuthHeader()
@@ -49,6 +57,7 @@ const deleteLeaveRequest = async (id) => {
 const leaveRequestService = {
     getLeaveRequests,
     getLeaveBalance,
+    getLeaveScope,
     createLeaveRequest,
     updateLeaveRequest,
     deleteLeaveRequest,

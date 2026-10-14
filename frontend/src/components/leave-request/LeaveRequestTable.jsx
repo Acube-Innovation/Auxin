@@ -38,6 +38,8 @@ function LeaveRequestTable({ onUpdate }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [employees, setEmployees] = useState([]);
     const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
+    // HOD: the department whose requests are shown (undefined until loaded, null when the login has none)
+    const [hodDepartment, setHodDepartment] = useState(undefined);
     const itemsPerPage = 10;
     const ANNUAL_LEAVE_ENTITLEMENT = 21;
 
@@ -77,6 +79,11 @@ function LeaveRequestTable({ onUpdate }) {
         fetchLeaveRequests();
         if (role === "admin" || role === "hod") {
             fetchEmployees();
+        }
+        if (role === "hod") {
+            leaveRequestService.getLeaveScope()
+                .then(scope => setHodDepartment(scope.department || null))
+                .catch(error => console.error("Error fetching leave scope:", error));
         }
     }, []);
 
@@ -137,7 +144,8 @@ function LeaveRequestTable({ onUpdate }) {
     // Determine which requests can be approved based on role
     // Both HOD and Admin can independently approve/reject leave requests
     const canApprove = (request) => {
-        if (isHOD && request.status === "Pending") return true;
+        // HOD: Pending requests of their department (the list holds only those), never their own
+        if (isHOD && request.status === "Pending") return (request.employee?._id || request.employee) !== localStorage.getItem("userId");
         if (isAdminRole && (request.status === "Pending" || request.status === "HOD Approved")) return true;
         return false;
     };
@@ -294,7 +302,8 @@ function LeaveRequestTable({ onUpdate }) {
             .filter(predicate)
             .reduce((sum, r) => sum + calculateDays(r.startDate, r.endDate), 0);
 
-        return employees.map(emp => {
+        const sameDepartment = (emp) => (emp.department || "").trim().toLowerCase() === (hodDepartment || "").trim().toLowerCase();
+        return employees.filter(emp => !isHOD || (hodDepartment && sameDepartment(emp))).map(emp => {
             const empName = (emp.employeeName || "").trim().toLowerCase();
             const empEmail = (emp.emailId || "").trim().toLowerCase();
 
@@ -384,7 +393,18 @@ function LeaveRequestTable({ onUpdate }) {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h2 className={styles.title}>Leave Management</h2>
+                <div>
+                    <h2 className={styles.title}>Leave Management</h2>
+                    {isHOD && hodDepartment !== undefined && (
+                        hodDepartment ? (
+                            <div className={styles.scopeNote}>Showing requests from the <strong>{hodDepartment}</strong> department</div>
+                        ) : (
+                            <div className={`${styles.scopeNote} ${styles.scopeWarning}`}>
+                                Your login is not linked to an employee with a department, so no requests are shown. Ask Admin to link it in User Management.
+                            </div>
+                        )
+                    )}
+                </div>
                 <div className={styles.actions}>
                     {!isAdminOrHOD && (
                         <button className={styles.addButton} onClick={() => setIsAddModalOpen(true)}>

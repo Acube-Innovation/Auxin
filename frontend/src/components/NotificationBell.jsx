@@ -755,9 +755,9 @@ function NotificationBell({ small = true }) {
                   className={`${styles.item} ${n.read ? styles.read : styles.unread}`}
                   onClick={() => {
                     markAsRead(n.id);
-                    // Vessel Operations entries open their voyage / task / My Tasks
+                    // Entries with an in-app link open it (voyage / task / My Tasks, Leave Management)
                     const url = n.meta?.url;
-                    if (url && url.startsWith('/operations')) { setIsOpen(false); window.location.assign(url); }
+                    if (url && url.startsWith('/')) { setIsOpen(false); window.location.assign(url); }
                   }}
                   style={{ cursor: 'pointer' }}
                 >
