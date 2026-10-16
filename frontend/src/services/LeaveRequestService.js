@@ -25,7 +25,7 @@ const getLeaveBalance = async () => {
     return response.data;
 };
 
-// { scope: 'all' | 'department' | 'own', department }: HODs see only their own department
+// { scope: 'all' | 'approver' | 'own', hodOf, hrOf }: the people this login is HOD / HR for in Leave Approvers
 const getLeaveScope = async () => {
     const response = await axios.get(`${API_URL}/scope`, {
         headers: getAuthHeader()

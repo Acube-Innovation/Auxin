@@ -419,3 +419,30 @@ main {
     padding: 0.75rem;
   }
 }
+
+/* Tabs: Users | Leave Approvers */
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  background: #f2f4f7;
+  border-radius: 10px;
+}
+
+.tab {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475467;
+  cursor: pointer;
+}
+
+.tabActive {
+  background: #fff;
+  color: #101828;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}

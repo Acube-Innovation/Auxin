@@ -6,7 +6,7 @@ const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const { hasOfficialHolidayOnStartOrEnd, calculateWorkingDays } = require('../utils/leaveUtils');
 const Employee = require('../models/Employee');
-const { departmentOfUser, departmentOfLeaveEmployee, leaveEmployeeIdsInDepartment, hodsOfDepartment } = require('../utils/leaveScope');
+const { personOfLeaveEmployee, approversOfLeave, approverScope, ownLeaveIds, approvalStep } = require('../utils/leaveScope');
 const Notification = require('../models/Notification');
 
 /**
@@ -126,39 +126,69 @@ function getLeaveTransporter() {
     });
 }
 
+const fmtShort = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+const fmtLong = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const idOf = (v) => (v && v._id ? String(v._id) : v ? String(v) : null);
+
 /**
- * Flow: Employee submits leave → bell notification to the HOD(s) of the employee's department.
- * Sent live to HODs who are online (socket room user-<id>); the others get it from the Notification
- * collection when they next open the app.
+ * Bell notification to one login, sent live when they are online (socket room user-<id>);
+ * otherwise they get it from the Notification collection when they next open the app.
  */
-async function notifyDepartmentHods(io, hodUsers, leaveRequest) {
-    if (!hodUsers.length) {
-        console.warn(`[Leave] No HOD for department "${leaveRequest.department || '(none)'}" – only Admin can approve this request.`);
-        return;
-    }
-    const startStr = new Date(leaveRequest.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-    const endStr = new Date(leaveRequest.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+async function notifyUser(io, user, { kind, leaveId, title, body }) {
+    if (!user) return;
     const url = '/leave-requests';
-    for (const hod of hodUsers) {
-        const payload = {
-            id: `leave-request-${leaveRequest._id}:${hod._id}`,
-            type: 'leave-request',
-            title: `Leave request from ${leaveRequest.employeeName || 'an employee'}`,
-            body: `${leaveRequest.leaveType || 'Leave'}, ${startStr} – ${endStr}. Waiting for your approval.`,
-            url,
-            meta: { url, kind: 'leave-request' },
-            timestamp: new Date(),
-        };
-        let online = false;
-        if (io) {
-            try { online = (await io.in(`user-${hod._id}`).fetchSockets()).length > 0; } catch (e) { online = false; }
-            if (online) io.to(`user-${hod._id}`).emit('notification', payload);
-        }
-        await Notification.create({ title: payload.title, body: payload.body, payload, userId: hod._id, deliveredTo: online ? [hod._id] : [] });
+    const payload = { id: `${kind}-${leaveId}:${user._id}`, type: kind, title, body, url, meta: { url, kind }, timestamp: new Date() };
+    let online = false;
+    if (io) {
+        try { online = (await io.in(`user-${user._id}`).fetchSockets()).length > 0; } catch (e) { online = false; }
+        if (online) io.to(`user-${user._id}`).emit('notification', payload);
     }
+    await Notification.create({ title, body, payload, userId: user._id, deliveredTo: online ? [user._id] : [] });
 }
 
-/** Flow: Employee submits leave → email to the HOD(s) of the employee's department and HR Admin. All emails FROM EMAIL_USER. */
+/** Flow: Employee submits leave → bell to their HOD (to their HR when they have no HOD) */
+async function notifyApproverOfNewLeave(io, leaveRequest, approver, step) {
+    if (!approver) {
+        console.warn(`[Leave] No HOD or HR set for "${leaveRequest.employeeName}" in Leave Approvers – only Admin can approve this request.`);
+        return;
+    }
+    await notifyUser(io, approver, {
+        kind: 'leave-request',
+        leaveId: leaveRequest._id,
+        title: `Leave request from ${leaveRequest.employeeName || 'an employee'}`,
+        body: `${leaveRequest.leaveType || 'Leave'}, ${fmtShort(leaveRequest.startDate)} – ${fmtLong(leaveRequest.endDate)}. Waiting for your ${step === 'hr' ? 'HR' : 'HOD'} approval.`,
+    });
+}
+
+/** Flow: HOD approves → bell to the employee's HR for the final approval */
+async function notifyHrOfHodApproval(io, leaveRequest, hr, hodName) {
+    if (!hr) {
+        console.warn(`[Leave] No HR set for "${leaveRequest.employeeName}" in Leave Approvers – only Admin can give the final approval.`);
+        return;
+    }
+    await notifyUser(io, hr, {
+        kind: 'leave-hod-approved',
+        leaveId: leaveRequest._id,
+        title: `Leave approved by HOD: ${leaveRequest.employeeName || 'an employee'}`,
+        body: `${leaveRequest.leaveType || 'Leave'}, ${fmtShort(leaveRequest.startDate)} – ${fmtLong(leaveRequest.endDate)}. Approved by ${hodName || 'HOD'}; waiting for your HR approval.`,
+    });
+}
+
+/** Flow: HOD / HR / Admin decide → bell to the employee's own login */
+async function notifyEmployeeOfStatus(io, leaveRequest, status) {
+    const { user } = await personOfLeaveEmployee(leaveRequest.employee);
+    if (!user) return;
+    const text = status === 'HOD Approved' ? 'approved by HOD and is waiting for HR approval'
+        : status === 'Approved' ? 'approved' : status === 'Rejected' ? 'rejected' : `now ${status}`;
+    await notifyUser(io, user, {
+        kind: 'leave-status',
+        leaveId: leaveRequest._id,
+        title: `Leave request ${status === 'HOD Approved' ? 'approved by HOD' : status.toLowerCase()}`,
+        body: `Your ${leaveRequest.leaveType || 'leave'} (${fmtShort(leaveRequest.startDate)} – ${fmtLong(leaveRequest.endDate)}) is ${text}.`,
+    });
+}
+
+/** Flow: Employee submits leave → email to their HOD (or HR when they have no HOD) and to Admin. All emails FROM EMAIL_USER. */
 async function sendLeaveRequestToHodAndAdmin(leaveRequest, hodUsers) {
     const transporter = getLeaveTransporter();
     if (!transporter) return;
@@ -167,7 +197,7 @@ async function sendLeaveRequestToHodAndAdmin(leaveRequest, hodUsers) {
         const toHod = hodUsers.map(u => (u.emailId && String(u.emailId).trim()) || null).filter(Boolean);
         const toAdmin = adminUsers.map(u => (u.emailId && String(u.emailId).trim()) || null).filter(Boolean);
         if (toHod.length === 0 && toAdmin.length === 0) {
-            console.warn('[Leave] No department HOD or Admin with emailId. Set emailId for users with role "hod" and "admin".');
+            console.warn('[Leave] No approver or Admin with emailId. Set emailId for the HOD / HR in Leave Approvers and for users with role "admin".');
             return;
         }
         if (toAdmin.length === 0) {
@@ -209,7 +239,34 @@ async function sendLeaveRequestToHodAndAdmin(leaveRequest, hodUsers) {
     }
 }
 
-/** Flow: When HOD or Admin approve/reject → email to employee. All emails FROM EMAIL_USER. */
+/** Flow: HOD approves → email to the employee's HR for the final approval. FROM EMAIL_USER. */
+async function sendHodApprovedToHr(leaveRequest, hr, hodName) {
+    const transporter = getLeaveTransporter();
+    const to = hr && hr.emailId && String(hr.emailId).trim();
+    if (!transporter || !to) return;
+    try {
+        await transporter.sendMail({
+            from: `"Auxin Leave" <${process.env.EMAIL_USER}>`,
+            to,
+            subject: `Leave approved by HOD – ${leaveRequest.employeeName || 'Employee'} – waiting for HR approval`,
+            html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+                <h2 style="color: #1a73e8;">Leave Request – Approved by HOD</h2>
+                <p>${hodName || 'The HOD'} has approved this leave request. It now needs your HR approval.</p>
+                <p><strong>Employee:</strong> ${leaveRequest.employeeName || 'N/A'}</p>
+                <p><strong>Leave Type:</strong> ${leaveRequest.leaveType || 'N/A'}</p>
+                <p><strong>Period:</strong> ${fmtLong(leaveRequest.startDate)} to ${fmtLong(leaveRequest.endDate)}</p>
+                <p><strong>Reason:</strong> ${leaveRequest.reason || 'N/A'}</p>
+                <p style="margin-top: 20px; color: #555;">Please review and approve or reject in the leave request portal.</p>
+            </div>`,
+        });
+        console.log('[Leave] Sent HOD-approved request to HR:', to);
+    } catch (err) {
+        console.error('[Leave] Failed to email HR:', err.message || err);
+    }
+}
+
+/** Flow: When HOD, HR or Admin approve/reject → email to employee. All emails FROM EMAIL_USER. */
 async function sendLeaveStatusToEmployee(leaveRequest, newStatus) {
     const transporter = getLeaveTransporter();
     if (!transporter) return;
@@ -233,7 +290,7 @@ async function sendLeaveStatusToEmployee(leaveRequest, newStatus) {
         let messageLine;
         if (newStatus === 'HOD Approved') {
             statusLabel = 'Approved by HOD';
-            messageLine = 'Your leave request has been <strong>approved by HOD</strong> and is pending admin approval.';
+            messageLine = 'Your leave request has been <strong>approved by HOD</strong> and is pending HR approval.';
         } else if (newStatus === 'Approved') {
             statusLabel = 'Approved';
             messageLine = 'Your leave request has been <strong>approved</strong>.';
@@ -320,12 +377,45 @@ router.get('/balance', authMiddleware, async (req, res) => {
     }
 });
 
-// Which leave requests the current user sees: all (admin), one department (HOD) or their own
+/**
+ * Approvers and the step the current login may take, for each request:
+ * approval = { hod, hr, step: 'hod' | 'hr' | 'admin' | null, own }. Rows are cached per employee id.
+ */
+async function withApproval(requests, user, rawEmployeeIds = new Map()) {
+    const cache = new Map();
+    const own = new Set(await ownLeaveIds(user));
+    const isAdmin = user.role === 'admin';
+    const out = [];
+    for (const doc of requests) {
+        const r = doc.toObject ? doc.toObject() : doc;
+        // populate('employee') leaves null for requests Admin made with an Employee id, so use the stored id
+        const key = rawEmployeeIds.get(String(r._id)) || idOf(r.employee);
+        if (!cache.has(key)) cache.set(key, await approversOfLeave(key));
+        const { hod, hr } = cache.get(key);
+        const pick = (u) => (u ? { _id: u._id, username: u.username } : null);
+        const step = isAdmin
+            ? (['Pending', 'HOD Approved'].includes(r.status) ? 'admin' : null)
+            : approvalStep({ status: r.status, hodId: idOf(hod), hrId: idOf(hr), userId: String(user._id), isOwn: own.has(key) });
+        out.push({ ...r, approval: { hod: pick(hod), hr: pick(hr), step, own: own.has(key) } });
+    }
+    return out;
+}
+
+// Which leave requests the current user sees: all (admin), or their own plus those of the people they approve
 router.get('/scope', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role === 'admin') return res.json({ scope: 'all', department: null });
-        if (req.user.role === 'hod') return res.json({ scope: 'department', department: await departmentOfUser(req.user) });
-        res.json({ scope: 'own', department: null });
+        if (req.user.role === 'admin') return res.json({ scope: 'all', hodOf: [], hrOf: [] });
+        const { hodOf, hrOf } = await approverScope(req.user._id);
+        const people = async (rows) => {
+            const out = [];
+            for (const m of rows) {
+                const employee = m.employee ? await Employee.findById(m.employee).select('employeeName department').lean() : null;
+                const user = m.user ? await User.findById(m.user).select('username').lean() : null;
+                out.push({ employee: m.employee || null, user: m.user || null, name: (employee && employee.employeeName) || (user && user.username) || '', department: (employee && employee.department) || '' });
+            }
+            return out;
+        };
+        res.json({ scope: hodOf.length || hrOf.length ? 'approver' : 'own', hodOf: await people(hodOf), hrOf: await people(hrOf) });
     } catch (error) {
         console.error('Error fetching leave scope:', error);
         res.status(500).json({ message: 'Error fetching leave scope', error: error.message });
@@ -337,54 +427,30 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         const { status, employeeId } = req.query;
         const filter = {};
+        const statuses = ['Pending', 'HOD Approved', 'Approved', 'Rejected'];
 
-        if (req.user.role === 'hod') {
-            // HOD sees the requests of their own department only (Pending ones to approve, and the processed ones)
-            if (status && status !== 'All') {
-                filter.status = status;
-            } else {
-                // Default: show Pending (for approval) and completed ones
-                filter.status = { $in: ['Pending', 'HOD Approved', 'Approved', 'Rejected'] };
-            }
-            const department = await departmentOfUser(req.user);
-            const departmentIds = await leaveEmployeeIdsInDepartment(department);
-            filter.employee = employeeId
-                ? (departmentIds.includes(String(employeeId)) ? employeeId : { $in: [] })
-                : { $in: departmentIds };
-        } else if (req.user.role === 'admin') {
-            // Admin sees Pending and HOD Approved requests (waiting for admin approval)
-            // and also sees requests they have already processed (Approved, Rejected)
-            const visibleStatuses = ['Pending', 'HOD Approved', 'Approved', 'Rejected'];
-
-            if (status && status !== 'All') {
-                if (visibleStatuses.includes(status)) {
-                    filter.status = status;
-                } else {
-                    // If requesting a status admin shouldn't see, return nothing
-                    filter.status = 'RESTRICTED_VIEW';
-                }
-            } else {
-                // Default: show Pending, HOD Approved (for approval) and completed ones
-                filter.status = { $in: visibleStatuses };
-            }
-            if (employeeId) {
-                filter.employee = employeeId;
-            }
+        if (req.user.role === 'admin') {
+            // Admin sees every request
+            filter.status = status && status !== 'All' ? (statuses.includes(status) ? status : 'RESTRICTED_VIEW') : { $in: statuses };
+            if (employeeId) filter.employee = employeeId;
         } else {
-            // Employees can only see their own requests
-            filter.employee = req.user.id;
-            if (status && status !== 'All') {
-                filter.status = status;
-            }
+            // Everyone else: their own requests plus those of the people they are HOD or HR for (Leave Approvers)
+            const { hodLeaveIds, hrLeaveIds } = await approverScope(req.user._id);
+            const visible = new Set([...(await ownLeaveIds(req.user)), ...hodLeaveIds, ...hrLeaveIds]);
+            filter.employee = employeeId ? (visible.has(String(employeeId)) ? employeeId : { $in: [] }) : { $in: [...visible] };
+            if (status && status !== 'All') filter.status = status;
         }
 
         const leaveRequests = await LeaveRequest.find(filter)
             .populate('employee', 'username emailId')
             .populate('hodApprovedBy', 'username')
+            .populate('hrApprovedBy', 'username')
+            .populate('rejectedBy', 'username')
             .populate('adminApprovedBy', 'username')
             .sort({ appliedOn: -1 });
 
-        res.json(leaveRequests);
+        const raw = await LeaveRequest.find({ _id: { $in: leaveRequests.map((r) => r._id) } }).select('employee').lean();
+        res.json(await withApproval(leaveRequests, req.user, new Map(raw.map((r) => [String(r._id), idOf(r.employee)]))));
     } catch (error) {
         console.error('Error fetching leave requests:', error);
         res.status(500).json({ message: 'Error fetching leave requests', error: error.message });
@@ -502,14 +568,15 @@ router.post('/', authMiddleware, async (req, res) => {
             reason: savedRequest.reason,
             appliedOn: savedRequest.appliedOn,
         };
+        // First approver: the HOD named for this person in Leave Approvers, or their HR when no HOD is set
         (async () => {
-            leaveSnapshot.department = await departmentOfLeaveEmployee(savedRequest.employee);
-            const hodUsers = await hodsOfDepartment(leaveSnapshot.department);
-            await notifyDepartmentHods(req.app.get('io'), hodUsers, { ...leaveSnapshot, _id: savedRequest._id });
-            await sendLeaveRequestToHodAndAdmin(leaveSnapshot, hodUsers);
+            const { hod, hr } = await approversOfLeave(savedRequest.employee);
+            const approver = hod || hr;
+            await notifyApproverOfNewLeave(req.app.get('io'), { ...leaveSnapshot, _id: savedRequest._id }, approver, hod ? 'hod' : 'hr');
+            await sendLeaveRequestToHodAndAdmin(leaveSnapshot, approver ? [approver] : []);
         })()
-            .then(() => console.log('[Leave] HOD notification / HOD-Admin email sent'))
-            .catch(e => console.error('[Leave] HOD notification / HOD-Admin email error:', e));
+            .then(() => console.log('[Leave] Approver notification / approver-Admin email sent'))
+            .catch(e => console.error('[Leave] Approver notification / approver-Admin email error:', e));
     } catch (error) {
         console.error('Error creating leave request:', error);
         res.status(400).json({ message: 'Error creating leave request', error: error.message });
@@ -528,78 +595,67 @@ router.put('/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Leave request not found' });
         }
 
-        // HOD acts only on the requests of their own department, and never on their own
-        if (req.user.role === 'hod') {
-            const department = await departmentOfUser(req.user);
-            if (!department) {
-                return res.status(403).json({ message: 'Your login is not linked to an employee with a department. Ask Admin to link it.' });
-            }
-            if (!(await leaveEmployeeIdsInDepartment(department)).includes(String(oldRequest.employee))) {
-                return res.status(403).json({ message: `This leave request is not from your department (${department}).` });
-            }
-            if (String(oldRequest.employee) === String(req.user._id)) {
-                return res.status(403).json({ message: 'You cannot approve or reject your own leave request.' });
-            }
-        }
-
-        // Handle status update (approval/rejection)
+        // Approval: Admin may set any status; others only take their own step for this person (Leave Approvers):
+        // HOD: Pending → HOD Approved, HR: HOD Approved → Approved (or Pending → Approved when no HOD is set).
+        let approvers = null;
         if (status) {
-            const userRole = req.user.role;
-            const currentStatus = oldRequest.status;
-
-            // HOD Approval Logic — HOD can fully approve OR reject any Pending request of their department
-            if (userRole === 'hod') {
-                if (status === 'Approved' || status === 'HOD Approved') {
-                    if (currentStatus !== 'Pending') {
-                        return res.status(400).json({
-                            message: 'HOD can only approve requests that are in Pending status'
-                        });
-                    }
-                    // HOD approval is now final — moves directly to Approved
-                    updateData.status = 'Approved';
-                    updateData.hodApprovedBy = req.user.id;
-                    updateData.hodApprovedAt = new Date();
-                    updateData.adminApprovedBy = req.user.id;
-                    updateData.adminApprovedAt = new Date();
-                } else if (status === 'Rejected') {
-                    if (currentStatus !== 'Pending') {
-                        return res.status(400).json({
-                            message: 'HOD can only reject requests that are in Pending status'
-                        });
-                    }
-                    updateData.status = 'Rejected';
-                    updateData.hodApprovedBy = req.user.id;
-                    updateData.hodApprovedAt = new Date();
-                }
-            }
-            // Admin Approval / Edit Logic — Admin can approve Pending OR HOD Approved requests
-            else if (userRole === 'admin') {
+            if (req.user.role === 'admin') {
                 const allowedStatuses = ['Pending', 'HOD Approved', 'Approved', 'Rejected'];
                 if (!allowedStatuses.includes(status)) {
                     return res.status(400).json({ message: 'Invalid status value' });
                 }
-
                 updateData.status = status;
                 if (status === 'Approved' || status === 'Rejected') {
                     updateData.adminApprovedBy = req.user.id;
                     updateData.adminApprovedAt = new Date();
                 }
-            }
-            // Regular employees cannot change status
-            else {
-                // Employees can only edit their own pending requests (not status)
-                // Status changes are ignored for regular employees
+                if (status === 'Rejected') {
+                    updateData.rejectedBy = req.user.id;
+                    updateData.rejectedAt = new Date();
+                }
+            } else if (status !== oldRequest.status) {
+                if (!['Approved', 'HOD Approved', 'Rejected'].includes(status)) {
+                    return res.status(400).json({ message: 'Invalid status value' });
+                }
+                approvers = await approversOfLeave(oldRequest.employee);
+                const isOwn = (await ownLeaveIds(req.user)).includes(String(oldRequest.employee));
+                const step = approvalStep({ status: oldRequest.status, hodId: idOf(approvers.hod), hrId: idOf(approvers.hr), userId: String(req.user._id), isOwn });
+                if (!step) {
+                    const reason = isOwn ? 'You cannot approve or reject your own leave request.'
+                        : oldRequest.status === 'Pending' ? 'Only the HOD set for this employee in Leave Approvers can act on this request now.'
+                        : oldRequest.status === 'HOD Approved' ? 'Only the HR set for this employee in Leave Approvers can give the final approval.'
+                        : `This request is already ${oldRequest.status}.`;
+                    return res.status(403).json({ message: reason });
+                }
+                const now = new Date();
+                if (status === 'Rejected') {
+                    updateData.status = 'Rejected';
+                    updateData.rejectedBy = req.user.id;
+                    updateData.rejectedAt = now;
+                } else if (step === 'hod') {
+                    updateData.status = 'HOD Approved';
+                    updateData.hodApprovedBy = req.user.id;
+                    updateData.hodApprovedAt = now;
+                } else {
+                    updateData.status = 'Approved';
+                    updateData.hrApprovedBy = req.user.id;
+                    updateData.hrApprovedAt = now;
+                }
             }
         }
+        // An approver's decision changes the status only, never the request's details
+        const decisionOnly = !!approvers;
 
         // Handle other field updates (for employee editing their own request)
-        if (employeeId) updateData.employee = employeeId;
-        if (employeeName) updateData.employeeName = employeeName;
-        if (company) updateData.company = company;
-        if (leaveType) updateData.leaveType = leaveType;
-        if (startDate) updateData.startDate = new Date(startDate);
-        if (endDate) updateData.endDate = new Date(endDate);
-        if (reason) updateData.reason = reason;
+        if (!decisionOnly) {
+            if (employeeId) updateData.employee = employeeId;
+            if (employeeName) updateData.employeeName = employeeName;
+            if (company) updateData.company = company;
+            if (leaveType) updateData.leaveType = leaveType;
+            if (startDate) updateData.startDate = new Date(startDate);
+            if (endDate) updateData.endDate = new Date(endDate);
+            if (reason) updateData.reason = reason;
+        }
 
         const effectiveStart = updateData.startDate || oldRequest.startDate;
         const effectiveEnd = updateData.endDate || oldRequest.endDate;
@@ -610,7 +666,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         }
 
         // Balance validation for employees editing their own pending requests with date changes
-        const isEmployee = req.user.role !== 'admin' && req.user.role !== 'hod';
+        const isEmployee = req.user.role !== 'admin' && !decisionOnly;
         const datesChanged = (startDate || endDate) && oldRequest.status === 'Pending';
         if (isEmployee && datesChanged) {
             const newDays = calculateWorkingDays(effectiveStart, effectiveEnd);
@@ -720,6 +776,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
             { new: true, runValidators: true }
         ).populate('employee', 'username emailId')
             .populate('hodApprovedBy', 'username')
+            .populate('hrApprovedBy', 'username')
+            .populate('rejectedBy', 'username')
             .populate('adminApprovedBy', 'username');
 
         // If the leave was just rejected, restore the balance back to the employee's override
@@ -740,10 +798,21 @@ router.put('/:id', authMiddleware, async (req, res) => {
                 .catch(e => console.error('[Leave] Balance deduction error on approve:', e));
         }
 
-        if (updateData.status === 'HOD Approved' || updateData.status === 'Approved' || updateData.status === 'Rejected') {
+        if (updateData.status && updateData.status !== oldRequest.status && ['HOD Approved', 'Approved', 'Rejected'].includes(updateData.status)) {
             sendLeaveStatusToEmployee(updatedRequest, updateData.status)
                 .then(() => console.log('[Leave] Employee status email sent'))
                 .catch(e => console.error('[Leave] Employee status email error:', e));
+            const io = req.app.get('io');
+            const leaveForNotice = { _id: oldRequest._id, employee: oldRequest.employee, employeeName: updatedRequest.employeeName, leaveType: updatedRequest.leaveType, startDate: updatedRequest.startDate, endDate: updatedRequest.endDate, reason: updatedRequest.reason };
+            (async () => {
+                await notifyEmployeeOfStatus(io, leaveForNotice, updateData.status);
+                // HOD approved → the employee's HR gives the final approval
+                if (updateData.status === 'HOD Approved') {
+                    const { hr } = approvers || await approversOfLeave(oldRequest.employee);
+                    await notifyHrOfHodApproval(io, leaveForNotice, hr, req.user.username);
+                    await sendHodApprovedToHr(leaveForNotice, hr, req.user.username);
+                }
+            })().catch(e => console.error('[Leave] Status notification error:', e));
         }
 
         res.json(updatedRequest);
