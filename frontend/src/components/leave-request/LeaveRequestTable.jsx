@@ -38,14 +38,15 @@ function LeaveRequestTable({ onUpdate }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [employees, setEmployees] = useState([]);
     const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
-    // HOD: the department whose requests are shown (undefined until loaded, null when the login has none)
-    const [hodDepartment, setHodDepartment] = useState(undefined);
+    // Leave Approvers: the people this login is HOD / HR for ({ scope: 'all' | 'approver' | 'own', hodOf, hrOf })
+    const [scope, setScope] = useState({ scope: "own", hodOf: [], hrOf: [] });
     const itemsPerPage = 10;
     const ANNUAL_LEAVE_ENTITLEMENT = 21;
 
-    const isHOD = userRole === "hod";
     const isAdminRole = userRole === "admin";
-    const isAdminOrHOD = isAdminRole || isHOD;
+    // An approver is anyone named as HOD or HR in Leave Approvers, whatever their role
+    const isApprover = scope.scope === "approver";
+    const isAdminOrHOD = isAdminRole || isApprover;
 
     const fetchLeaveRequests = async () => {
         setIsLoading(true);
@@ -77,14 +78,12 @@ function LeaveRequestTable({ onUpdate }) {
         const role = localStorage.getItem("role") || "";
         setUserRole(role);
         fetchLeaveRequests();
-        if (role === "admin" || role === "hod") {
-            fetchEmployees();
-        }
-        if (role === "hod") {
-            leaveRequestService.getLeaveScope()
-                .then(scope => setHodDepartment(scope.department || null))
-                .catch(error => console.error("Error fetching leave scope:", error));
-        }
+        leaveRequestService.getLeaveScope()
+            .then(s => {
+                setScope(s);
+                if (role === "admin" || s.scope === "approver") fetchEmployees();
+            })
+            .catch(error => console.error("Error fetching leave scope:", error));
     }, []);
 
     const handleEdit = (request) => {
@@ -111,7 +110,9 @@ function LeaveRequestTable({ onUpdate }) {
     const handleApprove = async (request) => {
         try {
             await leaveRequestService.approveLeaveRequest(request._id, "Approved");
-            showToast("Leave request approved successfully.", "success");
+            const step = request.approval?.step;
+            const hr = request.approval?.hr?.username;
+            showToast(step === "hod" ? `Approved as HOD. Sent to ${hr || "Admin"} for HR approval.` : "Leave request approved successfully.", "success");
             fetchLeaveRequests();
         } catch (error) {
             console.error("Error approving leave request:", error);
@@ -141,14 +142,10 @@ function LeaveRequestTable({ onUpdate }) {
         return req.status === activeFilter;
     });
 
-    // Determine which requests can be approved based on role
-    // Both HOD and Admin can independently approve/reject leave requests
-    const canApprove = (request) => {
-        // HOD: Pending requests of their department (the list holds only those), never their own
-        if (isHOD && request.status === "Pending") return (request.employee?._id || request.employee) !== localStorage.getItem("userId");
-        if (isAdminRole && (request.status === "Pending" || request.status === "HOD Approved")) return true;
-        return false;
-    };
+    // The server says which step this login may take on each request: HOD (Pending → HOD Approved),
+    // HR (HOD Approved → Approved) or Admin (any open request); never on their own leave
+    const canApprove = (request) => !!request.approval?.step;
+    const stepLabel = (request) => ({ hod: "HOD", hr: "HR", admin: "Admin" }[request.approval?.step] || "");
 
 
 
@@ -302,8 +299,9 @@ function LeaveRequestTable({ onUpdate }) {
             .filter(predicate)
             .reduce((sum, r) => sum + calculateDays(r.startDate, r.endDate), 0);
 
-        const sameDepartment = (emp) => (emp.department || "").trim().toLowerCase() === (hodDepartment || "").trim().toLowerCase();
-        return employees.filter(emp => !isHOD || (hodDepartment && sameDepartment(emp))).map(emp => {
+        // Approvers see the people they are HOD / HR for
+        const mine = new Set([...scope.hodOf, ...scope.hrOf].map(p => p.employee).filter(Boolean).map(String));
+        return employees.filter(emp => isAdminRole || mine.has(String(emp._id))).map(emp => {
             const empName = (emp.employeeName || "").trim().toLowerCase();
             const empEmail = (emp.emailId || "").trim().toLowerCase();
 
@@ -395,18 +393,15 @@ function LeaveRequestTable({ onUpdate }) {
             <div className={styles.header}>
                 <div>
                     <h2 className={styles.title}>Leave Management</h2>
-                    {isHOD && hodDepartment !== undefined && (
-                        hodDepartment ? (
-                            <div className={styles.scopeNote}>Showing requests from the <strong>{hodDepartment}</strong> department</div>
-                        ) : (
-                            <div className={`${styles.scopeNote} ${styles.scopeWarning}`}>
-                                Your login is not linked to an employee with a department, so no requests are shown. Ask Admin to link it in User Management.
-                            </div>
-                        )
+                    {isApprover && (
+                        <div className={styles.scopeNote} data-testid="approver-scope">
+                            {scope.hodOf.length > 0 && <>HOD for: <strong>{scope.hodOf.map(p => p.name).join(", ")}</strong>. </>}
+                            {scope.hrOf.length > 0 && <>HR for: <strong>{scope.hrOf.map(p => p.name).join(", ")}</strong>.</>}
+                        </div>
                     )}
                 </div>
                 <div className={styles.actions}>
-                    {!isAdminOrHOD && (
+                    {!isAdminRole && (
                         <button className={styles.addButton} onClick={() => setIsAddModalOpen(true)}>
                             <span>Request Leave</span>
                             <img src={plus} alt="" />
@@ -419,7 +414,7 @@ function LeaveRequestTable({ onUpdate }) {
                 <div className={styles.segmentedControl}>
                     {(isAdminRole
                         ? ["All", "Pending", "HOD Approved", "Approved", "Rejected", "History", "Holidays", "Leave Chart"]
-                        : isHOD
+                        : isApprover
                             ? ["All", "Pending", "HOD Approved", "Approved", "Rejected", "History", "Holidays", "Leave Chart"]
                             : ["All", "Pending", "HOD Approved", "Approved", "Rejected", "History", "Holidays"]
                     ).map(filter => (
@@ -616,6 +611,11 @@ function LeaveRequestTable({ onUpdate }) {
                                             <span className={`${styles.statusChip} ${styles[req.status.toLowerCase().replace(' ', '_')]}`}>
                                                 {req.status}
                                             </span>
+                                            {(req.approval?.hod || req.approval?.hr) && (
+                                                <div className={styles.approvers} title="Leave Approvers">
+                                                    HOD: {req.approval.hod?.username || "—"} · HR: {req.approval.hr?.username || "—"}
+                                                </div>
+                                            )}
                                         </td>
                                     </>
                                 ) : (
@@ -627,6 +627,11 @@ function LeaveRequestTable({ onUpdate }) {
                                             <span className={`${styles.statusChip} ${styles[req.status.toLowerCase().replace(' ', '_')]}`}>
                                                 {req.status}
                                             </span>
+                                            {(req.approval?.hod || req.approval?.hr) && (
+                                                <div className={styles.approvers} title="Leave Approvers">
+                                                    HOD: {req.approval.hod?.username || "—"} · HR: {req.approval.hr?.username || "—"}
+                                                </div>
+                                            )}
                                         </td>
                                     </>
                                 )}
@@ -669,42 +674,41 @@ function LeaveRequestTable({ onUpdate }) {
                                                     <DeleteIcon />
                                                 </button>
                                             </>
-                                        ) : isHOD ? (
-                                            // HOD view: Approve/Reject on Pending requests (approval is now final)
-                                            canApprove(req) ? (
-                                                <>
-                                                    <button
-                                                        className={`${styles.iconButton} ${styles.approveButton}`}
-                                                        onClick={() => handleApprove(req)}
-                                                        title="Approve"
-                                                    >
-                                                        <CheckIcon />
-                                                    </button>
-                                                    <button
-                                                        className={`${styles.iconButton} ${styles.rejectButton}`}
-                                                        onClick={() => handleReject(req)}
-                                                        title="Reject"
-                                                    >
-                                                        <XIcon />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <span className={styles.noAction}>—</span>
-                                            )
                                         ) : (
-                                            // Employee view: Show Edit/Delete buttons only for Pending requests
-                                            req.status === "Pending" ? (
-                                                <>
-                                                    <button className={styles.iconButton} onClick={() => handleEdit(req)} title="Edit">
-                                                        <EditIcon />
-                                                    </button>
-                                                    <button className={styles.iconButton} onClick={() => handleDelete(req)} title="Delete">
-                                                        <DeleteIcon />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <span className={styles.noAction}>—</span>
-                                            )
+                                            // Others: Approve/Reject when it is their HOD / HR step; Edit/Delete their own Pending requests
+                                            <>
+                                                {canApprove(req) && (
+                                                    <>
+                                                        <button
+                                                            className={`${styles.iconButton} ${styles.approveButton}`}
+                                                            onClick={() => handleApprove(req)}
+                                                            title={`Approve (${stepLabel(req)})`}
+                                                        >
+                                                            <CheckIcon />
+                                                        </button>
+                                                        <button
+                                                            className={`${styles.iconButton} ${styles.rejectButton}`}
+                                                            onClick={() => handleReject(req)}
+                                                            title={`Reject (${stepLabel(req)})`}
+                                                        >
+                                                            <XIcon />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {req.approval?.own && req.status === "Pending" && (
+                                                    <>
+                                                        <button className={styles.iconButton} onClick={() => handleEdit(req)} title="Edit">
+                                                            <EditIcon />
+                                                        </button>
+                                                        <button className={styles.iconButton} onClick={() => handleDelete(req)} title="Delete">
+                                                            <DeleteIcon />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {!canApprove(req) && !(req.approval?.own && req.status === "Pending") && (
+                                                    <span className={styles.noAction}>—</span>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </td>

@@ -10,8 +10,15 @@ import chevrondown from "../assets/dashboard/chevron-down.svg";
 import chevrondright from "../assets/dashboard/chevron-right.svg";
 import NotificationBell from "../components/NotificationBell";
 import DeleteModal from '../components/delete-modal/DeleteModal';
+import LeaveApproversTab from '../components/leave-approvers/LeaveApproversTab';
+import { useSearchParams } from 'react-router-dom';
 
 const UserManagement = () => {
+  // Tabs: Users, and Leave Approvers (Admin only); ?tab=leave-approvers opens the second one
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isAdmin = localStorage.getItem('role') === 'admin';
+  const tab = isAdmin && searchParams.get('tab') === 'leave-approvers' ? 'leave-approvers' : 'users';
+  const switchTab = (t) => setSearchParams(t === 'users' ? {} : { tab: t }, { replace: true });
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -149,6 +156,13 @@ const UserManagement = () => {
           </div>
         </section>
     <div className={styles.container}>
+      {isAdmin && (
+        <div className={styles.tabs} role="tablist">
+          <button role="tab" aria-selected={tab === 'users'} className={`${styles.tab} ${tab === 'users' ? styles.tabActive : ''}`} onClick={() => switchTab('users')}>Users</button>
+          <button role="tab" aria-selected={tab === 'leave-approvers'} data-tab="leave-approvers" className={`${styles.tab} ${tab === 'leave-approvers' ? styles.tabActive : ''}`} onClick={() => switchTab('leave-approvers')}>Leave Approvers</button>
+        </div>
+      )}
+      {tab === 'leave-approvers' ? <LeaveApproversTab styles={styles} /> : (<>
       <div className={styles.header}>
         <h1>User Management</h1>
         <button 
@@ -239,6 +253,7 @@ const UserManagement = () => {
         onSubmit={handleEditUser}
         userToEdit={userToEdit}
       />
+      </>)}
     </div>
       
       </main>

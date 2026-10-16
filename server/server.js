@@ -317,6 +317,7 @@ app.use('/api/checkins', require('./routes/checkInRoutes'));
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/leave-requests', leaveRequestRoutes);
+app.use('/api/leave-approvers', require('./routes/leaveApproverRoutes'));
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/departments', departmentRoutes);

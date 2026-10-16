@@ -307,3 +307,10 @@
     color: #b45309;
     cursor: default;
 }
+/* HOD / HR of the request (Leave Approvers) */
+.approvers {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #667085;
+    white-space: nowrap;
+}

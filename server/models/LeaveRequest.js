@@ -51,6 +51,25 @@ const leaveRequestSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    // HR (final) approval tracking — the HR named for the employee in Leave Approvers
+    hrApprovedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    hrApprovedAt: {
+        type: Date,
+        default: null
+    },
+    rejectedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    rejectedAt: {
+        type: Date,
+        default: null
+    },
     // Admin approval tracking
     adminApprovedBy: {
         type: mongoose.Schema.Types.ObjectId,

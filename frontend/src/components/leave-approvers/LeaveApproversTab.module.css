@@ -1,0 +1,202 @@
+/* User Management → Leave Approvers */
+
+.intro {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.toolbar select,
+.search {
+  height: 38px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  background: #fff;
+  color: #344054;
+}
+
+.search {
+  min-width: 240px;
+  flex: 1 1 240px;
+}
+
+.clear {
+  border: none;
+  background: none;
+  color: #1976d2;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.count {
+  margin-left: auto;
+  color: #667085;
+  font-size: 13px;
+}
+
+.name {
+  font-weight: 600;
+  color: #101828;
+}
+
+.sub,
+.muted {
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+.warnings {
+  margin: 0;
+  padding-left: 16px;
+  color: #b54708;
+  font-size: 12px;
+}
+
+.ok {
+  color: #067647;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.note {
+  margin-top: 12px;
+  color: #667085;
+  font-size: 13px;
+}
+
+/* Form */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 20px 40px rgba(16, 24, 40, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalHead h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.close {
+  border: none;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #667085;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #344054;
+}
+
+.field span {
+  font-weight: 600;
+}
+
+.field select {
+  height: 40px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.field small {
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+.formError {
+  background: #fef3f2;
+  color: #b42318;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.formWarn {
+  background: #fffaeb;
+  color: #b54708;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.primary,
+.secondary {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: #1976d2;
+  color: #fff;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.secondary {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+}
+
+@media (max-width: 640px) {
+  .count {
+    margin-left: 0;
+  }
+}
