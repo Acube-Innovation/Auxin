@@ -183,15 +183,14 @@ function LeaveApproversTab({ styles }) {
                             <th>Department</th>
                             <th>HOD</th>
                             <th>HR</th>
-                            <th>Notes</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="6" className={styles.noData}>Loading…</td></tr>
+                            <tr><td colSpan="5" className={styles.noData}>Loading…</td></tr>
                         ) : shown.length === 0 ? (
-                            <tr><td colSpan="6" className={styles.noData}>{rows.length ? "No rows match the filters." : "No leave approvers yet. Use Add Approvers."}</td></tr>
+                            <tr><td colSpan="5" className={styles.noData}>{rows.length ? "No rows match the filters." : "No leave approvers yet. Use Add Approvers."}</td></tr>
                         ) : shown.map((r) => (
                             <tr key={r._id} data-approver-row={r.name}>
                                 <td>
@@ -201,11 +200,6 @@ function LeaveApproversTab({ styles }) {
                                 <td>{r.department || <span className={own.muted}>—</span>}</td>
                                 <td>{r.hod ? r.hod.username : <span className={own.muted}>—</span>}</td>
                                 <td>{r.hr ? r.hr.username : <span className={own.muted}>—</span>}</td>
-                                <td>
-                                    {r.warnings.length ? (
-                                        <ul className={own.warnings}>{r.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
-                                    ) : <span className={own.ok}>OK</span>}
-                                </td>
                                 <td>
                                     <button className={styles.editButton} onClick={() => setEditing(r)}>Edit</button>
                                     <button className={styles.deleteButton} onClick={() => setDeleting(r)}>Delete</button>

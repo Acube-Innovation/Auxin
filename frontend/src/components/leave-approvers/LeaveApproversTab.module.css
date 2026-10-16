@@ -56,19 +56,6 @@
   font-size: 12px;
 }
 
-.warnings {
-  margin: 0;
-  padding-left: 16px;
-  color: #b54708;
-  font-size: 12px;
-}
-
-.ok {
-  color: #067647;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .note {
   margin-top: 12px;
   color: #667085;
