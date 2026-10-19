@@ -6,7 +6,8 @@ import styles from "./Login.module.css";
 import { getAuthApiUrl } from "../config/config";
 
 function Login() {
-  const [username, setUsername] = useState('');
+  // Login is by email address and password
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +17,7 @@ function Login() {
     e.preventDefault();
 
     try {
-      const res = await axios.post(getAuthApiUrl('/login'), { username, password }, { withCredentials: true });
+      const res = await axios.post(getAuthApiUrl('/login'), { email: email.trim(), password }, { withCredentials: true });
 
       // Store the token in localStorage
       localStorage.setItem("token", res.data.token);
@@ -40,7 +41,7 @@ function Login() {
       setError(
         status === 502 || (status >= 500 && status < 600)
           ? 'Server is temporarily unavailable. Please try again later.'
-          : 'Your Username/Password is incorrect!'
+          : (err.response?.data?.message || 'Your Email/Password is incorrect!')
       );
     }
   };
@@ -80,16 +81,17 @@ function Login() {
                   <div className={styles.inputFieldBase}>
                     <div className={styles.inputWithLabel}>
                       <div className={styles.label}>
-                        Username
+                        Email
                       </div>
                       <div className={styles.inputWrapper}>
                         <input
                           className={styles.input}
-                          id="username"
-                          type="text"
-                          placeholder="EX. John Doe"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
+                          id="email"
+                          type="email"
+                          autoComplete="email"
+                          placeholder="EX. name@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                         />
                       </div>

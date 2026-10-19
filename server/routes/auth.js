@@ -13,26 +13,32 @@ const Notification = require('../models/Notification');
 let otpStore = {}; // TEMP store (better use Redis or DB)
 
 
-router.post('/login', async (req, res) => {
-  const rawUsername = req.body && (req.body.username != null) ? String(req.body.username).trim() : '';
-  const rawPassword = req.body && (req.body.password != null) ? String(req.body.password) : '';
-  const username = rawUsername;
-  const password = rawPassword;
+// Login with the email address of the login (User.emailId, any letter case) and password
+// Exact email match, ignoring letter case and surrounding spaces
+const sameEmail = (email) => new RegExp(`^\\s*${String(email).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i');
 
-  console.log('Login attempt for username:', username);
+router.post('/login', async (req, res) => {
+  const body = req.body || {};
+  const email = String(body.email != null ? body.email : body.emailId != null ? body.emailId : '').trim();
+  const password = body.password != null ? String(body.password) : '';
+  const username = email; // used in the log lines below
+
+  console.log('Login attempt for email:', email);
 
   try {
-    if (!username || !password) {
-      console.log('Missing username or password');
-      return res.status(401).json({ message: 'Invalid credentials' });
+    if (!email || !password) {
+      return res.status(401).json({ message: 'Enter your email and password' });
     }
 
-    const user = await User.findOne({
-      username: { $regex: new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-    });
+    const matches = await User.find({ emailId: sameEmail(email) }).limit(2);
+    if (matches.length > 1) {
+      console.log('Email used by more than one login:', email);
+      return res.status(409).json({ message: 'This email belongs to more than one login. Please ask Admin to correct it.' });
+    }
+    const user = matches[0];
     if (!user) {
-      console.log('User not found:', username);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log('No login with email:', email);
+      return res.status(401).json({ message: 'Your Email/Password is incorrect!' });
     }
 
     console.log('User found, checking password...');
@@ -53,7 +59,7 @@ router.post('/login', async (req, res) => {
 
     if (!passwordOk) {
       console.log('Password incorrect for user:', username);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Your Email/Password is incorrect!' });
     }
 
     console.log('Password correct, generating token...');
@@ -411,7 +417,11 @@ router.post('/users', requireAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
-    if (emailId && !/\S+@\S+\.\S+/.test(emailId)) {
+    // Email is required: it is what the person logs in with
+    if (!emailId || !String(emailId).trim()) {
+      return res.status(400).json({ message: 'Email is required (it is used to log in)' });
+    }
+    if (!/\S+@\S+\.\S+/.test(emailId)) {
       return res.status(400).json({ message: 'Please enter a valid email address' });
     }
 
@@ -421,12 +431,9 @@ router.post('/users', requireAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
-    // Check if email already exists (if provided)
-    if (emailId) {
-      const existingEmail = await User.findOne({ emailId });
-      if (existingEmail) {
-        return res.status(400).json({ message: 'Email already exists' });
-      }
+    // Check if email already exists (any letter case)
+    if (await User.findOne({ emailId: sameEmail(emailId) })) {
+      return res.status(400).json({ message: 'Email already exists' });
     }
 
     // Hash password if hashing is enabled
@@ -528,9 +535,15 @@ router.put('/users/:userId', requireAdmin, async (req, res) => {
       user.username = username;
     }
 
-    // Check email uniqueness if changed
+    // Email is required (used to log in) and must not belong to another login
+    if (!String(emailId || user.emailId || '').trim()) {
+      return res.status(400).json({ message: 'Email is required (it is used to log in)' });
+    }
+    if (emailId && !/\S+@\S+\.\S+/.test(emailId)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
     if (emailId && emailId !== user.emailId) {
-      const existingEmail = await User.findOne({ emailId });
+      const existingEmail = await User.findOne({ _id: { $ne: user._id }, emailId: sameEmail(emailId) });
       if (existingEmail) {
         return res.status(400).json({ message: 'Email already exists' });
       }
