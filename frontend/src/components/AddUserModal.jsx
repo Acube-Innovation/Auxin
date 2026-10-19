@@ -67,7 +67,10 @@ const AddUserModal = ({ isOpen, onClose, onSubmit }) => {
       if (formData.password.length < 6) {
         throw new Error("Password must be at least 6 characters long");
       }
-      if (formData.emailId && !/\S+@\S+\.\S+/.test(formData.emailId)) {
+      if (!formData.emailId || !formData.emailId.trim()) {
+        throw new Error("Email ID is required (it is used to log in)");
+      }
+      if (!/\S+@\S+\.\S+/.test(formData.emailId)) {
         throw new Error("Please enter a valid email address");
       }
 
@@ -170,7 +173,7 @@ const AddUserModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="emailId">Email ID</label>
+            <label htmlFor="emailId">Email ID * <small>(used to log in)</small></label>
             <input
               type="email"
               id="emailId"

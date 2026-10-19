@@ -51,9 +51,9 @@ before(async () => {
   const e1 = await Employee.create({ employeeId: 'T1', employeeName: 'Test Op One', mobile: '1', emailId: 'ops1@auxin.local', role: 'Operations Executive', department: 'Bulk Operations' });
   const e2 = await Employee.create({ employeeId: 'T2', employeeName: 'Test Op Two', mobile: '2', emailId: 'ops2@auxin.local', role: 'Operations Executive', department: 'Bulk Operations' });
   const hash = bcrypt.hashSync('pw', 4);
-  const admin = await User.create({ username: 'admin', password: hash, role: 'admin' });
-  await User.create({ username: 'ops1', password: hash, role: 'operations_executive', employeeId: e1._id });
-  await User.create({ username: 'ops2', password: hash, role: 'operations_executive', employeeId: e2._id });
+  const admin = await User.create({ username: 'admin', password: hash, role: 'admin', emailId: 'admin@auxin.local' });
+  await User.create({ username: 'ops1', password: hash, role: 'operations_executive', employeeId: e1._id, emailId: 'ops1@auxin.local' });
+  await User.create({ username: 'ops2', password: hash, role: 'operations_executive', employeeId: e2._id, emailId: 'ops2@auxin.local' });
   await Client.create({ companyName: 'Charterer Co', clientType: 'Charterer', createdBy: admin._id, assignedTo: admin._id });
   await Client.create({ companyName: 'Agent Co', clientType: 'Agent', createdBy: admin._id, assignedTo: admin._id });
   ctx.e2 = String(e2._id);
@@ -69,7 +69,7 @@ before(async () => {
     server.stdout.on('data', (d) => { if (String(d).includes('MongoDB connected')) { clearTimeout(t); resolve(); } });
   });
   for (const u of ['admin', 'ops1', 'ops2']) {
-    const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: 'pw' }) });
+    const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${u}@auxin.local`, password: 'pw' }) });
     tokens[u] = (await r.json()).token;
   }
   const list = await call('GET', '/ops/voyages?status=ALL');
