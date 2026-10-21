@@ -5,6 +5,10 @@ import { useNavigate } from "react-router-dom";
 import OtpInput from "../components/OtpInput";
 import styles from "./Login.module.css";
 
+// The server's reason for a failed step, or why the server could not answer
+const reasonOf = (err, fallback) =>
+  !err.response ? "Cannot reach the server. Check your internet connection and try again." : (err.response.data?.message || fallback);
+
 function ForgotPassword() {
   const [step, setStep] = useState(1); // 1 = enter email, 2 = enter OTP, 3 = reset password
   const [emailId, setEmail] = useState("");
@@ -16,35 +20,35 @@ function ForgotPassword() {
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, { emailId });
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, { emailId: emailId.trim() });
       setStep(2);
       setError("");
     } catch (err) {
-      setError("Email not found!");
+      setError(reasonOf(err, "The OTP could not be sent. Please try again."));
     }
   };
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, { emailId, otp });
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, { emailId: emailId.trim(), otp });
       setStep(3);
       setError("");
     } catch (err) {
-      setError("Invalid OTP!");
+      setError(reasonOf(err, "The OTP could not be checked. Please try again."));
     }
   };
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/reset-password`, { emailId, otp: otp, newPassword });
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/reset-password`, { emailId: emailId.trim(), otp: otp, newPassword });
       alert("Password reset successfully!");
       setStep(1);
       // Redirect to login page
       navigate("/login");
     } catch (err) {
-      setError("Failed to reset password!");
+      setError(reasonOf(err, "The password could not be changed. Please try again."));
     }
   };
 

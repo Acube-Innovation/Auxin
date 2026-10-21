@@ -5,6 +5,16 @@ import auxin_logo from "../assets/auxin_logo.png";
 import styles from "./Login.module.css";
 import { getAuthApiUrl } from "../config/config";
 
+// The reason a login failed: the server's own message, or why the server could not answer
+function loginErrorMessage(err) {
+  const status = err.response?.status;
+  const message = err.response?.data?.message;
+  if (!err.response) return 'Cannot reach the server. Check your internet connection and try again.';
+  if (message) return message;
+  if (status >= 500) return 'The server is temporarily unavailable. Please try again in a few minutes.';
+  return 'Login failed. Please check your email address and password.';
+}
+
 function Login() {
   // Login is by email address and password
   const [email, setEmail] = useState('');
@@ -37,12 +47,7 @@ function Login() {
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      const status = err.response?.status;
-      setError(
-        status === 502 || (status >= 500 && status < 600)
-          ? 'Server is temporarily unavailable. Please try again later.'
-          : (err.response?.data?.message || 'Your Email/Password is incorrect!')
-      );
+      setError(loginErrorMessage(err));
     }
   };
 
