@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '../pages/Login.module.css';
 
+// Number of digits in the OTP the server emails (server/routes/auth.js)
+export const OTP_LENGTH = 6;
+const empty = () => Array(OTP_LENGTH).fill('');
+
 const OtpInput = ({ value, onChange, onComplete }) => {
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(empty);
   const inputRefs = useRef([]);
 
   useEffect(() => {
     if (value) {
-      const otpArray = value.split('').slice(0, 4);
-      while (otpArray.length < 4) {
+      const otpArray = value.split('').slice(0, OTP_LENGTH);
+      while (otpArray.length < OTP_LENGTH) {
         otpArray.push('');
       }
       setOtp(otpArray);
@@ -26,12 +30,12 @@ const OtpInput = ({ value, onChange, onComplete }) => {
     onChange(otpString);
 
     // Auto-focus next input
-    if (val && index < 3) {
+    if (val && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Call onComplete when all 4 digits are entered
-    if (otpString.length === 4 && onComplete) {
+    // Call onComplete when all digits are entered
+    if (otpString.length === OTP_LENGTH && onComplete) {
       onComplete(otpString);
     }
   };
@@ -46,7 +50,7 @@ const OtpInput = ({ value, onChange, onComplete }) => {
     if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
-    if (e.key === 'ArrowRight' && index < 3) {
+    if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -54,9 +58,9 @@ const OtpInput = ({ value, onChange, onComplete }) => {
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    const digits = pastedData.replace(/\D/g, '').slice(0, 4);
+    const digits = pastedData.replace(/\D/g, '').slice(0, OTP_LENGTH);
     
-    const newOtp = ['', '', '', ''];
+    const newOtp = empty();
     for (let i = 0; i < digits.length; i++) {
       newOtp[i] = digits[i];
     }
@@ -66,10 +70,10 @@ const OtpInput = ({ value, onChange, onComplete }) => {
     onChange(otpString);
     
     // Focus the next empty input or the last one
-    const nextIndex = Math.min(digits.length, 3);
+    const nextIndex = Math.min(digits.length, OTP_LENGTH - 1);
     inputRefs.current[nextIndex]?.focus();
     
-    if (otpString.length === 4 && onComplete) {
+    if (otpString.length === OTP_LENGTH && onComplete) {
       onComplete(otpString);
     }
   };
