@@ -8,6 +8,7 @@ const { hasOfficialHolidayOnStartOrEnd, calculateWorkingDays } = require('../uti
 const Employee = require('../models/Employee');
 const { personOfLeaveEmployee, approversOfLeave, approverScope, ownLeaveIds, approvalStep } = require('../utils/leaveScope');
 const Notification = require('../models/Notification');
+const { smtpReason } = require('../utils/smtpReason');
 
 /**
  * Map a leave type string to the corresponding leaveOverride field key.
@@ -231,7 +232,7 @@ async function sendLeaveRequestToHodAndAdmin(leaveRequest, hodUsers) {
                 });
                 console.log('[Leave] Sent new leave request to HOD/Admin:', to);
             } catch (e) {
-                console.error('[Leave] Failed to send to HOD/Admin', to, e.message);
+                console.error('[Leave] Failed to send new leave request to', to, '–', smtpReason(e));
             }
         }
     } catch (err) {
@@ -262,7 +263,7 @@ async function sendHodApprovedToHr(leaveRequest, hr, hodName) {
         });
         console.log('[Leave] Sent HOD-approved request to HR:', to);
     } catch (err) {
-        console.error('[Leave] Failed to email HR:', err.message || err);
+        console.error('[Leave] Failed to email HR', to, '–', smtpReason(err));
     }
 }
 
@@ -319,7 +320,7 @@ async function sendLeaveStatusToEmployee(leaveRequest, newStatus) {
         });
         console.log('[Leave] Sent status to employee:', employeeEmail);
     } catch (err) {
-        console.error('[Leave] Failed to email employee:', err.message || err);
+        console.error('[Leave] Failed to email employee –', smtpReason(err));
     }
 }
 
@@ -575,7 +576,6 @@ router.post('/', authMiddleware, async (req, res) => {
             await notifyApproverOfNewLeave(req.app.get('io'), { ...leaveSnapshot, _id: savedRequest._id }, approver, hod ? 'hod' : 'hr');
             await sendLeaveRequestToHodAndAdmin(leaveSnapshot, approver ? [approver] : []);
         })()
-            .then(() => console.log('[Leave] Approver notification / approver-Admin email sent'))
             .catch(e => console.error('[Leave] Approver notification / approver-Admin email error:', e));
     } catch (error) {
         console.error('Error creating leave request:', error);
@@ -800,7 +800,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
         if (updateData.status && updateData.status !== oldRequest.status && ['HOD Approved', 'Approved', 'Rejected'].includes(updateData.status)) {
             sendLeaveStatusToEmployee(updatedRequest, updateData.status)
-                .then(() => console.log('[Leave] Employee status email sent'))
                 .catch(e => console.error('[Leave] Employee status email error:', e));
             const io = req.app.get('io');
             const leaveForNotice = { _id: oldRequest._id, employee: oldRequest.employee, employeeName: updatedRequest.employeeName, leaveType: updatedRequest.leaveType, startDate: updatedRequest.startDate, endDate: updatedRequest.endDate, reason: updatedRequest.reason };
