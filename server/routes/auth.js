@@ -16,6 +16,31 @@ let otpStore = {}; // TEMP store (better use Redis or DB)
 // Login with the email address of the login (User.emailId, any letter case) and password
 // Exact email match, ignoring letter case and surrounding spaces
 const sameEmail = (email) => new RegExp(`^\\s*${String(email).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i');
+const looksLikeEmail = (s) => /^\S+@\S+\.\S+$/.test(String(s || '').trim());
+
+/**
+ * The login(s) that an email address opens: logins with that User.emailId, otherwise the login linked
+ * (User.employeeId) to the employee record with that email – logins made before the email was required.
+ * Returns { users (at most 2), viaEmployee }.
+ */
+async function loginsByEmail(email) {
+  const users = await User.find({ emailId: sameEmail(email) }).limit(2);
+  if (users.length) return { users, viaEmployee: false };
+  const Employee = require('../models/Employee');
+  const employee = await Employee.findOne({ emailId: sameEmail(email) }).select('_id').lean();
+  if (!employee) return { users: [], viaEmployee: false };
+  return { users: await User.find({ employeeId: employee._id }).limit(2), viaEmployee: true };
+}
+
+// A login found through its employee record and with no email of its own gets that email,
+// so that Forgot Password and email notifications work for it from now on
+async function saveEmailOnLogin(user, email) {
+  if (String(user.emailId || '').trim()) return;
+  if (await User.exists({ _id: { $ne: user._id }, emailId: sameEmail(email) })) return;
+  await User.updateOne({ _id: user._id }, { $set: { emailId: email } });
+  user.emailId = email;
+  console.log(`Email ${email} saved on login ${user.username} (taken from the employee record)`);
+}
 
 router.post('/login', async (req, res) => {
   const body = req.body || {};
@@ -26,19 +51,38 @@ router.post('/login', async (req, res) => {
   console.log('Login attempt for email:', email);
 
   try {
-    if (!email || !password) {
-      return res.status(401).json({ message: 'Enter your email and password' });
+    if (!email && !password) {
+      return res.status(400).json({ message: 'Enter your email address and password.' });
+    }
+    if (!email) {
+      return res.status(400).json({ message: 'Enter your email address.' });
+    }
+    if (!password) {
+      return res.status(400).json({ message: 'Enter your password.' });
     }
 
-    const matches = await User.find({ emailId: sameEmail(email) }).limit(2);
+    if (!looksLikeEmail(email)) {
+      // Most often a username, which was accepted before login moved to email
+      const byName = await User.findOne({ username: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }).select('emailId').lean();
+      console.log('Login with something that is not an email:', email, byName ? '(a username)' : '');
+      if (byName && !String(byName.emailId || '').trim()) {
+        return res.status(400).json({ message: 'Login is now by email address, and your login has no email address yet. Please ask Admin to add your email in User Management.' });
+      }
+      if (byName) {
+        return res.status(400).json({ message: 'Login is now by email address, not username. Enter the email address of your login (for example name@company.com).' });
+      }
+      return res.status(400).json({ message: `"${email}" is not an email address. Enter your email address, for example name@company.com.` });
+    }
+
+    const { users: matches, viaEmployee } = await loginsByEmail(email);
     if (matches.length > 1) {
       console.log('Email used by more than one login:', email);
-      return res.status(409).json({ message: 'This email belongs to more than one login. Please ask Admin to correct it.' });
+      return res.status(409).json({ message: 'This email address belongs to more than one login. Please ask Admin to correct it in User Management.' });
     }
     const user = matches[0];
     if (!user) {
       console.log('No login with email:', email);
-      return res.status(401).json({ message: 'Your Email/Password is incorrect!' });
+      return res.status(401).json({ message: `No login found for ${email}. Check the spelling, or ask Admin which email address is set on your login.` });
     }
 
     console.log('User found, checking password...');
@@ -54,19 +98,21 @@ router.post('/login', async (req, res) => {
       console.log('Password check result:', passwordOk);
     } catch (bcryptError) {
       console.error('Bcrypt error:', bcryptError);
-      return res.status(500).json({ message: 'Server error during authentication' });
+      return res.status(500).json({ message: 'Server error while checking the password. Please try again.' });
     }
 
     if (!passwordOk) {
       console.log('Password incorrect for user:', username);
-      return res.status(401).json({ message: 'Your Email/Password is incorrect!' });
+      return res.status(401).json({ message: 'Incorrect password. Try again, or use Forgot Password to set a new one.' });
     }
+
+    if (viaEmployee) await saveEmailOnLogin(user, email);
 
     console.log('Password correct, generating token...');
 
     if (!process.env.JWT_SECRET) {
       console.error('JWT_SECRET not set');
-      return res.status(500).json({ message: 'Server configuration error' });
+      return res.status(500).json({ message: 'Login is not available: the server is not set up correctly. Please contact Admin.' });
     }
 
     const token = jwt.sign(
@@ -99,7 +145,7 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     try {
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'Server error while logging in. Please try again in a moment.' });
     } catch (e) {
       console.error('Failed to send error response:', e);
     }
@@ -308,20 +354,35 @@ router.post('/me/profile-picture', upload.single('profilePicture'), async (req, 
 
 // ************************************ OTP RELATED THINGS *****************************
 
+// OTPs are kept per login, under the email in lower case
+const otpKey = (emailId) => String(emailId || '').trim().toLowerCase();
+
 // Send OTP
 router.post("/send-otp", async (req, res) => {
-  const { emailId } = req.body;
-
+  const emailId = String((req.body || {}).emailId || '').trim();
 
   try {
-    const user = await User.findOne({ emailId: emailId });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!emailId) return res.status(400).json({ message: "Enter your email address." });
+    if (!looksLikeEmail(emailId)) {
+      return res.status(400).json({ message: `"${emailId}" is not an email address. Enter your email address, for example name@company.com.` });
+    }
+    const { users } = await loginsByEmail(emailId);
+    if (users.length > 1) {
+      return res.status(409).json({ message: "This email address belongs to more than one login. Please ask Admin to correct it in User Management." });
+    }
+    const user = users[0];
+    if (!user) {
+      return res.status(404).json({ message: `No login found for ${emailId}. Check the spelling, or ask Admin which email address is set on your login.` });
+    }
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(503).json({ message: "The OTP email cannot be sent because email is not set up on the server. Please ask Admin to reset your password." });
+    }
 
     // const otp = crypto.randomInt(100000, 999999).toString();
 
     const otp = crypto.randomInt(1000, 10000).toString();
 
-    otpStore[emailId] = otp;
+    otpStore[otpKey(emailId)] = { otp, userId: String(user._id) };
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -340,36 +401,41 @@ router.post("/send-otp", async (req, res) => {
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Error sending OTP", error: err.message });
+    console.error('Send OTP failed:', err.message);
+    res.status(500).json({ message: "The OTP email could not be sent. Please try again in a moment, or ask Admin to reset your password.", error: err.message });
   }
 });
 
 // Verify OTP
 router.post("/verify-otp", (req, res) => {
   const { emailId, otp } = req.body;
-  if (otpStore[emailId] && otpStore[emailId] === otp) {
+  const stored = otpStore[otpKey(emailId)];
+  if (stored && stored.otp === String(otp || '').trim()) {
     return res.json({ valid: true });
   }
-  res.status(400).json({ valid: false, message: "Invalid OTP" });
+  res.status(400).json({ valid: false, message: stored ? "The OTP is incorrect. Check the code in the email and try again." : "No OTP was sent to this email, or it was already used. Please request a new OTP." });
 });
 
 // Reset Password
 router.post("/reset-password", async (req, res) => {
   const { emailId, otp, newPassword } = req.body;
   try {
-    if (!otpStore[emailId] || otpStore[emailId] !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+    const stored = otpStore[otpKey(emailId)];
+    if (!stored || stored.otp !== String(otp || '').trim()) {
+      return res.status(400).json({ message: stored ? "The OTP is incorrect. Check the code in the email and try again." : "No OTP was sent to this email, or it was already used. Please request a new OTP." });
+    }
+    if (!newPassword || String(newPassword).length < 6) {
+      return res.status(400).json({ message: "The new password must be at least 6 characters long." });
     }
 
-    delete otpStore[emailId]; // clear otp after use
+    delete otpStore[otpKey(emailId)]; // clear otp after use
 
-    // const hashed = await bcrypt.hash(newPassword, 10);
-
-    await User.findOneAndUpdate({ emailId: emailId }, { password: newPassword });
+    const password = process.env.HASH_PASSWORDS === 'true' ? await bcrypt.hash(String(newPassword), 10) : String(newPassword);
+    await User.updateOne({ _id: stored.userId }, { $set: { password } });
 
     res.json({ message: "Password updated successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Error resetting password", error: err.message });
+    res.status(500).json({ message: "The password could not be changed because of a server error. Please try again.", error: err.message });
   }
 });
 
