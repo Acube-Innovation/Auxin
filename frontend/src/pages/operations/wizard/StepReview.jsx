@@ -18,7 +18,7 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-// Step 6 — Review of the saved draft (like the client's OPS sheet) before activation
+// Step 5 — Review of the saved draft (like the client's OPS sheet) before activation
 function StepReview({ voyage, officeTz, counts }) {
   if (!voyage) return <div className={styles.empty}>Loading…</div>;
   const f = voyage.fixture || {};
@@ -41,6 +41,10 @@ function StepReview({ voyage, officeTz, counts }) {
             <Row label="Brokers">{(voyage.brokers || []).map((b) => b.companyName).join(", ") || "—"}</Row>
             <Row label="Operators">{(voyage.operators || []).map((o) => o.employeeName).join(", ")}</Row>
           </Block>
+          <Block title="Customer">
+            <Row label="Customer">{dash(voyage.customer?.client?.companyName)}</Row>
+            <Row label="Contact">{[voyage.customer?.contactName, voyage.customer?.email, voyage.customer?.phone].filter(Boolean).join(" · ") || "—"}</Row>
+          </Block>
           <Block title="Cargo">
             {(voyage.cargo || []).length ? voyage.cargo.map((c) => <Row key={c._id} label={c.description}>{c.quantity != null ? `${c.quantity.toLocaleString("en-IN")} ${c.unit}` : "—"}</Row>) : <div className={styles.subtle}>No cargo lines</div>}
           </Block>
@@ -53,10 +57,9 @@ function StepReview({ voyage, officeTz, counts }) {
             <Row label="Vessel laycan">{f.vesselLaycanFrom ? `${formatInstantDate(f.vesselLaycanFrom, officeTz)} – ${formatInstantDate(f.vesselLaycanTo, officeTz) || "?"}` : "—"}</Row>
             <Row label="CP date">{f.cpDate ? formatInstantDate(f.cpDate, officeTz) : "—"}</Row>
           </Block>
-          <Block title="Delivery, re-delivery and bunkers">
+          <Block title="Delivery and re-delivery">
             <Row label="Delivery">{[voyage.delivery?.place, voyage.delivery?.port?.name].filter(Boolean).join(" · ") || "—"}<div className={styles.note}>{at(voyage.delivery?.estimated, voyage.delivery?.timeZone)}</div></Row>
             <Row label="Re-delivery">{[voyage.redelivery?.place, voyage.redelivery?.port?.name].filter(Boolean).join(" · ") || "—"}<div className={styles.note}>{at(voyage.redelivery?.estimated, voyage.redelivery?.timeZone)}</div></Row>
-            <Row label="Bunkers">{[voyage.portCalls.find((p) => p._id === voyage.bunker?.portCall)?.port?.name, voyage.bunker?.supplier?.companyName, voyage.bunker?.grade, voyage.bunker?.quantity != null ? `${voyage.bunker.quantity} MT` : null].filter(Boolean).join(" · ") || "—"}</Row>
           </Block>
         </div>
       </div>

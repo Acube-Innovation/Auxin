@@ -1,13 +1,22 @@
 import React from "react";
 import Select from "react-select";
 import { PortDateTimeInput, ZoneDateInput } from "../../../components/operations/PortDateTimeInput";
+import { zoneLabel } from "../../../utils/opsTime";
 import { clientOption } from "./wizardModel";
+import PickOrAdd from "./PickOrAdd";
 import styles from "../masters/Masters.module.css";
 
-// Step 2 — Fixture & Vessel (features B1–B3)
-function StepFixture({ form, update, opts, officeTz, isOperator }) {
+const section = (title, note) => (
+  <div className={`${styles.field} ${styles.full}`} style={{ borderTop: "1px solid #eef0f3", paddingTop: 12 }}>
+    <label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>{title}{note && <span className={styles.subtle} style={{ fontWeight: 400 }}> · {note}</span>}</label>
+  </div>
+);
+
+// Step 2 — Fixture & Vessel, with delivery and re-delivery (features B1–B3, B5)
+function StepFixture({ form, update, opts, officeTz, isOperator, quickAdd }) {
   const setFixture = (k) => (v) => update((f) => ({ ...f, fixture: { ...f.fixture, [k]: v } }));
   const setMaster = (k) => (e) => update((f) => ({ ...f, master: { ...f.master, [k]: e.target.value } }));
+  const setHandover = (which, patch) => update((f) => ({ ...f, [which]: { ...f[which], ...patch } }));
 
   // Picking a vessel fills owners and owners' broker from the vessel master when still empty
   const chooseVessel = (opt) => update((f) => {
@@ -19,6 +28,32 @@ function StepFixture({ form, update, opts, officeTz, isOperator }) {
     }
     return next;
   });
+
+  const handover = (which, title) => {
+    const h = form[which];
+    const zone = h.port?.timeZone || officeTz;
+    return (
+      <div className={styles.card} style={{ padding: "0.9rem 1rem" }}>
+        <b>{title}</b>
+        <div className={styles.formGrid} style={{ marginTop: 8 }}>
+          <div className={styles.field}>
+            <label>Place</label>
+            <input className={styles.input} value={h.place} onChange={(e) => setHandover(which, { place: e.target.value })} placeholder={which === "delivery" ? "e.g. Djibouti / APS" : "e.g. DLOSP Kakinada"} aria-label={`${title} place`} />
+          </div>
+          <div className={styles.field}>
+            <label>Port</label>
+            <PickOrAdd inputId={`wz-${which}-port`} what="port" options={opts.ports} value={h.port} isClearable placeholder="Type to search or add…"
+              onChange={(o) => setHandover(which, { port: o })} onCreate={quickAdd.port} />
+            <div className={styles.hint}>Times are in {h.port ? "this port's" : "office"} local time: {zoneLabel(zone)}</div>
+          </div>
+          <div className={`${styles.field} ${styles.full}`}>
+            <label>Estimated date and time</label>
+            <PortDateTimeInput value={h.estimated} zone={zone} onChange={(iso) => setHandover(which, { estimated: iso })} ariaLabel={`${title} estimated`} />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={styles.formGrid}>
@@ -35,7 +70,7 @@ function StepFixture({ form, update, opts, officeTz, isOperator }) {
 
       <div className={styles.field}>
         <label>Vessel<span className={styles.req}>*</span></label>
-        <Select inputId="wz-vessel" options={opts.vessels} value={form.vessel} onChange={chooseVessel} placeholder="Select vessel…" isClearable />
+        <PickOrAdd inputId="wz-vessel" what="vessel" options={opts.vessels} value={form.vessel} onChange={chooseVessel} onCreate={quickAdd.vessel} placeholder="Type to search or add…" isClearable />
         <div className={styles.hint}>Active vessels from Ops Masters → Vessels</div>
       </div>
       <div className={styles.field}>
@@ -47,16 +82,19 @@ function StepFixture({ form, update, opts, officeTz, isOperator }) {
 
       <div className={styles.field}>
         <label>Charterer</label>
-        <Select inputId="wz-charterer" options={opts.clients.Charterer} value={form.charterers} onChange={(v) => update((f) => ({ ...f, charterers: v }))} placeholder="Select charterer…" isClearable />
+        <PickOrAdd inputId="wz-charterer" what="charterer" options={opts.clients.Charterer} value={form.charterers} onChange={(v) => update((f) => ({ ...f, charterers: v }))}
+          onCreate={(name) => quickAdd.client("Charterer", name)} placeholder="Type to search or add…" isClearable />
         <div className={styles.hint}>Clients with type “Charterer” (Sales &amp; Leads)</div>
       </div>
       <div className={styles.field}>
         <label>Owners</label>
-        <Select inputId="wz-owners" options={opts.clients["Ship Owners"]} value={form.owners} onChange={(v) => update((f) => ({ ...f, owners: v }))} placeholder="Select owners…" isClearable />
+        <PickOrAdd inputId="wz-owners" what="owners" options={opts.clients["Ship Owners"]} value={form.owners} onChange={(v) => update((f) => ({ ...f, owners: v }))}
+          onCreate={(name) => quickAdd.client("Ship Owners", name)} placeholder="Type to search or add…" isClearable />
       </div>
       <div className={`${styles.field} ${styles.full}`}>
         <label>Brokers</label>
-        <Select inputId="wz-brokers" isMulti options={opts.clients.Broker} value={form.brokers} onChange={(v) => update((f) => ({ ...f, brokers: v || [] }))} placeholder="Select brokers…" />
+        <PickOrAdd inputId="wz-brokers" what="broker" isMulti options={opts.clients.Broker} value={form.brokers} onChange={(v) => update((f) => ({ ...f, brokers: v || [] }))}
+          onCreate={(name) => quickAdd.client("Broker", name)} placeholder="Type to search or add…" />
       </div>
 
       <div className={styles.field}><label>Master's name</label><input className={styles.input} value={form.master.name} onChange={setMaster("name")} placeholder="Capt. …" /></div>
@@ -64,23 +102,10 @@ function StepFixture({ form, update, opts, officeTz, isOperator }) {
       <div className={styles.field}><label>Master's phone</label><input className={styles.input} value={form.master.phone} onChange={setMaster("phone")} /></div>
       <div />
 
-      <div className={`${styles.field} ${styles.full}`} style={{ borderTop: "1px solid #eef0f3", paddingTop: 12 }}>
-        <label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Fixture <span className={styles.subtle} style={{ fontWeight: 400 }}>· office time ({officeTz})</span></label>
-      </div>
-      <div className={styles.field}>
-        <label>Cargo fixed</label>
-        <PortDateTimeInput value={form.fixture.cargoFixedAt} zone={officeTz} onChange={setFixture("cargoFixedAt")} ariaLabel="Cargo fixed" />
-      </div>
+      {section("Fixture", `office time (${officeTz})`)}
       <div className={styles.field}>
         <label>Vessel fixed</label>
         <PortDateTimeInput value={form.fixture.vesselFixedAt} zone={officeTz} onChange={setFixture("vesselFixedAt")} ariaLabel="Vessel fixed" />
-      </div>
-      <div className={styles.field}>
-        <label>Cargo laycan (from – to)</label>
-        <div style={{ display: "flex", gap: 6 }}>
-          <ZoneDateInput value={form.fixture.cargoLaycanFrom} zone={officeTz} onChange={setFixture("cargoLaycanFrom")} ariaLabel="Cargo laycan from" />
-          <ZoneDateInput value={form.fixture.cargoLaycanTo} zone={officeTz} onChange={setFixture("cargoLaycanTo")} ariaLabel="Cargo laycan to" />
-        </div>
       </div>
       <div className={styles.field}>
         <label>Vessel laycan (from – to)</label>
@@ -89,11 +114,16 @@ function StepFixture({ form, update, opts, officeTz, isOperator }) {
           <ZoneDateInput value={form.fixture.vesselLaycanTo} zone={officeTz} onChange={setFixture("vesselLaycanTo")} ariaLabel="Vessel laycan to" />
         </div>
       </div>
-      <div className={styles.field}>
-        <label>CP date</label>
-        <ZoneDateInput value={form.fixture.cpDate} zone={officeTz} onChange={setFixture("cpDate")} ariaLabel="CP date" />
+
+      {section("Delivery and re-delivery")}
+      <div className={`${styles.field} ${styles.full}`}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          {handover("delivery", "Delivery")}
+          {handover("redelivery", "Re-delivery")}
+        </div>
       </div>
-      <div className={`${styles.field}`}>
+
+      <div className={`${styles.field} ${styles.full}`}>
         <label>Remarks</label>
         <input className={styles.input} value={form.remarks} onChange={(e) => update((f) => ({ ...f, remarks: e.target.value }))} />
       </div>

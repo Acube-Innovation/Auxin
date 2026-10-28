@@ -6,17 +6,18 @@ import { suggestTimes } from "../../../utils/opsSuggest";
 let seq = 0;
 export const newKey = () => `k${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Delivery & Bunkers", "Task Preview", "Review & Activate"];
+export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Task Preview", "Review & Activate"];
 
 export const clientOption = (c) => (c ? { value: c._id, label: c.companyName } : null);
 export const employeeOption = (e) => (e ? { value: e._id, label: e.employeeName } : null);
 export const portOption = (p) => (p ? { value: p._id, label: `${p.name}, ${p.country || ""}`.replace(/, $/, ""), name: p.name, timeZone: p.timeZone, defaultAgents: p.defaultAgents || [] } : null);
-export const vesselOption = (v) => (v ? { value: v._id, label: v.name + (v.imo ? ` (IMO ${v.imo})` : ""), owners: v.owners, ownersBroker: v.ownersBroker } : null);
+export const vesselOption = (v) => (v ? { value: v._id, label: v.name + (v.imo ? ` (IMO ${v.imo})` : ""), name: v.name, owners: v.owners, ownersBroker: v.ownersBroker } : null);
 
 const emptyTimes = () => ({ eta: null, etb: null, etc: null, ets: null });
 export const emptyRow = (type = "LOADING") => ({ key: newKey(), _id: null, port: null, type, agent: null, cargoQty: "", ratePerDay: "", planned: emptyTimes(), manual: { etb: false, etc: false, ets: false }, remarks: "" });
 export const emptyCargo = () => ({ key: newKey(), description: "", quantity: "", unit: "MT", packages: "", packageUnit: "", remarks: "" });
 const emptyHandover = () => ({ place: "", port: null, estimated: null });
+const emptyCustomer = () => ({ client: null, contactName: "", email: "", phone: "" });
 
 export function emptyForm() {
   return {
@@ -26,13 +27,13 @@ export function emptyForm() {
     charterers: null,
     owners: null,
     brokers: [],
+    customer: emptyCustomer(),
     operators: [],
     fixture: { cargoFixedAt: null, vesselFixedAt: null, cargoLaycanFrom: null, cargoLaycanTo: null, vesselLaycanFrom: null, vesselLaycanTo: null, cpDate: null },
     cargo: [emptyCargo()],
     rows: [emptyRow("LOADING"), emptyRow("DISCHARGING")],
     delivery: emptyHandover(),
     redelivery: emptyHandover(),
-    bunker: { rowKey: "", supplier: null, grade: "", quantity: "", bookedOn: null, bunkeringDate: null },
     remarks: "",
   };
 }
@@ -51,7 +52,6 @@ export function fromVoyage(v) {
     manual: { etb: false, etc: false, ets: false, ...(pc.manual || {}) },
     remarks: pc.remarks || "",
   }));
-  const bunkerRow = rows.find((r) => r._id && r._id === v.bunker?.portCall);
   const handover = (h) => ({ place: h?.place || "", port: h?.port ? portOption(h.port) : null, estimated: h?.estimated || null });
   return {
     voyageType: v.voyageType || "TC_TRIP",
@@ -60,20 +60,13 @@ export function fromVoyage(v) {
     charterers: clientOption(v.charterers),
     owners: clientOption(v.owners),
     brokers: (v.brokers || []).map(clientOption),
+    customer: { client: clientOption(v.customer?.client), contactName: v.customer?.contactName || "", email: v.customer?.email || "", phone: v.customer?.phone || "" },
     operators: (v.operators || []).map(employeeOption),
     fixture: { ...emptyForm().fixture, ...(v.fixture || {}) },
     cargo: (v.cargo || []).length ? v.cargo.map((c) => ({ key: newKey(), description: c.description, quantity: c.quantity ?? "", unit: c.unit || "MT", packages: c.packages ?? "", packageUnit: c.packageUnit || "", remarks: c.remarks || "" })) : [emptyCargo()],
     rows,
     delivery: handover(v.delivery),
     redelivery: handover(v.redelivery),
-    bunker: {
-      rowKey: bunkerRow ? bunkerRow.key : "",
-      supplier: clientOption(v.bunker?.supplier),
-      grade: v.bunker?.grade || "",
-      quantity: v.bunker?.quantity ?? "",
-      bookedOn: v.bunker?.bookedOn || null,
-      bunkeringDate: v.bunker?.bunkeringDate || null,
-    },
     remarks: v.remarks || "",
   };
 }
@@ -81,7 +74,7 @@ export function fromVoyage(v) {
 const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
 const val = (o) => (o ? o.value : null);
 
-// Voyage fields for POST / PUT (bunker.portCall is set separately once port calls have ids)
+// Voyage fields for POST / PUT. Bunkers are not part of the form: the voyage keeps whatever it has.
 export function voyagePayload(form) {
   return {
     voyageType: form.voyageType,
@@ -90,6 +83,7 @@ export function voyagePayload(form) {
     charterers: val(form.charterers),
     owners: val(form.owners),
     brokers: form.brokers.map(val),
+    customer: { client: val(form.customer.client), contactName: form.customer.contactName, email: form.customer.email, phone: form.customer.phone },
     operators: form.operators.map(val),
     fixture: form.fixture,
     cargo: form.cargo.filter((c) => String(c.description).trim()).map((c) => ({
@@ -97,10 +91,6 @@ export function voyagePayload(form) {
     })),
     delivery: { place: form.delivery.place, port: val(form.delivery.port), estimated: form.delivery.estimated },
     redelivery: { place: form.redelivery.place, port: val(form.redelivery.port), estimated: form.redelivery.estimated },
-    bunker: {
-      supplier: val(form.bunker.supplier), grade: form.bunker.grade, quantity: num(form.bunker.quantity),
-      bookedOn: form.bunker.bookedOn, bunkeringDate: form.bunker.bunkeringDate,
-    },
     remarks: form.remarks,
   };
 }
@@ -125,17 +115,21 @@ export function rowPayload(row) {
 
 // Problems that stop the user leaving a step (null = fine)
 export function stepError(step, form, { isOperator, settings } = {}) {
+  const f = form.fixture;
+  if (step === 1) {
+    const bad = form.cargo.find((c) => !String(c.description).trim() && (c.quantity !== "" || c.packages !== ""));
+    if (bad) return "Every cargo line with a quantity needs a description";
+    if (form.customer.email && !/^\S+@\S+\.\S+$/.test(form.customer.email)) return "The customer's email is not valid";
+    if (f.cargoLaycanFrom && f.cargoLaycanTo && f.cargoLaycanTo < f.cargoLaycanFrom) return "Cargo laycan 'to' is before 'from'";
+  }
   if (step === 2) {
     if (!form.vessel) return "Choose the vessel";
     if (!form.operators.length && !isOperator) return "Choose at least one operator";
     if (form.master.email && !/^\S+@\S+\.\S+$/.test(form.master.email)) return "The Master's email is not valid";
-    const f = form.fixture;
-    if (f.cargoLaycanFrom && f.cargoLaycanTo && f.cargoLaycanTo < f.cargoLaycanFrom) return "Cargo laycan 'to' is before 'from'";
     if (f.vesselLaycanFrom && f.vesselLaycanTo && f.vesselLaycanTo < f.vesselLaycanFrom) return "Vessel laycan 'to' is before 'from'";
-  }
-  if (step === 1) {
-    const bad = form.cargo.find((c) => !String(c.description).trim() && (c.quantity !== "" || c.packages !== ""));
-    if (bad) return "Every cargo line with a quantity needs a description";
+    const d = form.delivery.estimated;
+    const r = form.redelivery.estimated;
+    if (d && r && r < d) return "Re-delivery cannot be before delivery";
   }
   if (step === 3) {
     if (!form.rows.length) return "Add at least one port call";
@@ -146,12 +140,6 @@ export function stepError(step, form, { isOperator, settings } = {}) {
       const order = [["ETA", p.eta, "ETB", p.etb], ["ETB", p.etb, "ETC", p.etc], ["ETC", p.etc, "ETS", p.ets]];
       for (const [a, av, b, bv] of order) if (av && bv && bv < av) return `Port call ${n + 1}: ${b} cannot be before ${a}`;
     }
-  }
-  if (step === 4) {
-    const d = form.delivery.estimated;
-    const r = form.redelivery.estimated;
-    if (d && r && r < d) return "Re-delivery cannot be before delivery";
-    if (form.bunker.rowKey && !form.rows.some((row) => row.key === form.bunker.rowKey && row.type === "BUNKERING")) return "The bunkering port must be a Bunkering port call";
   }
   return null;
 }

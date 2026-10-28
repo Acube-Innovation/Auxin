@@ -6,6 +6,10 @@ const OpsMasterService = {
 
   // Clients for pickers (charterers, owners, brokers, agents, suppliers)
   lookupClients: (type, search) => opsRequest("/lookups/clients", { params: { type, search } }),
+  // Quick add from the New Voyage form (an existing record with the same name is returned instead)
+  quickAddClient: (data) => opsRequest("/lookups/clients", { method: "POST", body: data }),
+  quickAddVessel: (data) => opsRequest("/lookups/vessels", { method: "POST", body: data }),
+  quickAddPort: (data) => opsRequest("/lookups/ports", { method: "POST", body: data }),
 
   getVessels: (params) => opsRequest("/vessels", { params }),
   createVessel: (data) => opsRequest("/vessels", { method: "POST", body: data }),

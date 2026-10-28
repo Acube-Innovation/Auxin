@@ -15,13 +15,14 @@ import {
 import StepFixture from "./StepFixture";
 import StepCargo from "./StepCargo";
 import StepRotation from "./StepRotation";
-import StepDeliveryBunker from "./StepDeliveryBunker";
 import StepTaskPreview from "./StepTaskPreview";
 import StepReview from "./StepReview";
+import QuickAddPort from "./QuickAddPort";
 import shared from "../masters/Masters.module.css";
 import styles from "./Wizard.module.css";
 
 const CLIENT_TYPES = ["Charterer", "Ship Owners", "Broker", "Agent", "Supplier"];
+const addTo = (list, opt) => [...(list || []).filter((o) => o.value !== opt.value), opt].sort((a, b) => a.label.localeCompare(b.label));
 
 // New Voyage wizard — /operations/voyages/new and /operations/voyages/:id/edit (drafts) — features B1–B10
 function VoyageWizard() {
@@ -44,6 +45,7 @@ function VoyageWizard() {
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [portRequest, setPortRequest] = useState(null); // { name, resolve } while the Add port dialog is open
   const loadedId = useRef(null);
 
   const officeTz = meta?.officeTimeZone || "Asia/Kolkata";
@@ -58,11 +60,12 @@ function VoyageWizard() {
           OpsMasterService.getVessels({ active: true }),
           OpsMasterService.getPorts({ active: true }),
           EmployeeService.getEmployees(),
-          OpsMasterService.lookupClients(CLIENT_TYPES.join(",")),
+          OpsMasterService.lookupClients(""), // every client: the customer can be any type
         ]);
         setMeta(m);
         const byType = Object.fromEntries(CLIENT_TYPES.map((t) => [t, []]));
         clients.forEach((c) => byType[c.clientType] && byType[c.clientType].push(clientOption(c)));
+        byType.All = clients.map(clientOption);
         setOpts({
           vessels: vessels.map(vesselOption),
           ports: ports.map(portOption),
@@ -116,24 +119,50 @@ function VoyageWizard() {
     setPreview(null); // tasks must be regenerated after any change
   }, []);
 
+  // ------------------------------------------------------------------ quick add (type a name that is not in the list)
+  // Each returns the new option (already added to the picker's list), or null when cancelled or refused.
+  const quickAdd = useMemo(() => ({
+    client: async (clientType, companyName) => {
+      try {
+        const opt = clientOption(await OpsMasterService.quickAddClient({ clientType, companyName }));
+        setOpts((o) => ({ ...o, clients: { ...o.clients, [clientType]: addTo(o.clients[clientType], opt), All: addTo(o.clients.All, opt) } }));
+        showToast(`${opt.label} added (${clientType})`, "success");
+        return opt;
+      } catch (e) { showToast(e.message, "error"); return null; }
+    },
+    vessel: async (name) => {
+      try {
+        const opt = vesselOption(await OpsMasterService.quickAddVessel({ name }));
+        setOpts((o) => ({ ...o, vessels: addTo(o.vessels, opt) }));
+        showToast(`Vessel ${name} added; IMO, type and owners can be completed in Ops Masters → Vessels`, "success");
+        return opt;
+      } catch (e) { showToast(e.message, "error"); return null; }
+    },
+    port: (name) => new Promise((resolve) => setPortRequest({ name, resolve })),
+  }), [showToast]);
+
+  const savePort = async (data) => {
+    const opt = portOption(await OpsMasterService.quickAddPort(data)); // errors are shown in the dialog
+    setOpts((o) => ({ ...o, ports: addTo(o.ports, opt) }));
+    showToast(`Port ${opt.label} added`, "success");
+    portRequest.resolve(opt);
+    setPortRequest(null);
+  };
+  const cancelPort = () => { if (portRequest) portRequest.resolve(null); setPortRequest(null); };
+
   // ------------------------------------------------------------------ save draft (create, or sync voyage + port calls)
   const saveDraft = async () => {
     const payload = voyagePayload(form);
-    const bunkerIndex = form.rows.findIndex((r) => r.key === form.bunker.rowKey);
     let v;
     if (!voyageId) {
-      v = await OpsVoyageService.create({
-        ...payload,
-        bunker: { ...payload.bunker, portCallIndex: bunkerIndex >= 0 ? bunkerIndex : null },
-        portCalls: form.rows.map(rowPayload),
-      });
+      v = await OpsVoyageService.create({ ...payload, portCalls: form.rows.map(rowPayload) });
       loadedId.current = v._id;
       setVoyageId(v._id);
       // Show the draft's address without a route change (keeps the wizard's step and state)
       window.history.replaceState(window.history.state, "", `/operations/voyages/${v._id}/edit`);
     } else {
-      // 1. voyage fields (bunkering call cleared until the port calls are in place)
-      await OpsVoyageService.update(voyageId, { ...payload, bunker: { ...payload.bunker, portCall: null } });
+      // 1. voyage fields
+      await OpsVoyageService.update(voyageId, payload);
       // 2. port calls: remove, update, add
       const server = await OpsVoyageService.get(voyageId);
       const keep = new Set(form.rows.filter((r) => r._id).map((r) => r._id));
@@ -148,9 +177,9 @@ function VoyageWizard() {
           ids.push(res.portCall._id);
         }
       }
-      // 3. order, then the bunkering call
+      // 3. order
       if (ids.length > 1) await OpsVoyageService.reorderPortCalls(voyageId, ids);
-      v = await OpsVoyageService.update(voyageId, { bunker: { portCall: bunkerIndex >= 0 ? ids[bunkerIndex] : null } });
+      v = await OpsVoyageService.get(voyageId);
     }
     setSaved(v);
     setForm(fromVoyage(v));
@@ -174,10 +203,10 @@ function VoyageWizard() {
   const voyageIdRef = useRef(voyageId);
   useEffect(() => { voyageIdRef.current = voyageId; }, [voyageId]);
 
-  // Move to a step. Steps 5 and 6 need a saved, valid draft and the generated tasks.
+  // Move to a step. Steps 4 (Task Preview) and 5 (Review) need a saved, valid draft and the generated tasks.
   const goTo = async (target) => {
     setError("");
-    if (target <= 4) {
+    if (target <= 3) {
       if (target > step) {
         const problem = checkUpTo(Math.min(step, target - 1));
         if (problem) { setError(problem.err); setStep(problem.step); return; }
@@ -185,7 +214,7 @@ function VoyageWizard() {
       setStep(target);
       return;
     }
-    const problem = checkUpTo(4);
+    const problem = checkUpTo(3);
     if (problem) { setError(problem.err); setStep(problem.step); return; }
     setBusy(true);
     try {
@@ -261,7 +290,7 @@ function VoyageWizard() {
     );
   }
 
-  const stepProps = { form, update, opts, officeTz, settings, isOperator };
+  const stepProps = { form, update, opts, officeTz, settings, isOperator, quickAdd };
 
   return (
     <OpsLayout title={title} breadcrumbs={crumbs}>
@@ -280,9 +309,8 @@ function VoyageWizard() {
               {step === 1 && <StepCargo {...stepProps} />}
               {step === 2 && <StepFixture {...stepProps} />}
               {step === 3 && <StepRotation {...stepProps} />}
-              {step === 4 && <StepDeliveryBunker {...stepProps} />}
-              {step === 5 && <StepTaskPreview preview={preview} excluded={excluded} setExcluded={setExcluded} adhoc={adhoc} setAdhoc={setAdhoc} loading={busy} />}
-              {step === 6 && <StepReview voyage={saved} officeTz={officeTz} counts={counts} />}
+              {step === 4 && <StepTaskPreview preview={preview} excluded={excluded} setExcluded={setExcluded} adhoc={adhoc} setAdhoc={setAdhoc} loading={busy} />}
+              {step === 5 && <StepReview voyage={saved} officeTz={officeTz} counts={counts} />}
             </>
           )}
         </div>
@@ -292,11 +320,12 @@ function VoyageWizard() {
           <div className={shared.toolbarLeft}>
             {step > 1 && <button className={shared.btnSecondary} onClick={() => goTo(step - 1)} disabled={busy}>Back</button>}
             <button className={shared.btnSecondary} onClick={saveOnly} disabled={busy || (!dirty && Boolean(voyageId))}>{busy ? "Saving…" : "Save draft"}</button>
-            {step < 6 && <button className={shared.btnPrimary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 4 ? "Save & preview tasks" : "Next"}</button>}
-            {step === 6 && <button className={shared.btnPrimary} onClick={activate} disabled={busy || !preview}>{busy ? "Activating…" : "Activate voyage"}</button>}
+            {step < 5 && <button className={shared.btnPrimary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 3 ? "Save & preview tasks" : "Next"}</button>}
+            {step === 5 && <button className={shared.btnPrimary} onClick={activate} disabled={busy || !preview}>{busy ? "Activating…" : "Activate voyage"}</button>}
           </div>
         </div>
       </div>
+      <QuickAddPort request={portRequest} onSave={savePort} onCancel={cancelPort} />
     </OpsLayout>
   );
 }

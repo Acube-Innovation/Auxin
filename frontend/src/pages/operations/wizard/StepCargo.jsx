@@ -1,11 +1,15 @@
 import React from "react";
 import { emptyCargo } from "./wizardModel";
+import PickOrAdd from "./PickOrAdd";
+import { PortDateTimeInput, ZoneDateInput } from "../../../components/operations/PortDateTimeInput";
 import styles from "../masters/Masters.module.css";
 
 const UNITS = ["MT", "CBM", "Units", "TEU", "Pieces"];
 
-// Step 1 — Cargo lines (feature B4)
-function StepCargo({ form, update }) {
+// Step 1 — Customer, cargo lines and the cargo fixture dates (feature B4)
+function StepCargo({ form, update, opts, officeTz, quickAdd }) {
+  const setCustomer = (patch) => update((f) => ({ ...f, customer: { ...f.customer, ...patch } }));
+  const setFixture = (k) => (v) => update((f) => ({ ...f, fixture: { ...f.fixture, [k]: v } }));
   const set = (key, field) => (e) => update((f) => ({ ...f, cargo: f.cargo.map((c) => (c.key === key ? { ...c, [field]: e.target.value } : c)) }));
   const remove = (key) => update((f) => ({ ...f, cargo: f.cargo.length > 1 ? f.cargo.filter((c) => c.key !== key) : [emptyCargo()] }));
   const add = () => update((f) => ({ ...f, cargo: [...f.cargo, emptyCargo()] }));
@@ -13,6 +17,20 @@ function StepCargo({ form, update }) {
 
   return (
     <div>
+      <div className={styles.formGrid} style={{ marginBottom: 14 }}>
+        <div className={`${styles.field} ${styles.full}`}><label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Customer</label></div>
+        <div className={styles.field}>
+          <label>Customer</label>
+          <PickOrAdd inputId="wz-customer" what="customer" options={opts.clients.All} value={form.customer.client} isClearable placeholder="Type to search or add…"
+            onChange={(o) => setCustomer({ client: o })} onCreate={(name) => quickAdd.client("Other", name)} />
+          <div className={styles.hint}>Any client in Sales &amp; Leads; a new one is added with type “Other”</div>
+        </div>
+        <div className={styles.field}><label>Contact person</label><input className={styles.input} value={form.customer.contactName} onChange={(e) => setCustomer({ contactName: e.target.value })} aria-label="Customer contact person" /></div>
+        <div className={styles.field}><label>Email</label><input className={styles.input} value={form.customer.email} onChange={(e) => setCustomer({ email: e.target.value })} placeholder="name@company.com" aria-label="Customer email" /></div>
+        <div className={styles.field}><label>Phone</label><input className={styles.input} value={form.customer.phone} onChange={(e) => setCustomer({ phone: e.target.value })} aria-label="Customer phone" /></div>
+      </div>
+
+      <div className={styles.field} style={{ marginBottom: 6 }}><label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Cargo</label></div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead><tr><th>#</th><th>Description<span className={styles.req}>*</span></th><th>Quantity</th><th>Unit</th><th>Bags / pieces</th><th>Package unit</th><th>Remarks</th><th /></tr></thead>
@@ -41,6 +59,27 @@ function StepCargo({ form, update }) {
         {total > 0 && <span className={styles.subtle}>Total: {total.toLocaleString("en-IN")} MT</span>}
       </div>
       <div className={styles.hint}>Cargo is optional at this stage; lines without a description are ignored.</div>
+
+      <div className={styles.formGrid} style={{ marginTop: 16, borderTop: "1px solid #eef0f3", paddingTop: 12 }}>
+        <div className={`${styles.field} ${styles.full}`}>
+          <label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Fixture <span className={styles.subtle} style={{ fontWeight: 400 }}>· office time ({officeTz})</span></label>
+        </div>
+        <div className={styles.field}>
+          <label>Cargo fixed</label>
+          <PortDateTimeInput value={form.fixture.cargoFixedAt} zone={officeTz} onChange={setFixture("cargoFixedAt")} ariaLabel="Cargo fixed" />
+        </div>
+        <div className={styles.field}>
+          <label>CP date</label>
+          <ZoneDateInput value={form.fixture.cpDate} zone={officeTz} onChange={setFixture("cpDate")} ariaLabel="CP date" />
+        </div>
+        <div className={styles.field}>
+          <label>Cargo laycan (from – to)</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <ZoneDateInput value={form.fixture.cargoLaycanFrom} zone={officeTz} onChange={setFixture("cargoLaycanFrom")} ariaLabel="Cargo laycan from" />
+            <ZoneDateInput value={form.fixture.cargoLaycanTo} zone={officeTz} onChange={setFixture("cargoLaycanTo")} ariaLabel="Cargo laycan to" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

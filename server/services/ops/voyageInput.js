@@ -100,6 +100,12 @@ async function normaliseVoyage(body, current = null) {
       await assertExist(Client, [out[key]], key === 'charterers' ? 'Charterer' : 'Owners');
     }
   }
+  if (has(b, 'customer')) {
+    const c = b.customer || {};
+    out.customer = { client: refId(c.client, 'Customer'), contactName: (c.contactName || '').trim(), email: (c.email || '').trim().toLowerCase(), phone: (c.phone || '').trim() };
+    await assertExist(Client, [out.customer.client], 'Customer');
+    if (out.customer.email && !/^\S+@\S+\.\S+$/.test(out.customer.email)) throw badRequest("Customer's email is not valid");
+  }
   if (has(b, 'brokers')) {
     out.brokers = refIds(b.brokers, 'Broker');
     await assertExist(Client, out.brokers, 'Broker');

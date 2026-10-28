@@ -44,6 +44,13 @@ const voyageSchema = new mongoose.Schema({
   charterers: { type: ObjectId, ref: 'Client', default: null },
   owners: { type: ObjectId, ref: 'Client', default: null },
   brokers: [{ type: ObjectId, ref: 'Client' }],
+  // Customer of the cargo (any client in Sales & Leads) and the contact for this voyage
+  customer: {
+    client: { type: ObjectId, ref: 'Client', default: null },
+    contactName: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+  },
   operators: [{ type: ObjectId, ref: 'Employee' }],
 
   fixture: {
