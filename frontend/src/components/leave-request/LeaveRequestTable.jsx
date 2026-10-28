@@ -143,8 +143,10 @@ function LeaveRequestTable({ onUpdate }) {
     });
 
     // The server says which step this login may take on each request: HOD (Pending → HOD Approved),
-    // HR (HOD Approved → Approved) or Admin (any open request); never on their own leave
+    // HR (HOD Approved → Approved) or Admin (any open request); never on their own leave.
+    // "waiting" = Admin on a request whose HOD has not approved yet: reject only (HR approves after the HOD).
     const canApprove = (request) => !!request.approval?.step;
+    const waitingForHod = (request) => request.approval?.step === "waiting";
     const stepLabel = (request) => ({ hod: "HOD", hr: "HR", admin: "Admin" }[request.approval?.step] || "");
 
 
@@ -643,13 +645,15 @@ function LeaveRequestTable({ onUpdate }) {
                                             <>
                                                 {canApprove(req) && (
                                                     <>
-                                                        <button
-                                                            className={`${styles.iconButton} ${styles.approveButton}`}
-                                                            onClick={() => handleApprove(req)}
-                                                            title="Approve"
-                                                        >
-                                                            <CheckIcon />
-                                                        </button>
+                                                        {!waitingForHod(req) && (
+                                                            <button
+                                                                className={`${styles.iconButton} ${styles.approveButton}`}
+                                                                onClick={() => handleApprove(req)}
+                                                                title={req.approval?.step === "hod" ? "Approve (HOD)" : "Approve"}
+                                                            >
+                                                                <CheckIcon />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             className={`${styles.iconButton} ${styles.rejectButton}`}
                                                             onClick={() => handleReject(req)}
