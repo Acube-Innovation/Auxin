@@ -96,6 +96,7 @@ async function populatedVoyage(id, user) {
     .populate('charterers', CLIENT)
     .populate('owners', CLIENT)
     .populate('brokers', CLIENT)
+    .populate('customer.client', CLIENT)
     .populate('operators', EMPLOYEE)
     .populate('bunker.supplier', CLIENT)
     .populate('delivery.port', 'name country timeZone')
@@ -360,6 +361,7 @@ router.post('/:id/clone', async (req, res) => {
       charterers: src.charterers,
       owners: src.owners,
       brokers: src.brokers,
+      customer: src.customer,
       operators: withCreatorAsOperator(req.user, (src.operators || []).map(String)),
       fixture: {},
       cargo: (src.cargo || []).map(({ _id, ...c }) => c),

@@ -1,16 +1,16 @@
 import React from "react";
-import Select from "react-select";
 import { PortDateTimeInput } from "../../../components/operations/PortDateTimeInput";
 import { suggestTimes } from "../../../utils/opsSuggest";
 import { zoneLabel } from "../../../utils/opsTime";
 import { clientOption, emptyRow } from "./wizardModel";
+import PickOrAdd from "./PickOrAdd";
 import styles from "../masters/Masters.module.css";
 
 const TYPES = [["LOADING", "Loading"], ["DISCHARGING", "Discharging"], ["BUNKERING", "Bunkering"]];
 const TYPE_COLOR = { LOADING: "#067647", DISCHARGING: "#b54708", BUNKERING: "#3538cd" };
 
 // Step 3 — Port rotation with ETB / ETC / ETS suggestions (features B6, B7)
-function StepRotation({ form, update, opts, settings }) {
+function StepRotation({ form, update, opts, settings, quickAdd }) {
   const setRow = (key, patch) => update((f) => ({ ...f, rows: f.rows.map((r) => (r.key === key ? { ...r, ...(typeof patch === "function" ? patch(r) : patch) } : r)) }));
   const move = (i, d) => update((f) => {
     const rows = [...f.rows];
@@ -19,7 +19,7 @@ function StepRotation({ form, update, opts, settings }) {
     [rows[i], rows[j]] = [rows[j], rows[i]];
     return { ...f, rows };
   });
-  const remove = (key) => update((f) => ({ ...f, rows: f.rows.filter((r) => r.key !== key), bunker: f.bunker.rowKey === key ? { ...f.bunker, rowKey: "" } : f.bunker }));
+  const remove = (key) => update((f) => ({ ...f, rows: f.rows.filter((r) => r.key !== key) }));
   const add = (type) => update((f) => ({ ...f, rows: [...f.rows, emptyRow(type)] }));
 
   // Choosing a port suggests its first default agent
@@ -62,7 +62,7 @@ function StepRotation({ form, update, opts, settings }) {
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 2fr 1fr 1fr", gap: 10 }}>
               <div className={styles.field}>
                 <label>Port<span className={styles.req}>*</span></label>
-                <Select inputId={`wz-port-${i + 1}`} options={opts.ports} value={row.port} onChange={(o) => choosePort(row, o)} placeholder="Select port…" />
+                <PickOrAdd inputId={`wz-port-${i + 1}`} what="port" options={opts.ports} value={row.port} onChange={(o) => choosePort(row, o)} onCreate={quickAdd.port} placeholder="Type to search or add…" />
               </div>
               <div className={styles.field}>
                 <label>Type<span className={styles.req}>*</span></label>
@@ -72,7 +72,8 @@ function StepRotation({ form, update, opts, settings }) {
               </div>
               <div className={styles.field}>
                 <label>Agent</label>
-                <Select inputId={`wz-agent-${i + 1}`} options={opts.clients.Agent} value={row.agent} onChange={(o) => setRow(row.key, { agent: o })} isClearable placeholder="Select agent…" />
+                <PickOrAdd inputId={`wz-agent-${i + 1}`} what="agent" options={opts.clients.Agent} value={row.agent} onChange={(o) => setRow(row.key, { agent: o })}
+                  onCreate={(name) => quickAdd.client("Agent", name)} isClearable placeholder="Type to search or add…" />
               </div>
               <div className={styles.field}>
                 <label>{row.type === "BUNKERING" ? "Quantity" : "Cargo qty"}</label>

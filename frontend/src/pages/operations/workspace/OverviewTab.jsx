@@ -49,6 +49,7 @@ function OverviewTab({ voyage, officeTz, canEdit, onOpenTasks, onActivated, onOp
           <div className={ws.sectionTitle}>Parties</div>
           <Row label="Vessel">{voyage.vessel?.name}{voyage.vessel?.imo ? ` · IMO ${voyage.vessel.imo}` : ""}{voyage.vessel?.type ? ` · ${voyage.vessel.type}` : ""}</Row>
           <Row label="Master">{[voyage.master?.name, voyage.master?.email, voyage.master?.phone].filter(Boolean).join(" · ") || "—"}</Row>
+          <Row label="Customer">{[voyage.customer?.client?.companyName, voyage.customer?.contactName, voyage.customer?.email, voyage.customer?.phone].filter(Boolean).join(" · ") || "—"}</Row>
           <Row label="Charterer">{dash(voyage.charterers?.companyName)}</Row>
           <Row label="Owners">{dash(voyage.owners?.companyName)}</Row>
           <Row label="Brokers">{(voyage.brokers || []).map((b) => b.companyName).join(", ") || "—"}</Row>
