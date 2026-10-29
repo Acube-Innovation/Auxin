@@ -453,10 +453,16 @@ router.get('/', authMiddleware, async (req, res) => {
             filter.status = status && status !== 'All' ? (statuses.includes(status) ? status : 'RESTRICTED_VIEW') : { $in: statuses };
             if (employeeId) filter.employee = employeeId;
         } else {
-            // Everyone else: their own requests plus those of the people they are HOD or HR for (Leave Approvers)
-            const { hodLeaveIds, hrLeaveIds } = await approverScope(req.user._id);
-            const visible = new Set([...(await ownLeaveIds(req.user)), ...hodLeaveIds, ...hrLeaveIds]);
-            filter.employee = employeeId ? (visible.has(String(employeeId)) ? employeeId : { $in: [] }) : { $in: [...visible] };
+            // Everyone else: their own requests plus those of the people they are HOD or HR for (Leave Approvers).
+            // HR sees the requests of someone who has an HOD only once the HOD has approved them.
+            const { hodLeaveIds, hrLeaveIds, hrAfterHodLeaveIds } = await approverScope(req.user._id);
+            const always = new Set([...(await ownLeaveIds(req.user)), ...hodLeaveIds, ...[...hrLeaveIds].filter((x) => !hrAfterHodLeaveIds.has(x))]);
+            const afterHod = [...hrAfterHodLeaveIds].filter((x) => !always.has(x));
+            const pick = (ids) => (employeeId ? (ids.includes(String(employeeId)) ? [employeeId] : []) : ids);
+            filter.$or = [
+                { employee: { $in: pick([...always]) } },
+                { employee: { $in: pick(afterHod) }, $or: [{ status: { $in: ['HOD Approved', 'Approved'] } }, { hodApprovedAt: { $ne: null } }] },
+            ];
             if (status && status !== 'All') filter.status = status;
         }
 

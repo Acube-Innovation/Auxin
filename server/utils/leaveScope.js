@@ -85,7 +85,13 @@ async function approverScope(userId) {
         LeaveApprover.find({ hod: userId }).lean(),
         LeaveApprover.find({ hr: userId }).lean(),
     ]);
-    return { hodOf, hrOf, hodLeaveIds: await leaveIdsOfMappings(hodOf), hrLeaveIds: await leaveIdsOfMappings(hrOf) };
+    return {
+        hodOf, hrOf,
+        hodLeaveIds: await leaveIdsOfMappings(hodOf),
+        hrLeaveIds: await leaveIdsOfMappings(hrOf),
+        // HR sees a request of someone with an HOD only after the HOD has approved it; without an HOD, HR is first
+        hrAfterHodLeaveIds: await leaveIdsOfMappings(hrOf.filter((m) => m.hod)),
+    };
 }
 
 /** Ids a login's own leave requests carry: the login and its Employee record */
