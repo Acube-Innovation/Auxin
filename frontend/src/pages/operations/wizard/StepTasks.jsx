@@ -22,7 +22,7 @@ function StepTasks({ step, preview, excluded, setExcluded, stale, busy, onRefres
   const ticked = tasks.filter((t) => !excluded.has(t.key)).length;
 
   return (
-    <div id="wz-step-tasks" className={styles.card} style={{ marginTop: 18, padding: "0.9rem 1rem" }}>
+    <div id="wz-step-tasks">
       <div className={styles.toolbar}>
         <b style={{ color: "#0b3a6f" }}>Tasks for {WHAT[step]}</b>
         {preview && !stale && <span className={styles.subtle}>{tasks.length} tasks · <b>{ticked}</b> ticked · {tasks.length - ticked} unticked (kept as Not applicable)</span>}

@@ -10,7 +10,7 @@ import { useToast } from "../../../context/ToastContext";
 import { DEFAULT_SETTINGS } from "../../../utils/opsSuggest";
 import { OPS_OPERATORS } from "../../../config/opsRoles";
 import {
-  STEPS, emptyForm, fromVoyage, voyagePayload, rowPayload, stepError, vesselOption, portOption, clientOption, employeeOption,
+  STEPS, stepOfTask, emptyForm, fromVoyage, voyagePayload, rowPayload, stepError, vesselOption, portOption, clientOption, employeeOption,
 } from "./wizardModel";
 import StepFixture from "./StepFixture";
 import StepCargo from "./StepCargo";
@@ -43,6 +43,7 @@ function VoyageWizard() {
   const [opts, setOpts] = useState({ vessels: [], ports: [], employees: [], clients: {} });
   const [form, setForm] = useState(emptyForm());
   const [step, setStep] = useState(startStep);
+  const [view, setView] = useState(openTasks && startStep <= 3 ? "tasks" : "details"); // tabs inside a step: its fields | its tasks
   const [voyageId, setVoyageId] = useState(id || null);
   const [saved, setSaved] = useState(null);        // populated voyage after the last save
   const [preview, setPreview] = useState(null);
@@ -241,11 +242,23 @@ function VoyageWizard() {
   useEffect(() => {
     if (!openTasks || autoTasks.current || !saved || !meta) return;
     autoTasks.current = true;
-    loadPreview().then(() => setTimeout(() => document.getElementById("wz-step-tasks")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300))
-      .catch((e) => setError(e.message));
+    loadPreview().catch((e) => setError(e.message));
   }, [openTasks, saved, meta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Move to a step. Step 4 (Review) needs a saved, valid draft and the generated tasks.
+  // The Tasks tab of a step: generated from the saved draft (saved first when there are changes)
+  const showTasks = () => {
+    setView("tasks");
+    if (!preview || previewStale || dirty || !voyageId) refreshTasks();
+  };
+  // Moving to another step shows that step's fields first (the notification link opens on Tasks only once)
+  const shownStep = useRef(step);
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    setView("details");
+  }, [step]);
+
   const goTo = async (target) => {
     setError("");
     if (target <= 3) {
@@ -367,10 +380,20 @@ function VoyageWizard() {
           {error && <div className={shared.formError} role="alert">{error}</div>}
           {!meta ? <div className={shared.empty}>Loading…</div> : (
             <>
-              {step === 1 && <StepCargo {...stepProps} />}
-              {step === 2 && <StepFixture {...stepProps} />}
-              {step === 3 && <StepRotation {...stepProps} />}
-              {step <= 3 && <StepTasks step={step} preview={preview} excluded={excluded} setExcluded={setExcluded} stale={previewStale || dirty} busy={busy} onRefresh={refreshTasks} />}
+              {step <= 3 && (
+                <div className={styles.subTabs} role="tablist" aria-label="Step sections">
+                  <button type="button" role="tab" aria-selected={view === "details"} className={view === "details" ? styles.subTabActive : styles.subTab} onClick={() => setView("details")}>
+                    {STEPS[step - 1]}
+                  </button>
+                  <button type="button" role="tab" aria-selected={view === "tasks"} className={view === "tasks" ? styles.subTabActive : styles.subTab} onClick={showTasks}>
+                    Tasks{preview && !previewStale && !dirty ? ` (${preview.tasks.filter((t) => stepOfTask(t) === step).length})` : ""}
+                  </button>
+                </div>
+              )}
+              {step === 1 && view === "details" && <StepCargo {...stepProps} />}
+              {step === 2 && view === "details" && <StepFixture {...stepProps} />}
+              {step === 3 && view === "details" && <StepRotation {...stepProps} />}
+              {step <= 3 && view === "tasks" && <StepTasks step={step} preview={preview} excluded={excluded} setExcluded={setExcluded} stale={previewStale || dirty} busy={busy} onRefresh={refreshTasks} />}
               {step === 4 && <><OneOffTasks adhoc={adhoc} setAdhoc={setAdhoc} /><StepReview voyage={saved} officeTz={officeTz} counts={counts} /></>}
             </>
           )}
