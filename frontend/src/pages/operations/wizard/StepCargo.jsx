@@ -1,4 +1,5 @@
 import React from "react";
+import Select from "react-select";
 import { emptyCargo } from "./wizardModel";
 import PickOrAdd from "./PickOrAdd";
 import { PortDateTimeInput, ZoneDateInput } from "../../../components/operations/PortDateTimeInput";
@@ -28,6 +29,12 @@ function StepCargo({ form, update, opts, officeTz, quickAdd }) {
         <div className={styles.field}><label>Contact person</label><input className={styles.input} value={form.customer.contactName} onChange={(e) => setCustomer({ contactName: e.target.value })} aria-label="Customer contact person" /></div>
         <div className={styles.field}><label>Email</label><input className={styles.input} value={form.customer.email} onChange={(e) => setCustomer({ email: e.target.value })} placeholder="name@company.com" aria-label="Customer email" /></div>
         <div className={styles.field}><label>Phone</label><input className={styles.input} value={form.customer.phone} onChange={(e) => setCustomer({ phone: e.target.value })} aria-label="Customer phone" /></div>
+        <div className={styles.field}>
+          <label>Assigned to</label>
+          <Select inputId="wz-cargo-assignee" options={opts.employees} value={form.cargoAssignee} isClearable placeholder="Select employee…"
+            onChange={(o) => update((f) => ({ ...f, cargoAssignee: o }))} />
+          <div className={styles.hint}>Gets the cargo tasks below and a notification (bell + email) when the draft is saved</div>
+        </div>
       </div>
 
       <div className={styles.field} style={{ marginBottom: 6 }}><label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Cargo</label></div>

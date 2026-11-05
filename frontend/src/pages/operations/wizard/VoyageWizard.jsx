@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import OpsLayout from "../../../components/operations/OpsLayout";
 import ProgressSteps from "../../../components/ProgressSteps";
 import OpsMasterService from "../../../services/OpsMasterService";
@@ -15,7 +15,8 @@ import {
 import StepFixture from "./StepFixture";
 import StepCargo from "./StepCargo";
 import StepRotation from "./StepRotation";
-import StepTaskPreview from "./StepTaskPreview";
+import StepTasks from "./StepTasks";
+import OneOffTasks from "./OneOffTasks";
 import StepReview from "./StepReview";
 import QuickAddPort from "./QuickAddPort";
 import shared from "../masters/Masters.module.css";
@@ -24,10 +25,16 @@ import styles from "./Wizard.module.css";
 const CLIENT_TYPES = ["Charterer", "Ship Owners", "Broker", "Agent", "Supplier"];
 const addTo = (list, opt) => [...(list || []).filter((o) => o.value !== opt.value), opt].sort((a, b) => a.label.localeCompare(b.label));
 
-// New Voyage wizard — /operations/voyages/new and /operations/voyages/:id/edit (drafts) — features B1–B10
+// New Voyage wizard — /operations/voyages/new and /operations/voyages/:id/edit (drafts) — features B1–B10.
+// Steps: Cargo → Fixture & Vessel → Port Rotation (each with its own task list) → Review & Activate.
+// A draft can be saved from Cargo alone; activation (from any step) needs the vessel, operators and ports.
+// ?step=1&tasks=1 opens a step with its task list (link of the cargo-assignee notification).
 function VoyageWizard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const query = new URLSearchParams(useLocation().search);
+  const startStep = Math.min(Math.max(Number(query.get("step")) || 1, 1), 4);
+  const openTasks = query.get("tasks") === "1";
   const { showToast } = useToast();
   const role = localStorage.getItem("role") || "";
   const isOperator = OPS_OPERATORS.includes(role);
@@ -35,10 +42,11 @@ function VoyageWizard() {
   const [meta, setMeta] = useState(null);
   const [opts, setOpts] = useState({ vessels: [], ports: [], employees: [], clients: {} });
   const [form, setForm] = useState(emptyForm());
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(startStep);
   const [voyageId, setVoyageId] = useState(id || null);
   const [saved, setSaved] = useState(null);        // populated voyage after the last save
   const [preview, setPreview] = useState(null);
+  const [previewStale, setPreviewStale] = useState(false); // the form changed since the tasks were generated
   const [excluded, setExcluded] = useState(new Set());
   const [adhoc, setAdhoc] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -116,7 +124,7 @@ function VoyageWizard() {
     setForm((f) => fn(f));
     setDirty(true);
     setError(""); // the user is fixing it
-    setPreview(null); // tasks must be regenerated after any change
+    setPreviewStale(true); // tasks must be regenerated after any change
   }, []);
 
   // ------------------------------------------------------------------ quick add (type a name that is not in the list)
@@ -153,9 +161,10 @@ function VoyageWizard() {
   // ------------------------------------------------------------------ save draft (create, or sync voyage + port calls)
   const saveDraft = async () => {
     const payload = voyagePayload(form);
+    const rows = form.rows.filter((r) => r.port || r._id); // empty starter rows are not saved (a draft from Cargo alone)
     let v;
     if (!voyageId) {
-      v = await OpsVoyageService.create({ ...payload, portCalls: form.rows.map(rowPayload) });
+      v = await OpsVoyageService.create({ ...payload, portCalls: rows.map(rowPayload) });
       loadedId.current = v._id;
       setVoyageId(v._id);
       // Show the draft's address without a route change (keeps the wizard's step and state)
@@ -165,10 +174,10 @@ function VoyageWizard() {
       await OpsVoyageService.update(voyageId, payload);
       // 2. port calls: remove, update, add
       const server = await OpsVoyageService.get(voyageId);
-      const keep = new Set(form.rows.filter((r) => r._id).map((r) => r._id));
+      const keep = new Set(rows.filter((r) => r._id).map((r) => r._id));
       for (const pc of server.portCalls) if (!keep.has(pc._id)) await OpsVoyageService.removePortCall(voyageId, pc._id);
       const ids = [];
-      for (const row of form.rows) {
+      for (const row of rows) {
         if (row._id) {
           await OpsVoyageService.updatePortCall(voyageId, row._id, rowPayload(row));
           ids.push(row._id);
@@ -195,15 +204,48 @@ function VoyageWizard() {
     return null;
   };
 
+  // Generate the tasks of the saved draft. Unticks made earlier are kept; tasks seen for the first time
+  // start ticked unless optional. Returns { p, ex } for callers that continue at once (activation).
+  const seenKeys = useRef(new Set());
   const loadPreview = async () => {
     const p = await OpsVoyageService.previewTasks(voyageIdRef.current);
+    const ex = new Set(p.tasks.filter((t) => (seenKeys.current.has(t.key) ? excluded.has(t.key) : !t.included)).map((t) => t.key));
+    p.tasks.forEach((t) => seenKeys.current.add(t.key));
+    setExcluded(ex);
     setPreview(p);
-    setExcluded(new Set(p.tasks.filter((t) => !t.included).map((t) => t.key)));
+    setPreviewStale(false);
+    return { p, ex };
   };
   const voyageIdRef = useRef(voyageId);
   useEffect(() => { voyageIdRef.current = voyageId; }, [voyageId]);
 
-  // Move to a step. Steps 4 (Task Preview) and 5 (Review) need a saved, valid draft and the generated tasks.
+  // Save (when needed) and show the tasks of the current step
+  const refreshTasks = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      if (dirty || !voyageId) {
+        const v = await saveDraft();
+        voyageIdRef.current = v._id;
+      }
+      await loadPreview();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The notification link (?tasks=1) opens the step with its task list
+  const autoTasks = useRef(false);
+  useEffect(() => {
+    if (!openTasks || autoTasks.current || !saved || !meta) return;
+    autoTasks.current = true;
+    loadPreview().then(() => setTimeout(() => document.getElementById("wz-step-tasks")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300))
+      .catch((e) => setError(e.message));
+  }, [openTasks, saved, meta]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Move to a step. Step 4 (Review) needs a saved, valid draft and the generated tasks.
   const goTo = async (target) => {
     setError("");
     if (target <= 3) {
@@ -222,7 +264,7 @@ function VoyageWizard() {
         const v = await saveDraft();
         voyageIdRef.current = v._id;
       }
-      if (!preview || dirty) await loadPreview();
+      if (!preview || previewStale || dirty) await loadPreview();
       setStep(target);
     } catch (e) {
       setError(e.message);
@@ -233,8 +275,6 @@ function VoyageWizard() {
 
   const saveOnly = async () => {
     setError("");
-    const problem = stepError(2, form, { isOperator, settings }); // a draft needs the vessel and operators
-    if (problem) { setError(problem); setStep(2); return; }
     setBusy(true);
     try {
       const v = await saveDraft();
@@ -246,14 +286,35 @@ function VoyageWizard() {
     }
   };
 
+  // Activate from any step: everything is checked first (vessel, operators, ports), the draft saved and the tasks generated
   const activate = async () => {
-    const included = preview.tasks.length - excluded.size;
-    if (!window.confirm(`Activate ${saved.voyageNo}? ${included + adhoc.length} tasks will be created${excluded.size ? ` and ${excluded.size} kept as Not applicable` : ""}.`)) return;
-    setBusy(true);
     setError("");
+    const problem = checkUpTo(3);
+    if (problem) { setError(problem.err); setStep(problem.step); return; }
+    if (!form.rows.some((r) => r.port)) { setError("Add at least one port call before activating"); setStep(3); return; }
+    setBusy(true);
+    let p = preview;
+    let exSet = excluded;
+    let voyageNo = saved?.voyageNo;
     try {
-      const ex = preview.tasks.filter((t) => excluded.has(t.key)).map((t) => ({ code: t.code, portCall: t.portCall ? t.portCall._id : null }));
-      const res = await OpsVoyageService.activate(voyageId, { excluded: ex, adhocTasks: adhoc.map(({ name, dueDate, priority }) => ({ name, dueDate, priority })) });
+      if (dirty || !voyageId) {
+        const v = await saveDraft();
+        voyageIdRef.current = v._id;
+        voyageNo = v.voyageNo;
+      }
+      if (!p || previewStale || dirty) ({ p, ex: exSet } = await loadPreview());
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    const included = p.tasks.length - exSet.size;
+    if (!window.confirm(`Activate ${voyageNo}? ${included + adhoc.length} tasks will be created${exSet.size ? ` and ${exSet.size} kept as Not applicable` : ""}.`)) return;
+    setBusy(true);
+    try {
+      const ex = p.tasks.filter((t) => exSet.has(t.key)).map((t) => ({ code: t.code, portCall: t.portCall ? t.portCall._id : null }));
+      const res = await OpsVoyageService.activate(voyageIdRef.current, { excluded: ex, adhocTasks: adhoc.map(({ name, dueDate, priority }) => ({ name, dueDate, priority })) });
       showToast(`${res.voyageNo} is active: ${res.activation.created} tasks created`, "success");
       setDirty(false);
       navigate(`/operations/voyages/${res._id}`);
@@ -309,8 +370,8 @@ function VoyageWizard() {
               {step === 1 && <StepCargo {...stepProps} />}
               {step === 2 && <StepFixture {...stepProps} />}
               {step === 3 && <StepRotation {...stepProps} />}
-              {step === 4 && <StepTaskPreview preview={preview} excluded={excluded} setExcluded={setExcluded} adhoc={adhoc} setAdhoc={setAdhoc} loading={busy} />}
-              {step === 5 && <StepReview voyage={saved} officeTz={officeTz} counts={counts} />}
+              {step <= 3 && <StepTasks step={step} preview={preview} excluded={excluded} setExcluded={setExcluded} stale={previewStale || dirty} busy={busy} onRefresh={refreshTasks} />}
+              {step === 4 && <><OneOffTasks adhoc={adhoc} setAdhoc={setAdhoc} /><StepReview voyage={saved} officeTz={officeTz} counts={counts} /></>}
             </>
           )}
         </div>
@@ -320,8 +381,8 @@ function VoyageWizard() {
           <div className={shared.toolbarLeft}>
             {step > 1 && <button className={shared.btnSecondary} onClick={() => goTo(step - 1)} disabled={busy}>Back</button>}
             <button className={shared.btnSecondary} onClick={saveOnly} disabled={busy || (!dirty && Boolean(voyageId))}>{busy ? "Saving…" : "Save draft"}</button>
-            {step < 5 && <button className={shared.btnPrimary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 3 ? "Save & preview tasks" : "Next"}</button>}
-            {step === 5 && <button className={shared.btnPrimary} onClick={activate} disabled={busy || !preview}>{busy ? "Activating…" : "Activate voyage"}</button>}
+            {step < 4 && <button className={shared.btnSecondary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 3 ? "Next: review" : "Next"}</button>}
+            <button className={shared.btnPrimary} onClick={activate} disabled={busy}>{busy ? "Working…" : "Activate voyage"}</button>
           </div>
         </div>
       </div>

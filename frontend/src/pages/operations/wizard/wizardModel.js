@@ -6,7 +6,16 @@ import { suggestTimes } from "../../../utils/opsSuggest";
 let seq = 0;
 export const newKey = () => `k${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Task Preview", "Review & Activate"];
+export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Review & Activate"];
+
+// Which step's task list a generated task belongs to (by its stage): Cargo, Fixture & Vessel or Port Rotation
+const CARGO_STAGES = ["CARGO_FIXED", "BEFORE_SUBS"];
+export const stepOfTask = (task) => {
+  const st = task.stage || {};
+  if (CARGO_STAGES.includes(st.code)) return 1;
+  if (st.scope === "PORT_CALL" || st.code === "BUNKER_BOOKED") return 3;
+  return 2;
+};
 
 export const clientOption = (c) => (c ? { value: c._id, label: c.companyName } : null);
 export const employeeOption = (e) => (e ? { value: e._id, label: e.employeeName } : null);
@@ -28,6 +37,7 @@ export function emptyForm() {
     owners: null,
     brokers: [],
     customer: emptyCustomer(),
+    cargoAssignee: null,
     operators: [],
     fixture: { cargoFixedAt: null, vesselFixedAt: null, cargoLaycanFrom: null, cargoLaycanTo: null, vesselLaycanFrom: null, vesselLaycanTo: null, cpDate: null },
     cargo: [emptyCargo()],
@@ -62,9 +72,10 @@ export function fromVoyage(v) {
     brokers: (v.brokers || []).map(clientOption),
     customer: { client: clientOption(v.customer?.client), contactName: v.customer?.contactName || "", email: v.customer?.email || "", phone: v.customer?.phone || "" },
     operators: (v.operators || []).map(employeeOption),
+    cargoAssignee: employeeOption(v.cargoAssignee),
     fixture: { ...emptyForm().fixture, ...(v.fixture || {}) },
     cargo: (v.cargo || []).length ? v.cargo.map((c) => ({ key: newKey(), description: c.description, quantity: c.quantity ?? "", unit: c.unit || "MT", packages: c.packages ?? "", packageUnit: c.packageUnit || "", remarks: c.remarks || "" })) : [emptyCargo()],
-    rows,
+    rows: rows.length ? rows : [emptyRow("LOADING"), emptyRow("DISCHARGING")], // a draft saved from Cargo has none yet
     delivery: handover(v.delivery),
     redelivery: handover(v.redelivery),
     remarks: v.remarks || "",
@@ -85,6 +96,7 @@ export function voyagePayload(form) {
     brokers: form.brokers.map(val),
     customer: { client: val(form.customer.client), contactName: form.customer.contactName, email: form.customer.email, phone: form.customer.phone },
     operators: form.operators.map(val),
+    cargoAssignee: val(form.cargoAssignee),
     fixture: form.fixture,
     cargo: form.cargo.filter((c) => String(c.description).trim()).map((c) => ({
       description: c.description.trim(), quantity: num(c.quantity), unit: c.unit || "MT", packages: num(c.packages), packageUnit: c.packageUnit, remarks: c.remarks,

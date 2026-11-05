@@ -35,7 +35,8 @@ const voyageSchema = new mongoose.Schema({
     setAt: { type: Date, default: null },
   },
 
-  vessel: { type: ObjectId, ref: 'Vessel', required: true },
+  // A draft may be saved from the Cargo step before the vessel is known; activation needs it
+  vessel: { type: ObjectId, ref: 'Vessel', required: function () { return this.status !== 'DRAFT'; } },
   master: {
     name: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
@@ -52,6 +53,8 @@ const voyageSchema = new mongoose.Schema({
     phone: { type: String, trim: true },
   },
   operators: [{ type: ObjectId, ref: 'Employee' }],
+  // Employee who gets the cargo-stage tasks (Once Cargo Fixed, Before Vessel Subs Lifted) instead of the operators
+  cargoAssignee: { type: ObjectId, ref: 'Employee', default: null },
 
   fixture: {
     cargoFixedAt: { type: Date, default: null },
