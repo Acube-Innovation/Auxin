@@ -100,7 +100,7 @@ async function buildTemplateTasks(voyage, portCalls, { session, onlyPortCall = n
         isOptional: Boolean(t.isOptional),
         linkedField: t.linkedField || null,
         autoCompleteOnField: Boolean(t.autoCompleteOnField),
-        assignedTo: await assignees(t.defaultRole),
+        assignedTo: voyage.cargoAssignee && CARGO_STAGES.has(stage.code) ? [idOf(voyage.cargoAssignee)] : await assignees(t.defaultRole),
         _stage: { _id: stage._id, code: stage.code, name: stage.name, order: stage.order, scope: stage.scope },
         _portCall: pc ? { _id: pc._id, seq: pc.seq, type: pc.type, port: portName } : null,
       });
@@ -108,6 +108,9 @@ async function buildTemplateTasks(voyage, portCalls, { session, onlyPortCall = n
   }
   return tasks.sort((a, b) => a.sortKey - b.sortKey);
 }
+
+// Stages whose tasks go to the voyage's cargo assignee (when set) instead of the operators
+const CARGO_STAGES = new Set(['CARGO_FIXED', 'BEFORE_SUBS']);
 
 const keyOf = (code, portCallId) => `${code}:${portCallId ? idOf(portCallId) : ''}`;
 

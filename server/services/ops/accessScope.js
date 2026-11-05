@@ -27,14 +27,14 @@ async function voyageFilter(user) {
     const emp = employeeIdOf(user);
     if (!emp) return { _id: null }; // not linked to an employee → nothing
     const viaTasks = await taskVoyageIds(user);
-    return viaTasks.length ? { $or: [{ operators: emp }, { _id: { $in: viaTasks } }] } : { operators: emp };
+    return { $or: [{ operators: emp }, { cargoAssignee: emp }, ...(viaTasks.length ? [{ _id: { $in: viaTasks } }] : [])] };
   }
   return { _id: null };
 }
 
 const operatesVoyage = (user, voyage) => {
   const emp = employeeIdOf(user);
-  return Boolean(emp && (voyage.operators || []).some((o) => String(o._id || o) === emp));
+  return Boolean(emp && ((voyage.operators || []).some((o) => String(o._id || o) === emp) || String(voyage.cargoAssignee?._id || voyage.cargoAssignee || '') === emp));
 };
 
 // "Assigned" = operator of the voyage, or assignee of one of its tasks

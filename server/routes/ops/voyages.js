@@ -28,6 +28,32 @@ const { VOYAGE_STATUSES } = Voyage;
 
 const CLIENT = 'companyName clientType email phone';
 const EMPLOYEE = 'employeeName emailId profilePhoto employeeStatus';
+const notifier = require('../../services/ops/notifier');
+const { APP_URL } = require('../../services/ops/config');
+
+// Bell + email to the employee who was given the cargo tasks; the link opens the Cargo step's task list
+// (or, once active, the voyage's Operations View)
+async function notifyCargoAssignee(voyageId, user) {
+  try {
+    const v = await Voyage.findById(voyageId).populate('vessel', 'name').lean();
+    if (!v || !v.cargoAssignee) return;
+    const who = (await notifier.employeesWithUsers([v.cargoAssignee])).get(String(v.cargoAssignee));
+    if (!who) return;
+    const url = v.status === 'DRAFT' ? `/operations/voyages/${v._id}/edit?step=1&tasks=1` : `/operations/voyages/${v._id}?tab=tasks`;
+    const what = `${v.voyageNo}${v.vessel ? ` (${v.vessel.name})` : ''}`;
+    const title = `Cargo tasks assigned: ${what}`;
+    const body = `${user.username} assigned you the cargo tasks of ${what}.`;
+    await notifier.bell(who.users, { id: `cargo-assignee-${v._id}-${Date.now()}`, type: 'ops-cargo-assigned', title, body, url });
+    const to = (who.employee.emailId || who.users.find((u) => u.emailId)?.emailId || '').trim();
+    await notifier.email({
+      to, toName: who.employee.employeeName, subject: title, kind: 'ASSIGNMENT',
+      html: `<div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;"><h2 style="color:#1a73e8;">Cargo tasks assigned to you</h2>`
+        + `<p>${body}</p><p><a href="${APP_URL}${url}">Open the cargo tasks of ${what}</a></p></div>`,
+    });
+  } catch (err) {
+    console.error('Cargo assignee notification failed:', err.message);
+  }
+}
 
 // Status changes allowed through PUT. DRAFT → ACTIVE only through /activate.
 const STATUS_MOVES = {
@@ -51,7 +77,9 @@ function toObjectIds(filter) {
   const conv = (v) => (typeof v === 'string' && mongoose.isValidObjectId(v) ? new mongoose.Types.ObjectId(v) : v);
   if (filter._id === null) return { _id: null };
   if (filter.$or) {
-    return { $or: filter.$or.map((c) => (c.operators ? { operators: conv(c.operators) } : { _id: { $in: c._id.$in.map(conv) } })) };
+    return { $or: filter.$or.map((c) => (c.operators ? { operators: conv(c.operators) }
+      : c.cargoAssignee ? { cargoAssignee: conv(c.cargoAssignee) }
+        : { _id: { $in: c._id.$in.map(conv) } })) };
   }
   if (filter.operators) return { operators: conv(filter.operators) };
   return {};
@@ -98,6 +126,7 @@ async function populatedVoyage(id, user) {
     .populate('brokers', CLIENT)
     .populate('customer.client', CLIENT)
     .populate('operators', EMPLOYEE)
+    .populate('cargoAssignee', EMPLOYEE)
     .populate('bunker.supplier', CLIENT)
     .populate('delivery.port', 'name country timeZone')
     .populate('redelivery.port', 'name country timeZone')
@@ -226,7 +255,6 @@ router.post('/', async (req, res) => {
     if (!access.canCreate(req.user)) throw httpError(403, 'You cannot create voyages');
     const data = await normaliseVoyage(req.body, null);
     data.operators = withCreatorAsOperator(req.user, data.operators);
-    if (!data.operators.length) throw badRequest('Choose at least one operator');
 
     const portInputs = Array.isArray(req.body.portCalls) ? req.body.portCalls : [];
     const portCalls = [];
@@ -251,6 +279,7 @@ router.post('/', async (req, res) => {
       await voyage.save();
     }
     await VoyageLog.write(voyage._id, req.user, 'CREATED', `Draft ${voyage.voyageNo} created`);
+    if (voyage.cargoAssignee) notifyCargoAssignee(voyage._id, req.user);
     res.status(201).json(await populatedVoyage(voyage._id, req.user));
   } catch (err) {
     if (voyage) {
@@ -284,7 +313,8 @@ router.put('/:id', async (req, res) => {
       throw badRequest(`A ${current.status.toLowerCase()} voyage cannot be edited. Re-open it first.`);
     }
     const data = await normaliseVoyage(req.body, current.toObject());
-    if (data.operators && !data.operators.length) throw badRequest('A voyage needs at least one operator');
+    if (data.operators && !data.operators.length && current.status !== 'DRAFT') throw badRequest('A voyage needs at least one operator');
+    const assigneeChanged = Object.prototype.hasOwnProperty.call(req.body, 'cargoAssignee') && String(data.cargoAssignee || '') !== String(current.cargoAssignee || '');
     if (data.bunker && data.bunker.portCall) {
       const pc = await PortCall.findOne({ _id: data.bunker.portCall, voyage: current._id });
       if (!pc || pc.type !== 'BUNKERING') throw badRequest('The bunkering port call must be a BUNKERING call of this voyage');
@@ -319,6 +349,7 @@ router.put('/:id', async (req, res) => {
     }
     emitDatesChanged(req, current._id, result);
     emitVoyageUpdated(req, current._id, wantsStatus ? 'status' : 'voyage');
+    if (assigneeChanged && data.cargoAssignee) notifyCargoAssignee(current._id, req.user);
     res.json({ ...(await populatedVoyage(current._id, req.user)), movedTasks: result.movedTasks, dueSoon: result.dueSoon, autoCompleted: result.autoCompleted || 0, checksTicked: result.checksTicked || 0 });
   } catch (err) { sendError(res, err, 'Error updating voyage'); }
 });
@@ -348,7 +379,7 @@ router.post('/:id/clone', async (req, res) => {
     const source = await loadVisible(req, req.params.id);
     if (!access.canCreate(req.user)) throw httpError(403, 'You cannot create voyages');
     const src = source.toObject();
-    const vessel = await Vessel.findById(src.vessel).select('isActive name').lean();
+    const vessel = src.vessel ? await Vessel.findById(src.vessel).select('isActive name').lean() : { isActive: true };
     if (!vessel || !vessel.isActive) throw badRequest('The vessel of this voyage is no longer active; choose another vessel on a new voyage');
 
     const handover = (h) => ({ place: h?.place || '', port: h?.port || null, timeZone: h?.timeZone || OFFICE_TZ, estimated: null, original: null, actual: null });
@@ -418,6 +449,8 @@ router.post('/:id/generate-preview', async (req, res) => {
 router.post('/:id/activate', async (req, res) => {
   try {
     const voyage = await loadEditable(req, req.params.id);
+    if (!voyage.vessel) throw badRequest('Choose the vessel (Fixture & Vessel step) before activating');
+    if (!(voyage.operators || []).length) throw badRequest('Choose at least one operator (Fixture & Vessel step) before activating');
     const result = await taskEngine.activate(voyage._id, {
       excluded: Array.isArray(req.body.excluded) ? req.body.excluded : [],
       adhocTasks: Array.isArray(req.body.adhocTasks) ? req.body.adhocTasks : [],
