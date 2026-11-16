@@ -7,6 +7,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const { clientUsage } = require('../services/ops/references');
+const salesActivity = require('../services/salesActivity');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require("nodemailer");
@@ -225,7 +226,9 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
     console.log(`Deleted ${docResult.deletedCount} related documents`);
 
     // 2. Delete Clients (Events are embedded in Client, so they are deleted automatically)
+    const doomed = await Client.find({ _id: { $in: ids } }).select('companyName leadType').lean();
     const result = await Client.deleteMany({ _id: { $in: ids } });
+    for (const c of doomed) salesActivity.record(req.user, { entity: 'client', action: 'deleted', client: c });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: 'No clients found to delete' });
@@ -412,6 +415,7 @@ router.post('/:id/remarks', authMiddleware, async (req, res) => {
       }
     });
     await remark.save();
+    salesActivity.record(req.user, { entity: 'remark', action: 'added', client, title: text });
     res.status(201).json(remark);
   } catch (error) {
     res.status(500).json({ message: 'Error adding remark', error: error.message });
@@ -538,6 +542,10 @@ router.post('/', authMiddleware,
 
       const client = new Client(clientData);
       const savedClient = await client.save();
+      salesActivity.record(req.user, {
+        entity: 'client', action: 'added', client: savedClient,
+        stageChange: savedClient.currentStatus ? { from: '', to: savedClient.currentStatus } : undefined,
+      });
 
       // SKIP ALL NOTIFICATIONS if disableNotifications is true
       if (!disableNotifications) {
@@ -621,6 +629,12 @@ router.put('/:id', authMiddleware, // keep sales_executive also admin separately
         { new: true, runValidators: true }
       );
 
+      if (updatedClient) {
+        const diff = salesActivity.clientDiff(currentClient.toObject(), updatedClient.toObject());
+        if (diff.changes.length || diff.stageChange) {
+          salesActivity.record(req.user, { entity: 'client', action: 'edited', client: updatedClient, ...diff });
+        }
+      }
       res.json(updatedClient);
     } catch (error) {
       console.error("Update client error:", error);
@@ -654,6 +668,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!deletedClient) {
       return res.status(404).json({ message: 'Client not found' });
     }
+    salesActivity.record(req.user, { entity: 'client', action: 'deleted', client: deletedClient });
     res.json({ message: 'Client and related data deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting client', error: error.message });
@@ -683,6 +698,7 @@ router.post('/:id/events', authMiddleware, async (req, res) => {
     // Save immediately without waiting for emails
     await client.save();
     console.log("Event saved to database");
+    salesActivity.record(req.user, { entity: 'event', action: 'added', client, title: eventWithAssignedBy.eventName });
 
     // Schedule reminders if any
     if (eventWithAssignedBy.reminders && eventWithAssignedBy.reminders.length > 0) {
@@ -843,6 +859,7 @@ router.put('/:id/events/:eventId', authMiddleware, async (req, res) => {
     // Save immediately
     await client.save();
     console.log("Event updated in database");
+    salesActivity.record(req.user, { entity: 'event', action: 'edited', client, title: event.eventName });
 
     // Send response first
     res.json({
@@ -935,8 +952,10 @@ router.delete('/:id/events/:eventId', authMiddleware, async (req, res) => {
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
+    const removed = client.events.find(e => e._id.toString() === req.params.eventId);
     client.events = client.events.filter(e => e._id.toString() !== req.params.eventId);
     await client.save();
+    if (removed) salesActivity.record(req.user, { entity: 'event', action: 'deleted', client, title: removed.eventName });
     res.json({ message: 'Event deleted successfully', client });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting event', error: error.message });

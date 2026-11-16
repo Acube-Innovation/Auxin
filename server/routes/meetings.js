@@ -5,6 +5,8 @@ const Meeting = require('../models/Meeting');
 const Notification = require('../models/Notification');
 const Employee = require('../models/Employee');
 const Client = require('../models/Client');
+const salesActivity = require('../services/salesActivity');
+const { notifyMeeting } = require('../jobs/salesSummary');
 const nodemailer = require('nodemailer');
 const { sendEventAssignedTemplate } = require('../services/interaktWhatsAppService');
 
@@ -237,6 +239,8 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
     const saved = await meeting.save();
+    notifyMeeting(req.user, saved); // HOD is told straight away (runs in the background)
+    salesActivity.record(req.user, { entity: 'meeting', action: 'added', title: saved.title, changes: [{ field: 'When', from: '', to: `${saved.date.toISOString().slice(0, 10)}${saved.time ? ` ${saved.time}` : ''}` }] });
     const assignedBy = req.user?.username || "Admin";
 
     // Schedule reminders
@@ -330,6 +334,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const update = req.body;
     const meeting = await Meeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+    const before = meeting.toObject();
 
     Object.assign(meeting, {
       title: update.title ?? meeting.title,
@@ -345,6 +350,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     });
 
     const saved = await meeting.save();
+    const meetingChanges = salesActivity.meetingDiff(before, saved.toObject());
+    if (meetingChanges.length) salesActivity.record(req.user, { entity: 'meeting', action: 'edited', title: saved.title, changes: meetingChanges });
+    if (meetingChanges.some((c) => c.field === 'Date' || c.field === 'Time')) notifyMeeting(req.user, saved, before);
     const assignedBy = req.user?.username || "Admin";
 
     res.json(saved);
@@ -470,6 +478,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await Meeting.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Meeting not found' });
+    salesActivity.record(req.user, { entity: 'meeting', action: 'deleted', title: deleted.title });
     // emit delete
     try {
       const io = req.app.get('io');

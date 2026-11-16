@@ -8,6 +8,7 @@ const opsEmailLogSchema = new mongoose.Schema({
   kind: { type: String, required: true },             // REMINDER | DIGEST | ESCALATION | ETA_CHANGE
   to: { type: String, required: true },
   toName: { type: String },
+  toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // the login it was for (Sales Summary page)
   subject: { type: String, required: true },
   html: { type: String, required: true },
   status: { type: String, enum: ['SENT', 'SKIPPED', 'FAILED'], required: true },

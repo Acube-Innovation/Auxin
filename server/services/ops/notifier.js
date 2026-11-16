@@ -43,20 +43,20 @@ async function bell(users, payload) {
 }
 
 // Send (or record as skipped) one email
-async function email({ to, toName, subject, html, kind, job }) {
+async function email({ to, toName, toUser, subject, html, kind, job, fromName = 'Auxin Vessel Operations' }) {
   if (!to) return { status: 'SKIPPED', reason: 'no address' };
   let status = 'SENT';
   let error;
   try {
-    const r = await mailer.sendMail({ to, subject, html, fromName: 'Auxin Vessel Operations' });
+    const r = await mailer.sendMail({ to, subject, html, fromName });
     if (r && r.skipped) status = 'SKIPPED';
   } catch (err) {
     status = 'FAILED';
     error = err.message;
     console.error(`Ops email to ${to} failed:`, err.message);
   }
-  await OpsEmailLog.create({ kind, to, toName, subject, html, status, error, job });
-  return { status };
+  const log = await OpsEmailLog.create({ kind, to, toName, toUser, subject, html, status, error, job });
+  return { status, id: log._id };
 }
 
 module.exports = { setIo, employeesWithUsers, bell, email };

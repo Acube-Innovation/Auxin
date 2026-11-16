@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const Task = require('../models/Task');
 const Employee = require('../models/Employee');
 const Client = require('../models/Client');
+const salesActivity = require('../services/salesActivity');
 const nodemailer = require('nodemailer');
 const Notification = require('../models/Notification');
 
@@ -253,6 +254,7 @@ router.post('/clients/:clientId/tasks', authMiddleware, async (req, res) => {
 
     const saved = await task.save();
     console.log("Task saved to database");
+    salesActivity.record(req.user, { entity: 'task', action: 'added', clientId, title: saved.title });
 
     // Schedule reminders if any
     if (saved.reminders && saved.reminders.length > 0) {
@@ -427,6 +429,7 @@ router.put('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, res) 
 
     console.log(`🔄 Updating task ${taskId} for client ${clientId}`, update);
 
+    const before = await Task.findOne({ _id: taskId, clientId }).lean();
     const updated = await Task.findOneAndUpdate(
       { _id: taskId, clientId },
       update,
@@ -436,6 +439,8 @@ router.put('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, res) 
     if (!updated) {
       return res.status(404).json({ message: 'Task not found' });
     }
+    const taskChanges = before ? salesActivity.taskDiff(before, updated.toObject()) : [];
+    if (taskChanges.length) salesActivity.record(req.user, { entity: 'task', action: 'edited', clientId, title: updated.title, changes: taskChanges });
 
     console.log("Task updated in database");
 
@@ -485,6 +490,7 @@ router.delete('/clients/:clientId/tasks/:taskId', authMiddleware, async (req, re
     const { clientId, taskId } = req.params;
     const deleted = await Task.findOneAndDelete({ _id: taskId, clientId });
     if (!deleted) return res.status(404).json({ message: 'Task not found' });
+    salesActivity.record(req.user, { entity: 'task', action: 'deleted', clientId, title: deleted.title });
     res.json({ message: 'Task deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting task', error: error.message });

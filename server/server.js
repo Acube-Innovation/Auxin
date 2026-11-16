@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
+require('./utils/emailAllowList'); // test systems: EMAIL_ALLOW_ONLY limits who is emailed
 const path = require('path');
 const http = require('http');
 
@@ -299,6 +300,7 @@ app.post('/api/client-remarks/:clientId', authMiddleware, async (req, res) => {
       }
     });
     await remark.save();
+    require('./services/salesActivity').record(req.user, { entity: 'remark', action: 'added', client, title: text });
     res.status(201).json(remark);
   } catch (error) {
     res.status(500).json({ message: 'Error adding remark', error: error.message });
@@ -312,6 +314,7 @@ app.use('/api/clients', clientRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingsRoutes);
+app.use('/api/sales-summary', require('./routes/salesSummaryRoutes'));
 app.use('/api/documents', documentRoutes);
 app.use('/api/checkins', require('./routes/checkInRoutes'));
 app.use('/api/attendance', attendanceRoutes);

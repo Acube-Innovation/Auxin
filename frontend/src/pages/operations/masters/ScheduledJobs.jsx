@@ -5,7 +5,7 @@ import { useToast } from "../../../context/ToastContext";
 import { formatInstant } from "../../../utils/opsFormat";
 import styles from "./Masters.module.css";
 
-const KIND_LABEL = { REMINDER: "Reminder", DIGEST: "Morning summary", ESCALATION: "Escalation", ETA_CHANGE: "ETA change" };
+const KIND_LABEL = { REMINDER: "Reminder", DIGEST: "Morning summary", ESCALATION: "Escalation", ETA_CHANGE: "ETA change", SALES_SUMMARY: "Sales summary", SALES_MEETING: "Sales meeting" };
 const STATUS_CLASS = { SENT: styles.chipActive, SKIPPED: styles.chipNone, FAILED: styles.chipHigh };
 
 const resultText = (r) => {

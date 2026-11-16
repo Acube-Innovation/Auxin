@@ -478,10 +478,11 @@ test('recurring hire payment: repeats generated up to a week ahead until re-deli
 const runJob = (name) => call('POST', `/ops/jobs/${name}/run`);
 const emails = async (q = '') => (await call('GET', `/ops/jobs/emails?limit=200${q}`)).data;
 
-test('jobs: admin sees the five jobs; others are refused', async () => {
+test('jobs: admin sees the five ops jobs and the sales summary; others are refused', async () => {
   const { status, data } = await call('GET', '/ops/jobs');
   assert.equal(status, 200);
-  assert.deepEqual(data.jobs.map((j) => j.name).sort(), ['ops-daily-checks', 'ops-daily-digest', 'ops-escalation', 'ops-recurring', 'ops-reminder-scan']);
+  assert.deepEqual(data.jobs.map((j) => j.name).sort(), ['ops-daily-checks', 'ops-daily-digest', 'ops-escalation', 'ops-recurring', 'ops-reminder-scan', 'sales-daily-summary']);
+  assert.equal(data.jobs.find((j) => j.name === 'sales-daily-summary').schedule, 'Daily at 08:00');
   assert.equal(data.jobs.find((j) => j.name === 'ops-daily-digest').schedule, 'Daily at 07:30');
   assert.ok(data.jobs.every((j) => j.nextRunAt));
   assert.equal(data.emailConfigured, false);
