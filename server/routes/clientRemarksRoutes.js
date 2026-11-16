@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const ClientRemark = require('../models/ClientRemark');
 const Client = require('../models/Client');
 const User = require('../models/User');
+const salesActivity = require('../services/salesActivity');
 
 // Mounted at /api/client-remarks, so GET /api/client-remarks/:clientId
 router.get('/:clientId', authMiddleware, async (req, res) => {
@@ -39,6 +40,7 @@ router.post('/:clientId', authMiddleware, async (req, res) => {
       }
     });
     await remark.save();
+    salesActivity.record(req.user, { entity: 'remark', action: 'added', client, title: text });
     res.status(201).json(remark);
   } catch (error) {
     res.status(500).json({ message: 'Error adding remark', error: error.message });

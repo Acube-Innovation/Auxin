@@ -9,7 +9,12 @@ const { DateTime } = require('luxon');
 const OpsJob = require('../../models/ops/OpsJob');
 const notifier = require('../../services/ops/notifier');
 const { OFFICE_TZ, JOBS_ENABLED } = require('../../services/ops/config');
-const { JOBS } = require('./definitions');
+const { JOBS: OPS_JOBS } = require('./definitions');
+const salesSummary = require('../salesSummary');
+
+// The ops jobs follow OPS_JOBS_DISABLED; the sales summary has its own switch (SALES_SUMMARY_DISABLED)
+const JOBS = [...OPS_JOBS.map((j) => ({ ...j, enabled: () => JOBS_ENABLED })), salesSummary.JOB];
+const activeJobs = () => JOBS.filter((j) => j.enabled());
 
 const TICK_MS = 30 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
@@ -62,7 +67,7 @@ async function execute(def, doc, trigger) {
 // Claim and run every job that is due
 async function tick() {
   const now = new Date();
-  for (const def of JOBS) {
+  for (const def of activeJobs()) {
     const doc = await OpsJob.findOneAndUpdate(
       { name: def.name, nextRunAt: { $lte: now }, $or: [{ lockedUntil: null }, { lockedUntil: { $lt: now } }] },
       { $set: { lockedUntil: new Date(now.getTime() + LOCK_MS), lockedBy: INSTANCE, lastStartedAt: now, nextRunAt: nextRun(def.schedule, now) } },
@@ -93,13 +98,14 @@ async function runNow(name) {
 async function list() {
   await ensureJobs();
   const docs = new Map((await OpsJob.find().lean()).map((d) => [d.name, d]));
-  return JOBS.map((def) => ({ name: def.name, label: def.label, feature: def.feature, schedule: scheduleText(def.schedule), ...(docs.get(def.name) || {}), running: Boolean(docs.get(def.name)?.lockedUntil && new Date(docs.get(def.name).lockedUntil) > new Date()) }));
+  return JOBS.map((def) => ({ name: def.name, label: def.label, feature: def.feature, schedule: scheduleText(def.schedule), enabled: def.enabled(), ...(docs.get(def.name) || {}), running: Boolean(docs.get(def.name)?.lockedUntil && new Date(docs.get(def.name).lockedUntil) > new Date()) }));
 }
 
 function start(io) {
   notifier.setIo(io);
-  if (!JOBS_ENABLED) {
-    console.log('[ops-jobs] scheduler disabled (OPS_JOBS_DISABLED=1)');
+  if (!JOBS_ENABLED) console.log('[ops-jobs] ops jobs disabled (OPS_JOBS_DISABLED=1)');
+  if (!activeJobs().length) {
+    console.log('[ops-jobs] scheduler disabled: no job is switched on');
     return;
   }
   ensureJobs()
@@ -107,7 +113,7 @@ function start(io) {
     .catch((err) => console.error('[ops-jobs] start failed:', err.message));
   timer = setInterval(() => tick().catch((err) => console.error('[ops-jobs] tick failed:', err.message)), TICK_MS);
   timer.unref();
-  console.log(`[ops-jobs] scheduler started (office time ${OFFICE_TZ})`);
+  console.log(`[ops-jobs] scheduler started (office time ${OFFICE_TZ}): ${activeJobs().map((j) => j.name).join(', ')}`);
 }
 
 module.exports = { start, runNow, list, nextRun, tick };

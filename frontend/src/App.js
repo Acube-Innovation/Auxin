@@ -6,6 +6,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import SalesAndLeads from "./pages/SalesAndLeads";
 import Reports from "./pages/Reports";
+import SalesSummary from "./pages/SalesSummary";
 import Profile from "./pages/Profile";
 import YourCalendar from "./pages/sidebar/YourCalendar";
 import SalesAndLeadsClient from "./pages/SalesAndLeadsClient";
@@ -61,6 +62,9 @@ function App() {
 
 
 
+          <Route path="/sales-summary" element={
+            <ProtectedRoute><SalesSummary /></ProtectedRoute>
+          } />
           <Route path="/reports" element={
             <ProtectedRoute><Reports /></ProtectedRoute>
           } />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaTachometerAlt,
   FaUsers,
@@ -20,6 +20,7 @@ import styles from "./Sidebar.module.css";
 import DateRangePickerModal from "../../components/DateRangePickerModal";
 import useDateRange from "../../hooks/useDateRange";
 import { OPS_MASTERS_ROLES, ALL_OPS_ROLES, OPS_EDITOR_ROLES } from "../../config/opsRoles";
+import SalesSummaryService from "../../services/SalesSummaryService";
 
 import auxin_logo from "../../assets/auxin_logo.png";
 import users from "../../assets/dashboard/users.svg";
@@ -53,6 +54,23 @@ function Sidebar() {
 
   // Fix: Get role directly from localStorage
   const userRole = localStorage.getItem("role"); // This returns a string like "sales_executive"
+
+  // Sales Summary link: admins, HODs (Leave Approvers) and the summary recipients. Asked once per login.
+  const summaryKey = `salesSummaryAccess:${(localStorage.getItem("token") || "").slice(-16)}`;
+  const [canViewSummary, setCanViewSummary] = useState(() => {
+    try { return sessionStorage.getItem(summaryKey) === "1"; } catch (e) { return false; }
+  });
+  useEffect(() => {
+    let cached = null;
+    try { cached = sessionStorage.getItem(summaryKey); } catch (e) { /* no storage */ }
+    if (cached !== null || !localStorage.getItem("token")) return;
+    SalesSummaryService.access()
+      .then((d) => {
+        setCanViewSummary(Boolean(d && d.canView));
+        try { sessionStorage.setItem(summaryKey, d && d.canView ? "1" : "0"); } catch (e) { /* no storage */ }
+      })
+      .catch(() => {});
+  }, [summaryKey]);
 
   const handleLogout = () => {
     // Clear authentication data
@@ -171,6 +189,15 @@ function Sidebar() {
                   Reports
                 </Link>
               </li>
+
+              {canViewSummary && (
+                <li className={isActive("/sales-summary") ? styles.active : ""}>
+                  <Link to="/sales-summary" className={styles["sidebar-link"]}>
+                    <img src={filechartcolumn} alt="Sales Summary" className={styles.icon} />
+                    Sales Summary
+                  </Link>
+                </li>
+              )}
 
               <li className={isActive("/checkin-history") ? styles.active : ""}>
                 <Link to="/checkin-history" className={styles["sidebar-link"]}>
