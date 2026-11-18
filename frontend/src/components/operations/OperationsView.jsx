@@ -3,6 +3,8 @@ import OpsModal from "./OpsModal";
 import TaskDrawer from "./TaskDrawer";
 import AdhocTaskDialog from "./AdhocTaskDialog";
 import useTaskActions from "./useTaskActions";
+import { latestRemark } from "./RemarkLog";
+import { OPS_ADMIN, OPS_MANAGERS, hasRole } from "../../config/opsRoles";
 import { TaskHours, TimerButtons, useNow } from "./TaskTimer";
 import OpsVoyageService from "../../services/OpsVoyageService";
 import OpsTaskService, { TASK_STATUS_LABEL, TASK_STATUSES } from "../../services/OpsTaskService";
@@ -71,7 +73,10 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
       && (!filters.assignee || (t.assignedTo || []).some((a) => a._id === filters.assignee))
       && (!q || `${t.code || ""} ${t.name}`.toLowerCase().includes(q)));
   }, [data, filters]);
-  const rows = useMemo(() => filtered.filter((t) => !bucket || t.bucket === bucket), [filtered, bucket]);
+  // "Done today" is a filter of its own next to the buckets: tasks completed today (office time), for checking
+  const doneToday = useCallback((t) => t.status === "DONE" && t.completedDate === data?.today, [data]);
+  const rows = useMemo(() => filtered.filter((t) => !bucket || (bucket === "DONE_TODAY" ? doneToday(t) : t.bucket === bucket)), [filtered, bucket, doneToday]);
+  const canVerify = hasRole([...OPS_ADMIN, ...OPS_MANAGERS]);
   const anyRunning = useMemo(() => Boolean(data && data.tasks.some((t) => t.timer?.state === "RUNNING")), [data]);
   const now = useNow(anyRunning);
   const counts = useMemo(() => {
@@ -92,6 +97,15 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
       showToast(`${label}: ${res.updated} task${res.updated === 1 ? "" : "s"}${res.skipped.length ? ` · ${res.skipped.length} skipped (${res.skipped[0].reason})` : ""}`, res.skipped.length ? "warning" : "success");
       setSelected(new Set());
       setBulkDialog(null);
+      await changed(null);
+    } catch (e) { showToast(e.message, "error"); }
+  };
+
+  const verifySelected = async (ids, undo = false) => {
+    try {
+      const res = await OpsTaskService.verify(ids, undo);
+      showToast(`${undo ? "Check removed" : "Checked"}: ${res.updated} task${res.updated === 1 ? "" : "s"}${res.skipped.length ? ` · ${res.skipped.length} skipped (${res.skipped[0].reason})` : ""}`, res.skipped.length ? "warning" : "success");
+      setSelected(new Set());
       await changed(null);
     } catch (e) { showToast(e.message, "error"); }
   };
@@ -121,6 +135,10 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
             {b.label} {counts[b.key] || 0}
           </button>
         ))}
+        <button onClick={() => setBucket(bucket === "DONE_TODAY" ? "" : "DONE_TODAY")} className={styles.chip} data-testid="done-today-chip"
+          style={{ cursor: "pointer", background: "#e0f2fe", color: "#075985", border: bucket === "DONE_TODAY" ? "2px solid #075985" : "1px solid transparent" }}>
+          ✓ Done today {filtered.filter(doneToday).length}
+        </button>
         <span className={styles.subtle}>Today (office time): {formatLocalDate(data.today)}</span>
       </div>
 
@@ -166,6 +184,7 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
             {employees.map((e) => <option key={e._id} value={e._id}>{e.employeeName}</option>)}
           </select>
           <button className={styles.btnSecondary} onClick={() => setBulkDialog({ kind: "due", value: "" })}>Due date…</button>
+          {canVerify && <button className={styles.btnSecondary} onClick={() => verifySelected(sel)} title="Managers: mark the selected Done tasks as checked">✔ Mark checked</button>}
           <button className={styles.btnLink} onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}
@@ -199,11 +218,14 @@ function OperationsView({ voyage, editable, refreshKey, initialBucket = "", offi
                       {t.linkedField && !closed && <span className={styles.defaulted} title="Completing asks for a date/time that is saved on the voyage">records time</span>}
                       {(t.attachments || []).length > 0 && <span className={styles.subtle}> 📎{t.attachments.length}</span>}
                       {t.naReason && <div className={styles.note}>{t.naReason}</div>}
-                      {t.remarks && <div className={styles.note}>{t.remarks}</div>}
+                      {latestRemark(t) && <div className={styles.note} title="Latest remark (open the task for all remarks by day)">💬 {latestRemark(t)}</div>}
                       <div className={styles.note}>{t.anchor?.event ? ruleText(t.anchor.event, t.offsetDays, t.recurrence) : ""}</div>
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>{t.dueDate ? formatLocalDate(t.dueDate) : <span className={styles.subtle}>—</span>}
-                      {t.status === "DONE" && t.completedDate && <div className={styles.note}>done {formatLocalDate(t.completedDate)}</div>}</td>
+                      {t.status === "DONE" && t.completedDate && <div className={styles.note}>done {formatLocalDate(t.completedDate)}</div>}
+                      {t.status === "DONE" && (t.verified?.at
+                        ? <div className={styles.note} style={{ color: "#067647" }} title="Checked by a manager">✔ checked</div>
+                        : canVerify && <button className={styles.btnLink} style={{ fontSize: "0.8rem" }} onClick={() => verifySelected([t._id])}>Mark checked</button>)}</td>
                     <td>
                       {editable ? (
                         <select className={ov.rowSelect} value={t.status} onChange={(e) => setStatus(t, e.target.value)} aria-label={`Status of ${t.baseName || t.name}`}>

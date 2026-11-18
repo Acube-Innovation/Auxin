@@ -6,9 +6,9 @@ import { suggestTimes } from "../../../utils/opsSuggest";
 let seq = 0;
 export const newKey = () => `k${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export const STEPS = ["Cargo", "Fixture & Vessel", "Port Rotation", "Review & Activate"];
+export const STEPS = ["Cargo", "Vessel", "Port Rotation", "Review & Activate"];
 
-// Which step's task list a generated task belongs to (by its stage): Cargo, Fixture & Vessel or Port Rotation
+// Which step's task list a generated task belongs to (by its stage): Cargo, Vessel or Port Rotation
 const CARGO_STAGES = ["CARGO_FIXED", "BEFORE_SUBS"];
 export const stepOfTask = (task) => {
   const st = task.stage || {};
@@ -125,8 +125,9 @@ export function rowPayload(row) {
   };
 }
 
-// Problems that stop the user leaving a step (null = fine)
-export function stepError(step, form, { isOperator, settings } = {}) {
+// Problems that stop the user leaving a step or activating (null = fine). Vessel, operators and port calls are
+// optional: a voyage can be activated from the Cargo step and completed later. Only what was entered is checked.
+export function stepError(step, form, { settings } = {}) {
   const f = form.fixture;
   if (step === 1) {
     const bad = form.cargo.find((c) => !String(c.description).trim() && (c.quantity !== "" || c.packages !== ""));
@@ -135,8 +136,6 @@ export function stepError(step, form, { isOperator, settings } = {}) {
     if (f.cargoLaycanFrom && f.cargoLaycanTo && f.cargoLaycanTo < f.cargoLaycanFrom) return "Cargo laycan 'to' is before 'from'";
   }
   if (step === 2) {
-    if (!form.vessel) return "Choose the vessel";
-    if (!form.operators.length && !isOperator) return "Choose at least one operator";
     if (form.master.email && !/^\S+@\S+\.\S+$/.test(form.master.email)) return "The Master's email is not valid";
     if (f.vesselLaycanFrom && f.vesselLaycanTo && f.vesselLaycanTo < f.vesselLaycanFrom) return "Vessel laycan 'to' is before 'from'";
     const d = form.delivery.estimated;
@@ -144,10 +143,11 @@ export function stepError(step, form, { isOperator, settings } = {}) {
     if (d && r && r < d) return "Re-delivery cannot be before delivery";
   }
   if (step === 3) {
-    if (!form.rows.length) return "Add at least one port call";
-    const i = form.rows.findIndex((r) => !r.port);
+    // Rows without a port are not saved; a row with dates or quantities but no port is a mistake
+    const i = form.rows.findIndex((r) => !r.port && (r.planned.eta || r.agent || r.cargoQty !== "" || r.ratePerDay !== "" || r.remarks));
     if (i >= 0) return `Port call ${i + 1}: choose the port`;
     for (const [n, r] of form.rows.entries()) {
+      if (!r.port) continue;
       const p = suggestTimes(r, settings); // typed values and suggestions together
       const order = [["ETA", p.eta, "ETB", p.etb], ["ETB", p.etb, "ETC", p.etc], ["ETC", p.etc, "ETS", p.ets]];
       for (const [a, av, b, bv] of order) if (av && bv && bv < av) return `Port call ${n + 1}: ${b} cannot be before ${a}`;

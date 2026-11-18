@@ -1,5 +1,5 @@
 import React from "react";
-import { formatInstant, formatInstantDate, PORT_TYPE_LABEL } from "../../../utils/opsFormat";
+import { formatInstant, formatInstantDate, laycanText, PORT_TYPE_LABEL } from "../../../utils/opsFormat";
 import styles from "../masters/Masters.module.css";
 
 const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
@@ -34,12 +34,12 @@ function StepReview({ voyage, officeTz, counts }) {
           <Block title="Voyage">
             <Row label="Draft number">{voyage.voyageNo}</Row>
             <Row label="Type">{voyage.voyageType === "TC_TRIP" ? "Time-charter trip" : "Voyage charter"}</Row>
-            <Row label="Vessel">{voyage.vessel?.name}</Row>
+            <Row label="Vessel">{voyage.vessel?.name || <span className={styles.subtle}>not chosen yet (can be added after activation)</span>}</Row>
             <Row label="Master">{[voyage.master?.name, voyage.master?.email, voyage.master?.phone].filter(Boolean).join(" · ") || "—"}</Row>
             <Row label="Charterer">{dash(voyage.charterers?.companyName)}</Row>
             <Row label="Owners">{dash(voyage.owners?.companyName)}</Row>
             <Row label="Brokers">{(voyage.brokers || []).map((b) => b.companyName).join(", ") || "—"}</Row>
-            <Row label="Operators">{(voyage.operators || []).map((o) => o.employeeName).join(", ")}</Row>
+            <Row label="Operators">{(voyage.operators || []).map((o) => o.employeeName).join(", ") || <span className={styles.subtle}>none yet: tasks stay unassigned until operators are chosen</span>}</Row>
           </Block>
           <Block title="Customer">
             <Row label="Customer">{dash(voyage.customer?.client?.companyName)}</Row>
@@ -51,10 +51,9 @@ function StepReview({ voyage, officeTz, counts }) {
         </div>
         <div>
           <Block title={`Fixture (office time)`}>
-            <Row label="Cargo fixed">{at(f.cargoFixedAt, officeTz)}</Row>
-            <Row label="Vessel fixed">{at(f.vesselFixedAt, officeTz)}</Row>
-            <Row label="Cargo laycan">{f.cargoLaycanFrom ? `${formatInstantDate(f.cargoLaycanFrom, officeTz)} – ${formatInstantDate(f.cargoLaycanTo, officeTz) || "?"}` : "—"}</Row>
-            <Row label="Vessel laycan">{f.vesselLaycanFrom ? `${formatInstantDate(f.vesselLaycanFrom, officeTz)} – ${formatInstantDate(f.vesselLaycanTo, officeTz) || "?"}` : "—"}</Row>
+            <Row label="Vessel fixed">{f.vesselFixedAt ? formatInstantDate(f.vesselFixedAt, officeTz) : "—"}</Row>
+            <Row label="Cargo laycan">{laycanText(f.cargoLaycanFrom, f.cargoLaycanTo, officeTz) || "—"}</Row>
+            <Row label="Vessel laycan">{laycanText(f.vesselLaycanFrom, f.vesselLaycanTo, officeTz) || "—"}</Row>
             <Row label="CP date">{f.cpDate ? formatInstantDate(f.cpDate, officeTz) : "—"}</Row>
           </Block>
           <Block title="Delivery and re-delivery">
@@ -68,6 +67,7 @@ function StepReview({ voyage, officeTz, counts }) {
           <table className={styles.table}>
             <thead><tr><th>#</th><th>Port</th><th>Type</th><th>Agent</th><th>Qty / rate</th><th>ETA</th><th>ETB</th><th>ETC</th><th>ETS</th></tr></thead>
             <tbody>
+              {voyage.portCalls.length === 0 && <tr><td colSpan={9} className={styles.empty}>No port calls yet: they can be added after activation (Port calls tab); their tasks are created then.</td></tr>}
               {voyage.portCalls.map((pc) => (
                 <tr key={pc._id}>
                   <td>{pc.seq}</td>

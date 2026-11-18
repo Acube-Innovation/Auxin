@@ -12,11 +12,13 @@ const fieldLabel = (path) => {
 };
 
 // Status changes that need a question first (shared by the Operations View, the task panel and My Tasks):
-//   N/A asks for the reason (D2); Done on a task with a linked field asks for the time to record (C5).
+//   N/A asks for the reason (D2); Initiated and Awaiting offer a remark (optional); Done on a task with a linked
+//   field asks for the time to record (C5). Remarks are added to the task's remark log and never edited.
 // onChanged(result) runs after every successful change with the API response ({ task, movedTasks, dueSoon }).
 export default function useTaskActions(onChanged) {
   const { showToast } = useToast();
   const [na, setNa] = useState(null);         // { task, reason }
+  const [remark, setRemark] = useState(null); // { task, status, text } for Initiated / Awaiting
   const [linked, setLinked] = useState(null); // { task, info, value, completedDate }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +43,7 @@ export default function useTaskActions(onChanged) {
   const setStatus = async (task, status) => {
     if (status === task.status) return;
     if (status === "NA") { setError(""); setNa({ task, reason: "" }); return; }
+    if (status === "INITIATED" || status === "AWAITING") { setError(""); setRemark({ task, status, text: "" }); return; }
     if (status === "DONE" && task.linkedField) {
       try {
         const full = await OpsTaskService.get(task._id);
@@ -69,6 +72,28 @@ export default function useTaskActions(onChanged) {
             <label>Reason <span className={styles.req}>*</span></label>
             <textarea className={styles.textarea} rows={3} autoFocus value={na.reason} aria-label="Reason"
               onChange={(e) => setNa({ ...na, reason: e.target.value })} placeholder="Why this task does not apply to this voyage" />
+          </div>
+        </>}
+      </OpsModal>
+
+      <OpsModal isOpen={Boolean(remark)} title={remark ? `Mark as ${remark.status === "AWAITING" ? "Awaiting" : "Initiated"}` : ""} onClose={() => setRemark(null)} width={520}
+        footer={<>
+          <button className={styles.btnSecondary} onClick={() => setRemark(null)}>Cancel</button>
+          <button className={styles.btnPrimary} disabled={busy}
+            onClick={async () => {
+              const label = remark.status === "AWAITING" ? "Awaiting" : "Initiated";
+              if (await run(remark.task, { status: remark.status, remark: remark.text.trim() || undefined }, remark.text.trim() ? `${label}; remark added` : `Marked ${label}`)) setRemark(null);
+            }}>{remark?.text.trim() ? "Save with remark" : "Save"}</button>
+        </>}>
+        {remark && <>
+          <p style={{ marginTop: 0 }}><b>{remark.task.baseName || remark.task.name}</b></p>
+          {error && <div className={styles.formError} role="alert">{error}</div>}
+          <div className={styles.field}>
+            <label>Remark <span className={styles.subtle}>(optional)</span></label>
+            <textarea className={styles.textarea} rows={3} autoFocus value={remark.text} aria-label="Remark"
+              onChange={(e) => setRemark({ ...remark, text: e.target.value })}
+              placeholder={remark.status === "AWAITING" ? "What or whom is it waiting for?" : "What has been done so far?"} />
+            <div className={styles.hint}>Remarks are kept day by day with your name and cannot be edited later; add another remark any time from the task.</div>
           </div>
         </>}
       </OpsModal>

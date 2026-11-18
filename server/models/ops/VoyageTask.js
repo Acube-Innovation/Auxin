@@ -54,7 +54,19 @@ const voyageTaskSchema = new mongoose.Schema({
   autoCompleteOnField: { type: Boolean, default: false },
 
   assignedTo: [{ type: ObjectId, ref: 'Employee' }],
-  remarks: { type: String },
+  remarks: { type: String },                                          // old single remark (before the remark log); read only
+  // Remarks are added, never edited: one entry per remark, shown day by day (with the status it was given for)
+  remarkLog: [{
+    at: { type: Date, default: Date.now },
+    by: { type: ObjectId, ref: 'User', default: null },
+    status: { type: String, enum: [...TASK_STATUSES, null], default: null },
+    text: { type: String, required: true, trim: true },
+  }],
+  // A manager checks a Done task (Tasks done today). Cleared when the task is re-opened.
+  verified: {
+    at: { type: Date, default: null },
+    by: { type: ObjectId, ref: 'User', default: null },
+  },
   attachments: [{
     fileName: String, filePath: String, fileType: String, fileSize: Number,
     uploadedBy: { type: ObjectId, ref: 'User' }, at: { type: Date, default: Date.now },
@@ -77,6 +89,7 @@ voyageTaskSchema.index({ voyage: 1, status: 1, dueDate: 1 });
 voyageTaskSchema.index({ assignedTo: 1, status: 1, dueDate: 1 });
 voyageTaskSchema.index({ status: 1, dueDate: 1 });
 voyageTaskSchema.index({ voyage: 1, sortKey: 1 });
+voyageTaskSchema.index({ status: 1, completedDate: 1 });
 
 module.exports = mongoose.model('VoyageTask', voyageTaskSchema);
 module.exports.TASK_STATUSES = TASK_STATUSES;

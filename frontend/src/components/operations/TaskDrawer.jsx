@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Select from "react-select";
 import OpsModal from "./OpsModal";
 import useTaskActions from "./useTaskActions";
+import RemarkLog from "./RemarkLog";
+import { OPS_ADMIN, OPS_MANAGERS, hasRole } from "../../config/opsRoles";
 import { TaskHours, TimerButtons, useNow } from "./TaskTimer";
 import OpsTaskService, { TASK_STATUS_LABEL, TASK_STATUSES } from "../../services/OpsTaskService";
 import { useToast } from "../../context/ToastContext";
@@ -10,7 +12,7 @@ import styles from "../../pages/operations/masters/Masters.module.css";
 
 const FIELD_NAME = {
   status: "Status", priority: "Priority", dueDate: "Due date", dueOverridden: "Due date lock", startDate: "Start date",
-  completedDate: "Completed on", assignedTo: "Assigned to", remarks: "Remarks", naReason: "N/A reason", attachment: "File", linkedValue: "Recorded time", timer: "Timer", plannedHours: "Planned hours",
+  completedDate: "Completed on", assignedTo: "Assigned to", remarks: "Remarks", remark: "Remark added", verified: "Checked by manager", naReason: "N/A reason", attachment: "File", linkedValue: "Recorded time", timer: "Timer", plannedHours: "Planned hours",
 };
 
 function historyText(h, empName, officeTz) {
@@ -27,6 +29,8 @@ function historyText(h, empName, officeTz) {
   };
   if (h.field === "created") return h.note || "Created";
   if (h.field === "attachment") return `${h.note || "File"}: ${h.to || h.from}`;
+  if (h.field === "remark") return `Remark added: ${h.to}`;
+  if (h.field === "verified") return h.to ? "Checked by manager" : "Manager check removed";
   return `${FIELD_NAME[h.field] || h.field}: ${v(h.from)} → ${v(h.to)}`;
 }
 
@@ -39,6 +43,8 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
   const [form, setForm] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newRemark, setNewRemark] = useState("");
+  const canVerify = hasRole([...OPS_ADMIN, ...OPS_MANAGERS]);
   const fileRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -48,7 +54,7 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
       setTask(t);
       setForm({
         priority: t.priority, startDate: t.startDate || "", dueDate: t.dueDate || "", completedDate: t.completedDate || "",
-        assignedTo: (t.assignedTo || []).map((a) => a._id), remarks: t.remarks || "", plannedHours: t.plannedHours ?? "",
+        assignedTo: (t.assignedTo || []).map((a) => a._id), plannedHours: t.plannedHours ?? "",
       });
       setError("");
     } catch (e) { setError(e.message); }
@@ -71,16 +77,35 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
     if ((form.dueDate || null) !== (task.dueDate || null)) patch.dueDate = form.dueDate || null;
     if (task.status === "DONE" && form.completedDate && form.completedDate !== task.completedDate) patch.completedDate = form.completedDate;
     if (JSON.stringify(form.assignedTo) !== JSON.stringify((task.assignedTo || []).map((a) => a._id))) patch.assignedTo = form.assignedTo;
-    if (form.remarks !== (task.remarks || "")) patch.remarks = form.remarks;
+    if (newRemark.trim()) patch.remark = newRemark.trim(); // a remark typed but not added yet is saved too
     if (String(form.plannedHours) !== String(task.plannedHours ?? "")) patch.plannedHours = form.plannedHours === "" ? null : Number(form.plannedHours);
     if (!Object.keys(patch).length) { onClose(); return; }
     setSaving(true);
     try {
       const res = await OpsTaskService.update(task._id, patch);
+      setNewRemark("");
       showToast("Task saved", "success");
       await changed(res);
       onClose();
     } catch (e) { setError(e.message); } finally { setSaving(false); }
+  };
+
+  const addRemark = async () => {
+    if (!newRemark.trim()) return;
+    try {
+      const res = await OpsTaskService.addRemark(task._id, newRemark.trim());
+      setNewRemark("");
+      showToast("Remark added", "success");
+      await changed(res);
+    } catch (e) { setError(e.message); }
+  };
+
+  const verify = async (undo) => {
+    try {
+      await OpsTaskService.verify([task._id], undo);
+      showToast(undo ? "Check removed" : "Marked as checked", "success");
+      await changed(null);
+    } catch (e) { setError(e.message); }
   };
 
   const unlock = async () => {
@@ -140,6 +165,12 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
                 {TASK_STATUSES.map((s) => <option key={s} value={s}>{TASK_STATUS_LABEL[s]}</option>)}
               </select>
               {task.status === "NA" && <div className={styles.note}>Reason: {task.naReason}</div>}
+              {task.status === "DONE" && (
+                <div className={styles.note} data-testid="verified">
+                  {task.verified?.at ? `✔ Checked by ${task.verified.by?.username || "manager"} on ${formatInstant(task.verified.at, officeTz, { withUtc: false })}` : "Not checked by a manager yet"}
+                  {canVerify && <> · <button type="button" className={styles.btnLink} onClick={() => verify(Boolean(task.verified?.at))}>{task.verified?.at ? "Remove check" : "Mark checked"}</button></>}
+                </div>
+              )}
               {task.linkedField && <div className={styles.hint}>Completing asks for {DATE_FIELD_LABEL[task.linkedField.split(".").slice(-2).join(".")] || task.linkedField}{task.linked?.current ? ` (now ${formatInstant(task.linked.current, task.linked.zone)})` : ""}</div>}
             </div>
             <div className={styles.field}>
@@ -177,8 +208,17 @@ function TaskDrawer({ taskId, employees = [], officeTz = "Asia/Kolkata", onClose
                 onChange={(v) => setForm({ ...form, assignedTo: (v || []).map((o) => o.value) })} />
             </div>
             <div className={`${styles.field} ${styles.full}`}>
-              <label>Remarks</label>
-              <textarea className={styles.textarea} rows={3} value={form.remarks} disabled={!canEdit} aria-label="Remarks" onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
+              <label>Remarks <span className={styles.subtle} style={{ fontWeight: 400 }}>· by day, cannot be edited</span></label>
+              <div style={{ maxHeight: 220, overflowY: "auto", border: "1px solid #eaecf0", borderRadius: 6, padding: "6px 10px" }}>
+                <RemarkLog remarks={task.remarkLog || []} legacy={task.remarks || ""} officeTz={officeTz} />
+              </div>
+              {canEdit && (
+                <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "flex-start" }}>
+                  <textarea className={styles.textarea} rows={2} value={newRemark} aria-label="New remark" placeholder="Add a remark…" style={{ flex: 1 }}
+                    onChange={(e) => setNewRemark(e.target.value)} />
+                  <button type="button" className={styles.btnSecondary} disabled={!newRemark.trim()} onClick={addRemark}>Add remark</button>
+                </div>
+              )}
             </div>
           </div>
 

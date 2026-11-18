@@ -10,6 +10,9 @@ const OpsTaskService = {
   timer: (id, action) => opsRequest(`/tasks/${id}/timer`, { method: "POST", body: { action } }), // start | hold | stop
   bulk: (ids, patch) => opsRequest("/tasks/bulk", { method: "POST", body: { ids, patch } }),
   addAdhoc: (voyageId, data) => opsRequest(`/voyages/${voyageId}/tasks`, { method: "POST", body: data }),
+  addRemark: (id, remark) => opsRequest(`/tasks/${id}`, { method: "PATCH", body: { remark } }),
+  doneToday: (params) => opsRequest("/tasks/done-today", { params }),                       // { date, voyage }
+  verify: (ids, undo = false) => opsRequest("/tasks/verify", { method: "POST", body: { ids, undo } }), // managers
 
   uploadAttachment: async (id, file) => {
     const form = new FormData();

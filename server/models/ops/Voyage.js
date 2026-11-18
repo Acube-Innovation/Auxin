@@ -35,8 +35,8 @@ const voyageSchema = new mongoose.Schema({
     setAt: { type: Date, default: null },
   },
 
-  // A draft may be saved from the Cargo step before the vessel is known; activation needs it
-  vessel: { type: ObjectId, ref: 'Vessel', required: function () { return this.status !== 'DRAFT'; } },
+  // A voyage can be saved and activated from the Cargo step before the vessel is known; the vessel is added later
+  vessel: { type: ObjectId, ref: 'Vessel', default: null },
   master: {
     name: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
@@ -57,7 +57,7 @@ const voyageSchema = new mongoose.Schema({
   cargoAssignee: { type: ObjectId, ref: 'Employee', default: null },
 
   fixture: {
-    cargoFixedAt: { type: Date, default: null },
+    cargoFixedAt: { type: Date, default: null },  // not entered: set when the voyage is first saved (cargo fixed)
     vesselFixedAt: { type: Date, default: null },
     cargoLaycanFrom: { type: Date, default: null },
     cargoLaycanTo: { type: Date, default: null },

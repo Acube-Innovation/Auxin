@@ -4,6 +4,7 @@ import OpsLayout from "../../components/operations/OpsLayout";
 import TaskDrawer from "../../components/operations/TaskDrawer";
 import EtaChangeModal from "../../components/operations/EtaChangeModal";
 import useTaskActions from "../../components/operations/useTaskActions";
+import DoneTodayPanel from "../../components/operations/DoneTodayPanel";
 import { PriorityTag } from "../../components/operations/OperationsView";
 import OpsReportService from "../../services/OpsReportService";
 import EmployeeService from "../../services/EmployeeService";
@@ -29,7 +30,7 @@ function VoyageCard({ v, onOpen }) {
     <button className={db.card} onClick={onOpen} data-voyage={v.voyageNo}>
       <div className={db.cardTop}>
         <div>
-          <div className={db.vessel}>{v.vessel}</div>
+          <div className={db.vessel}>{v.vessel || "Vessel not chosen yet"}</div>
           <div className={styles.subtle}>{v.voyageNo} · {v.operators.join(", ")}</div>
         </div>
         <span className={`${styles.chip} ${styles.chipExcel}`} style={{ whiteSpace: "nowrap" }}>{VESSEL_STATUS_LABEL[v.vesselStatus]}{v.vesselStatusManual ? " *" : ""}</span>
@@ -142,7 +143,7 @@ function OpsDashboard() {
                     {data.tasksToday.length === 0 && <tr><td colSpan={6} className={styles.empty}>Nothing due today.</td></tr>}
                     {data.tasksToday.map((t) => (
                       <tr key={t._id} data-task={t.code || t.baseName}>
-                        <td style={{ whiteSpace: "nowrap" }}><b>{t.voyage.vessel}</b><div className={styles.note}>{t.voyage.voyageNo}</div></td>
+                        <td style={{ whiteSpace: "nowrap" }}><b>{t.voyage.vessel || "—"}</b><div className={styles.note}>{t.voyage.voyageNo}</div></td>
                         <td>
                           <button className={ov.taskName} onClick={() => setOpenTask(t._id)}>{t.baseName || t.name}</button>
                           <div className={styles.note}>{[t.code, t.portCall?.port?.name].filter(Boolean).join(" · ")}</div>
@@ -158,6 +159,8 @@ function OpsDashboard() {
               </div>
               <div className={styles.hint} style={{ marginTop: 8 }}>Overdue tasks are in My Tasks and in each voyage's Operations View. * = vessel status set by hand.</div>
             </div>
+
+            <DoneTodayPanel refreshKey={data} onOpenTask={setOpenTask} />
           </>
         )}
       </div>

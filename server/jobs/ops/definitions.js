@@ -18,7 +18,7 @@ const minutesOf = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return
 const nowMinutes = () => { const n = DateTime.now().setZone(cfg.OFFICE_TZ); return n.hour * 60 + n.minute; };
 const idOf = (v) => (v ? String(v._id || v) : null);
 const voyageInfo = (v) => ({
-  voyageId: idOf(v), voyageNo: v.voyageNo, vesselName: v.vessel ? v.vessel.name : '',
+  voyageId: idOf(v), voyageNo: v.voyageNo, vesselName: v.vessel ? v.vessel.name : 'Vessel not chosen yet',
   vesselStatus: STATUS_LABEL[(v.vesselStatusOverride && v.vesselStatusOverride.value) || v.vesselStatus] || '',
 });
 const taskInfo = (t, extra = {}) => ({

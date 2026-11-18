@@ -26,7 +26,7 @@ async function notifyDatesChanged(voyageId, result, byUser) {
     }
   }
   const people = await notifier.employeesWithUsers([...per.keys()]);
-  const info = { voyageId: idOf(voyage), voyageNo: voyage.voyageNo, vesselName: voyage.vessel ? voyage.vessel.name : '' };
+  const info = { voyageId: idOf(voyage), voyageNo: voyage.voyageNo, vesselName: voyage.vessel ? voyage.vessel.name : 'Vessel not chosen yet' };
   const byName = (byUser && byUser.username) || 'Someone';
   for (const [empId, moved] of per) {
     const p = people.get(empId);
