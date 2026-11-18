@@ -354,8 +354,31 @@ router.post('/me/profile-picture', upload.single('profilePicture'), async (req, 
 
 // ************************************ OTP RELATED THINGS *****************************
 
-// OTPs are kept per login, under the email in lower case
+// OTPs are kept per login, under the email in lower case: 6 digits, valid 10 minutes, at most 5 wrong tries
 const otpKey = (emailId) => String(emailId || '').trim().toLowerCase();
+const OTP_MINUTES = 10;
+const OTP_TRIES = 5;
+
+/** The stored OTP for this email if `otp` matches it, else { message } saying why not (counts a wrong try) */
+function checkOtp(emailId, otp) {
+  const key = otpKey(emailId);
+  const stored = otpStore[key];
+  if (!stored) return { message: "No OTP was sent to this email, or it was already used. Please request a new OTP." };
+  if (Date.now() > stored.expires) {
+    delete otpStore[key];
+    return { message: `The OTP has expired (it is valid for ${OTP_MINUTES} minutes). Please request a new OTP.` };
+  }
+  if (stored.otp !== String(otp || '').trim()) {
+    stored.tries += 1;
+    if (stored.tries >= OTP_TRIES) {
+      delete otpStore[key];
+      return { message: "Too many wrong attempts. Please request a new OTP." };
+    }
+    const left = OTP_TRIES - stored.tries;
+    return { message: `The OTP is incorrect. ${left} attempt${left === 1 ? '' : 's'} left.` };
+  }
+  return { stored };
+}
 
 // Send OTP
 router.post("/send-otp", async (req, res) => {
@@ -378,11 +401,9 @@ router.post("/send-otp", async (req, res) => {
       return res.status(503).json({ message: "The OTP email cannot be sent because email is not set up on the server. Please ask Admin to reset your password." });
     }
 
-    // const otp = crypto.randomInt(100000, 999999).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
 
-    const otp = crypto.randomInt(1000, 10000).toString();
-
-    otpStore[otpKey(emailId)] = { otp, userId: String(user._id) };
+    otpStore[otpKey(emailId)] = { otp, userId: String(user._id), expires: Date.now() + OTP_MINUTES * 60 * 1000, tries: 0 };
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -396,7 +417,7 @@ router.post("/send-otp", async (req, res) => {
       from: process.env.EMAIL_USER,
       to: emailId,
       subject: "Your OTP Code",
-      text: `Your OTP is ${otp}`,
+      text: `Your OTP is ${otp}. It is valid for ${OTP_MINUTES} minutes.`,
     });
 
     res.json({ message: "OTP sent successfully" });
@@ -409,21 +430,17 @@ router.post("/send-otp", async (req, res) => {
 // Verify OTP
 router.post("/verify-otp", (req, res) => {
   const { emailId, otp } = req.body;
-  const stored = otpStore[otpKey(emailId)];
-  if (stored && stored.otp === String(otp || '').trim()) {
-    return res.json({ valid: true });
-  }
-  res.status(400).json({ valid: false, message: stored ? "The OTP is incorrect. Check the code in the email and try again." : "No OTP was sent to this email, or it was already used. Please request a new OTP." });
+  const { stored, message } = checkOtp(emailId, otp);
+  if (stored) return res.json({ valid: true });
+  res.status(400).json({ valid: false, message });
 });
 
 // Reset Password
 router.post("/reset-password", async (req, res) => {
   const { emailId, otp, newPassword } = req.body;
   try {
-    const stored = otpStore[otpKey(emailId)];
-    if (!stored || stored.otp !== String(otp || '').trim()) {
-      return res.status(400).json({ message: stored ? "The OTP is incorrect. Check the code in the email and try again." : "No OTP was sent to this email, or it was already used. Please request a new OTP." });
-    }
+    const { stored, message } = checkOtp(emailId, otp);
+    if (!stored) return res.status(400).json({ message });
     if (!newPassword || String(newPassword).length < 6) {
       return res.status(400).json({ message: "The new password must be at least 6 characters long." });
     }
