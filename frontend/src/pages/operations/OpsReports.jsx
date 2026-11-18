@@ -7,7 +7,7 @@ import OpsMasterService from "../../services/OpsMasterService";
 import EmployeeService from "../../services/EmployeeService";
 import { TASK_STATUS_LABEL, TASK_STATUSES } from "../../services/OpsTaskService";
 import { useToast } from "../../context/ToastContext";
-import { BUCKET_BY_KEY, PORT_TYPE_LABEL, VESSEL_STATUS_LABEL, addDays, formatDelay, formatInstant, formatLocalDate, ruleText } from "../../utils/opsFormat";
+import { BUCKET_BY_KEY, PORT_TYPE_LABEL, VESSEL_STATUS_LABEL, addDays, formatDelay, formatInstant, formatLocalDate, ruleText, laycanText } from "../../utils/opsFormat";
 import { dateText, exportReport, ltText, utcText } from "../../utils/opsExport";
 import styles from "./masters/Masters.module.css";
 import rs from "./OpsReports.module.css";
@@ -101,10 +101,9 @@ function SummarySheet({ data }) {
       <div className={rs.sheetGrid}>
         <div className={rs.block}>
           <h4>Fixture (office time)</h4>
-          <KV k="Cargo fixed"><T iso={f.cargoFixedAt} zone={tz} /></KV>
-          <KV k="Vessel fixed"><T iso={f.vesselFixedAt} zone={tz} /></KV>
-          <KV k="Cargo laycan">{f.cargoLaycanFrom ? `${formatInstant(f.cargoLaycanFrom, tz).slice(0, 11)} – ${f.cargoLaycanTo ? formatInstant(f.cargoLaycanTo, tz).slice(0, 11) : "?"}` : ""}</KV>
-          <KV k="Vessel laycan">{f.vesselLaycanFrom ? `${formatInstant(f.vesselLaycanFrom, tz).slice(0, 11)} – ${f.vesselLaycanTo ? formatInstant(f.vesselLaycanTo, tz).slice(0, 11) : "?"}` : ""}</KV>
+          <KV k="Vessel fixed">{f.vesselFixedAt ? formatInstant(f.vesselFixedAt, tz).slice(0, 11) : ""}</KV>
+          <KV k="Cargo laycan">{laycanText(f.cargoLaycanFrom, f.cargoLaycanTo, tz)}</KV>
+          <KV k="Vessel laycan">{laycanText(f.vesselLaycanFrom, f.vesselLaycanTo, tz)}</KV>
           <KV k="CP date">{f.cpDate ? formatInstant(f.cpDate, tz).slice(0, 11) : ""}</KV>
         </div>
         <div className={rs.block}>
@@ -121,7 +120,7 @@ function SummarySheet({ data }) {
           {(v.cargo || []).map((c) => <KV key={c._id} k={c.description}>{c.quantity != null ? `${c.quantity.toLocaleString("en-IN")} ${c.unit}` : ""}</KV>)}
           <KV k="Bunker port">{v.portCalls.find((p) => p._id === v.bunker?.portCall)?.port?.name}</KV>
           <KV k="Supplier">{[v.bunker?.supplier?.companyName, v.bunker?.grade, v.bunker?.quantity != null && `${v.bunker.quantity} MT`].filter(Boolean).join(" · ")}</KV>
-          <KV k="Booked on"><T iso={v.bunker?.bookedOn} zone={tz} /></KV>
+          <KV k="Booked on">{v.bunker?.bookedOn ? formatInstant(v.bunker.bookedOn, tz).slice(0, 11) : ""}</KV>
         </div>
       </div>
       <table className={rs.sheetTable}>
@@ -218,16 +217,18 @@ function OpsReports() {
         const v = data.voyage;
         const tz = data.officeTimeZone;
         const both = (iso, zone) => (iso ? `${ltText(iso, zone)} LT (${utcText(iso)} UTC)` : "");
+        const dayText = (iso, zone) => formatInstant(iso, zone).slice(0, 11);
         const aoa = [
           ["Voyage summary", v.voyageNo], ["Vessel", v.vessel?.name], ["IMO", v.vessel?.imo || ""], ["Voyage type", v.voyageType], ["Status", v.status],
           ["Vessel status", VESSEL_STATUS_LABEL[v.vesselStatusShown]], ["Report date", dateText(data.today)], [],
           ["Charterer", v.charterers?.companyName || ""], ["Owners", v.owners?.companyName || ""], ["Brokers", (v.brokers || []).map((b) => b.companyName).join(", ")],
           ["Operators", (v.operators || []).map((o) => o.employeeName).join(", ")], ["Master", [v.master?.name, v.master?.email, v.master?.phone].filter(Boolean).join(" · ")], [],
-          ["Cargo fixed", both(v.fixture?.cargoFixedAt, tz)], ["Vessel fixed", both(v.fixture?.vesselFixedAt, tz)], [],
+          ["Vessel fixed", v.fixture?.vesselFixedAt ? dayText(v.fixture.vesselFixedAt, tz) : ""],
+          ["Cargo laycan", laycanText(v.fixture?.cargoLaycanFrom, v.fixture?.cargoLaycanTo, tz)], ["Vessel laycan", laycanText(v.fixture?.vesselLaycanFrom, v.fixture?.vesselLaycanTo, tz)], [],
           ...(v.cargo || []).map((c) => [`Cargo: ${c.description}`, c.quantity != null ? `${c.quantity} ${c.unit}` : ""]), [],
           ["Delivery", [v.delivery?.place, v.delivery?.timeZone].filter(Boolean).join(" · ")], ["Delivery estimated", both(v.delivery?.estimated, v.delivery?.timeZone)], ["Delivery actual", both(v.delivery?.actual, v.delivery?.timeZone)],
           ["Re-delivery", [v.redelivery?.place, v.redelivery?.timeZone].filter(Boolean).join(" · ")], ["Re-delivery estimated", both(v.redelivery?.estimated, v.redelivery?.timeZone)], ["Re-delivery actual", both(v.redelivery?.actual, v.redelivery?.timeZone)], [],
-          ["Bunker booked on", both(v.bunker?.bookedOn, tz)], ["Bunkering date", both(v.bunker?.bunkeringDate, tz)], [],
+          ["Bunker booked on", v.bunker?.bookedOn ? dayText(v.bunker.bookedOn, tz) : ""], ["Bunkering date", both(v.bunker?.bunkeringDate, tz)], [],
           ["Tasks % complete", data.totals?.pctComplete ?? ""], ["Tasks overdue", data.totals?.overdue ?? 0], ["On-time %", data.totals?.onTimePct ?? ""],
         ];
         const rows = v.portCalls.map((pc) => ({

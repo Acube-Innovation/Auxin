@@ -12,7 +12,7 @@ const section = (title, note) => (
   </div>
 );
 
-// Step 2 — Fixture & Vessel, with delivery and re-delivery (features B1–B3, B5)
+// Step 2 — Vessel, with delivery and re-delivery (features B1–B3, B5). Optional: the voyage can be activated without it.
 function StepFixture({ form, update, opts, officeTz, isOperator, quickAdd }) {
   const setFixture = (k) => (v) => update((f) => ({ ...f, fixture: { ...f.fixture, [k]: v } }));
   const setMaster = (k) => (e) => update((f) => ({ ...f, master: { ...f.master, [k]: e.target.value } }));
@@ -69,15 +69,15 @@ function StepFixture({ form, update, opts, officeTz, isOperator, quickAdd }) {
       </div>
 
       <div className={styles.field}>
-        <label>Vessel<span className={styles.req}>*</span></label>
+        <label>Vessel</label>
         <PickOrAdd inputId="wz-vessel" what="vessel" options={opts.vessels} value={form.vessel} onChange={chooseVessel} onCreate={quickAdd.vessel} placeholder="Type to search or add…" isClearable />
-        <div className={styles.hint}>Active vessels from Ops Masters → Vessels</div>
+        <div className={styles.hint}>Active vessels from Ops Masters → Vessels. Can be chosen after the voyage is activated.</div>
       </div>
       <div className={styles.field}>
-        <label>Operators{!isOperator && <span className={styles.req}>*</span>}</label>
+        <label>Operators</label>
         <Select inputId="wz-operators" isMulti options={opts.employees} value={form.operators} onChange={(v) => update((f) => ({ ...f, operators: v || [] }))}
           placeholder="Select operators…" />
-        <div className={styles.hint}>{isOperator ? "You are added as an operator automatically" : "Tasks are assigned to the operators by default"}</div>
+        <div className={styles.hint}>{isOperator ? "You are added as an operator automatically" : "Tasks are assigned to the operators by default (also when chosen later)"}</div>
       </div>
 
       <div className={styles.field}>
@@ -102,17 +102,19 @@ function StepFixture({ form, update, opts, officeTz, isOperator, quickAdd }) {
       <div className={styles.field}><label>Master's phone</label><input className={styles.input} value={form.master.phone} onChange={setMaster("phone")} /></div>
       <div />
 
-      {section("Fixture", `office time (${officeTz})`)}
+      {section("Vessel fixed", `office time (${officeTz})`)}
       <div className={styles.field}>
-        <label>Vessel fixed</label>
-        <PortDateTimeInput value={form.fixture.vesselFixedAt} zone={officeTz} onChange={setFixture("vesselFixedAt")} ariaLabel="Vessel fixed" />
+        <label>Vessel fixed (date)</label>
+        <ZoneDateInput value={form.fixture.vesselFixedAt} zone={officeTz} onChange={setFixture("vesselFixedAt")} ariaLabel="Vessel fixed" />
+      </div>
+      <div />
+      <div className={styles.field}>
+        <label>Vessel laycan from (date and time)</label>
+        <PortDateTimeInput value={form.fixture.vesselLaycanFrom} zone={officeTz} onChange={setFixture("vesselLaycanFrom")} ariaLabel="Vessel laycan from" />
       </div>
       <div className={styles.field}>
-        <label>Vessel laycan (from – to)</label>
-        <div style={{ display: "flex", gap: 6 }}>
-          <ZoneDateInput value={form.fixture.vesselLaycanFrom} zone={officeTz} onChange={setFixture("vesselLaycanFrom")} ariaLabel="Vessel laycan from" />
-          <ZoneDateInput value={form.fixture.vesselLaycanTo} zone={officeTz} onChange={setFixture("vesselLaycanTo")} ariaLabel="Vessel laycan to" />
-        </div>
+        <label>Vessel laycan to (date and time)</label>
+        <PortDateTimeInput value={form.fixture.vesselLaycanTo} zone={officeTz} onChange={setFixture("vesselLaycanTo")} ariaLabel="Vessel laycan to" />
       </div>
 
       {section("Delivery and re-delivery")}

@@ -255,6 +255,8 @@ router.post('/', async (req, res) => {
     if (!access.canCreate(req.user)) throw httpError(403, 'You cannot create voyages');
     const data = await normaliseVoyage(req.body, null);
     data.operators = withCreatorAsOperator(req.user, data.operators);
+    // "Cargo fixed" is not entered: the cargo is fixed when the voyage is first saved from the Cargo step
+    data.fixture = { ...(data.fixture || {}), cargoFixedAt: (data.fixture && data.fixture.cargoFixedAt) || new Date() };
 
     const portInputs = Array.isArray(req.body.portCalls) ? req.body.portCalls : [];
     const portCalls = [];
@@ -313,7 +315,6 @@ router.put('/:id', async (req, res) => {
       throw badRequest(`A ${current.status.toLowerCase()} voyage cannot be edited. Re-open it first.`);
     }
     const data = await normaliseVoyage(req.body, current.toObject());
-    if (data.operators && !data.operators.length && current.status !== 'DRAFT') throw badRequest('A voyage needs at least one operator');
     const assigneeChanged = Object.prototype.hasOwnProperty.call(req.body, 'cargoAssignee') && String(data.cargoAssignee || '') !== String(current.cargoAssignee || '');
     if (data.bunker && data.bunker.portCall) {
       const pc = await PortCall.findOne({ _id: data.bunker.portCall, voyage: current._id });
@@ -329,6 +330,8 @@ router.put('/:id', async (req, res) => {
       if (changed.some(([g, k]) => k === 'actual')) voyage.vesselStatusOverride = { value: null, setBy: null, setAt: null };
       await voyage.save({ session });
       if (voyage.status !== 'ACTIVE') return { movedTasks: [], dueSoon: [] };
+      // Operators chosen after activation take the open tasks nobody has yet
+      if (data.operators) await taskEngine.assignUnassigned(voyage._id, { session, user: req.user });
 
       const recalc = await taskEngine.recalculate(voyage._id, { session, user: req.user, reason: req.body.reason });
       await taskEngine.refreshVesselStatus(voyage._id, { session });
@@ -449,8 +452,8 @@ router.post('/:id/generate-preview', async (req, res) => {
 router.post('/:id/activate', async (req, res) => {
   try {
     const voyage = await loadEditable(req, req.params.id);
-    if (!voyage.vessel) throw badRequest('Choose the vessel (Fixture & Vessel step) before activating');
-    if (!(voyage.operators || []).length) throw badRequest('Choose at least one operator (Fixture & Vessel step) before activating');
+    // Vessel, operators and port calls are optional: a voyage can be activated from the Cargo step and
+    // completed later (tasks of port calls added afterwards are created then; unassigned tasks go to the operators)
     const result = await taskEngine.activate(voyage._id, {
       excluded: Array.isArray(req.body.excluded) ? req.body.excluded : [],
       adhocTasks: Array.isArray(req.body.adhocTasks) ? req.body.adhocTasks : [],

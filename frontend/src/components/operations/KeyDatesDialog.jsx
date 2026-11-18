@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import OpsModal from "./OpsModal";
-import { PortDateTimeInput } from "./PortDateTimeInput";
+import { PortDateTimeInput, ZoneDateInput } from "./PortDateTimeInput";
 import { zoneLabel } from "../../utils/opsTime";
 import styles from "../../pages/operations/masters/Masters.module.css";
 
 // Voyage-level key dates on an active voyage: delivery / re-delivery (estimated + actual), bunker dates,
-// fixture dates (features B2, B5, B8). Every change recalculates the linked tasks and is logged.
+// vessel fixed (features B2, B5, B8). Bunker booked and vessel fixed are dates only. Every change recalculates the
+// linked tasks and is logged.
 function KeyDatesDialog({ voyage, officeTz, onClose, onSubmit }) {
   const [form, setForm] = useState(null);
   const [error, setError] = useState("");
@@ -18,7 +19,7 @@ function KeyDatesDialog({ voyage, officeTz, onClose, onSubmit }) {
       delivery: { estimated: voyage.delivery?.estimated || null, actual: voyage.delivery?.actual || null },
       redelivery: { estimated: voyage.redelivery?.estimated || null, actual: voyage.redelivery?.actual || null },
       bunker: { bookedOn: voyage.bunker?.bookedOn || null, bunkeringDate: voyage.bunker?.bunkeringDate || null },
-      fixture: { cargoFixedAt: voyage.fixture?.cargoFixedAt || null, vesselFixedAt: voyage.fixture?.vesselFixedAt || null },
+      fixture: { vesselFixedAt: voyage.fixture?.vesselFixedAt || null },
       reason: "",
     });
   }, [voyage]);
@@ -47,10 +48,12 @@ function KeyDatesDialog({ voyage, officeTz, onClose, onSubmit }) {
     <div className={styles.card} style={{ padding: "0.8rem 1rem" }}>
       <b>{title}</b> <span className={styles.subtle}>{zoneLabel(zone)}</span>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
-        {fields.map(([label, group, key]) => (
+        {fields.map(([label, group, key, dateOnly]) => (
           <div key={`${group}.${key}`} className={styles.field}>
             <label>{label}</label>
-            <PortDateTimeInput value={form[group][key]} zone={zone} onChange={set(group, key)} ariaLabel={label} />
+            {dateOnly
+              ? <ZoneDateInput value={form[group][key]} zone={zone} onChange={set(group, key)} ariaLabel={label} />
+              : <PortDateTimeInput value={form[group][key]} zone={zone} onChange={set(group, key)} ariaLabel={label} />}
           </div>
         ))}
       </div>
@@ -68,10 +71,10 @@ function KeyDatesDialog({ voyage, officeTz, onClose, onSubmit }) {
         {block(`Delivery${voyage.delivery?.place ? ` — ${voyage.delivery.place}` : ""}`, dz, [["Delivery estimated", "delivery", "estimated"], ["Delivery actual", "delivery", "actual"]])}
         {block(`Re-delivery${voyage.redelivery?.place ? ` — ${voyage.redelivery.place}` : ""}`, rz, [["Re-delivery estimated", "redelivery", "estimated"], ["Re-delivery actual", "redelivery", "actual"]])}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {block("Bunker booked (office time)", officeTz, [["Bunker booked on", "bunker", "bookedOn"]])}
+          {block("Bunker booked", officeTz, [["Bunker booked on (date)", "bunker", "bookedOn", true]])}
           {block(`Bunkering${bunkerCall ? ` — ${bunkerCall.port?.name}` : ""}`, bz, [["Bunkering date", "bunker", "bunkeringDate"]])}
         </div>
-        {block("Fixture (office time)", officeTz, [["Cargo fixed", "fixture", "cargoFixedAt"], ["Vessel fixed", "fixture", "vesselFixedAt"]])}
+        {block("Vessel fixed", officeTz, [["Vessel fixed (date)", "fixture", "vesselFixedAt", true]])}
         <div className={styles.field}>
           <label>Reason for the change <span className={styles.subtle}>(optional, kept in the revision log)</span></label>
           <input className={styles.input} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} aria-label="Reason" />

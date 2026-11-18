@@ -188,7 +188,7 @@ function VoyageWorkspace() {
       <div className={styles.page}>
         <div className={`${styles.card} ${ws.header}`}>
           <div>
-            <div className={ws.vessel}>{voyage.vessel?.name}</div>
+            <div className={ws.vessel}>{voyage.vessel?.name || <span className={styles.subtle}>Vessel not chosen yet</span>}</div>
             <div className={ws.chips}>
               <span className={`${styles.chip} ${STATUS_CLASS[voyage.status]}`}>{voyage.status}</span>
               <span className={`${styles.chip} ${styles.chipScope}`}>{voyage.voyageType === "TC_TRIP" ? "Time-charter trip" : "Voyage charter"}</span>
@@ -200,9 +200,14 @@ function VoyageWorkspace() {
                 `Operators: ${(voyage.operators || []).map((o) => o.employeeName).join(", ")}`].filter(Boolean).join(" · ")}
             </div>
             {voyage.remarks && <div className={styles.note}>{voyage.remarks}</div>}
+            {voyage.status === "ACTIVE" && (() => {
+              const missing = [!voyage.vessel && "vessel", !(voyage.operators || []).length && "operators", !voyage.portCalls.some((p) => p.status !== "CANCELLED") && "port calls"].filter(Boolean);
+              return missing.length ? <div className={styles.readOnlyBanner} style={{ marginTop: 8 }}>Still to add: {missing.join(", ")}{canEdit ? " — use “Edit voyage”" : ""}.</div> : null;
+            })()}
           </div>
           <div className={ws.actions}>
             {voyage.status === "DRAFT" && canEdit && <button className={styles.btnPrimary} onClick={() => navigate(`/operations/voyages/${voyage._id}/edit`)}>Edit draft</button>}
+            {voyage.status === "ACTIVE" && canEdit && <button className={styles.btnPrimary} onClick={() => navigate(`/operations/voyages/${voyage._id}/edit`)}>Edit voyage</button>}
             {editable && <button className={styles.btnSecondary} onClick={() => setKeyDatesOpen(true)}>Key dates</button>}
             {editable && (
               <select className={styles.select} value={voyage.vesselStatusOverride?.value || ""} onChange={(e) => setVesselStatus(e.target.value)} aria-label="Vessel status override">

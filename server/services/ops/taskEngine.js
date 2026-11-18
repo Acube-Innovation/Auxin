@@ -117,6 +117,7 @@ const keyOf = (code, portCallId) => `${code}:${portCallId ? idOf(portCallId) : '
 // ------------------------------------------------------------------ preview (B9)
 async function preview(voyageId) {
   const { voyage, portCalls } = await loadContext(voyageId);
+  if (!voyage.fixture.cargoFixedAt) voyage.fixture.cargoFixedAt = voyage.createdAt || new Date(); // as activation does (not saved)
   const tasks = await buildTemplateTasks(voyage, portCalls);
   return tasks.map((t) => ({
     key: keyOf(t.code, t.portCall),
@@ -185,8 +186,8 @@ async function activate(voyageId, { excluded = [], adhocTasks = [] } = {}, user)
   return withTransaction(async (session) => {
     const { voyage, portCalls } = await loadContext(voyageId, session);
     if (voyage.status !== 'DRAFT') throw badRequest(`Only a draft voyage can be activated (this one is ${voyage.status.toLowerCase()})`);
-    if (!portCalls.some((pc) => pc.status !== 'CANCELLED')) throw badRequest('Add at least one port call before activating');
     if (await VoyageTask.exists({ voyage: voyage._id }).session(session)) throw badRequest('This voyage already has tasks');
+    if (!voyage.fixture.cargoFixedAt) voyage.fixture.cargoFixedAt = voyage.createdAt || new Date(); // drafts saved before the field was removed
 
     const tasks = await buildTemplateTasks(voyage, portCalls, { session });
     const byKey = new Map(tasks.map((t) => [keyOf(t.code, t.portCall), t]));
@@ -270,6 +271,25 @@ async function recalculate(voyageId, { session, user = null, reason = '' } = {})
   return { movedTasks: moved, dueSoon, recurring };
 }
 
+// ------------------------------------------------------------------ operators added after activation
+// Open tasks with nobody assigned get their default assignees (the template's role among the operators, else the operators)
+async function assignUnassigned(voyageId, { session, user = null } = {}) {
+  const { voyage } = await loadContext(voyageId, session);
+  if (!(voyage.operators || []).length) return 0;
+  const tasks = await VoyageTask.find({ voyage: voyage._id, status: { $in: OPEN }, assignedTo: { $size: 0 } }).populate('template', 'defaultRole').session(session || null);
+  if (!tasks.length) return 0;
+  const assignees = await assigneeResolver(voyage, session);
+  const now = new Date();
+  const ops = [];
+  for (const t of tasks) {
+    const to = await assignees(t.template && t.template.defaultRole);
+    if (!to.length) continue;
+    ops.push({ updateOne: { filter: { _id: t._id }, update: { $set: { assignedTo: to }, $push: { history: { at: now, by: user ? user._id : null, field: 'assignedTo', from: [], to, note: 'Operators chosen for the voyage', auto: true } } } } });
+  }
+  if (ops.length) await VoyageTask.bulkWrite(ops, { session });
+  return ops.length;
+}
+
 // ------------------------------------------------------------------ port calls added / cancelled on an active voyage
 async function addPortCallTasks(voyageId, portCallId, { session, user }) {
   const { voyage, portCalls } = await loadContext(voyageId, session);
@@ -338,7 +358,7 @@ async function addAdhocTask(voyageId, input, user) {
     const doc = buildAdhocTask(input, voyage, portCalls.filter((pc) => pc.status !== 'CANCELLED'), stagesById, user);
     doc.history[0].note = 'Ad-hoc task added';
     if (Array.isArray(input.assignedTo) && input.assignedTo.length) doc.assignedTo = [...new Set(input.assignedTo.map(String))];
-    if (input.remarks) doc.remarks = String(input.remarks);
+    if (input.remarks && String(input.remarks).trim()) doc.remarkLog = [{ at: new Date(), by: user._id, status: doc.status || 'NOT_STARTED', text: String(input.remarks).trim() }];
     const [created] = await VoyageTask.create([doc], { session });
     return created;
   });
@@ -362,5 +382,5 @@ async function refreshVesselStatus(voyageId, { session }) {
 }
 
 module.exports = {
-  withTransaction, preview, activate, recalculate, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, autoCompleteLinked, linkedEntered, addAdhocTask, OPEN,
+  withTransaction, preview, activate, recalculate, assignUnassigned, addPortCallTasks, cancelPortCallTasks, refreshVesselStatus, buildTemplateTasks, autoCompleteLinked, linkedEntered, addAdhocTask, OPEN,
 };

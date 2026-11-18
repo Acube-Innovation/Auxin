@@ -82,12 +82,10 @@ async function normaliseVoyage(body, current = null) {
     if (!VOYAGE_TYPES.includes(b.voyageType)) throw badRequest(`voyageType must be one of ${VOYAGE_TYPES.join(', ')}`);
     out.voyageType = b.voyageType;
   }
-  const isDraft = !current || current.status === 'DRAFT';
   if (has(b, 'vessel') || !current) {
-    out.vessel = refId(b.vessel, 'Vessel');
-    if (!out.vessel && !isDraft) throw badRequest('Vessel is required');
+    out.vessel = refId(b.vessel, 'Vessel'); // optional: a voyage may be activated from the Cargo step
     // A new voyage must use an active vessel; an existing one may keep a vessel deactivated since
-    const changed = !current || String(current.vessel) !== out.vessel;
+    const changed = !current || String(current.vessel || '') !== String(out.vessel || '');
     await assertExist(Vessel, [out.vessel], changed ? 'Active vessel' : 'Vessel', changed ? { isActive: true } : {});
   }
   if (has(b, 'master')) {

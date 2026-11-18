@@ -13,6 +13,7 @@ const access = require('../../services/ops/accessScope');
 const engine = require('../../services/ops/dueDateEngine');
 const { badRequest } = require('../../services/ops/voyageInput');
 const { sendError } = require('./helpers');
+const { OFFICE_TZ } = require('../../services/ops/config');
 
 const MAX_ROWS = 20000;
 const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
@@ -56,7 +57,7 @@ router.get('/tasks', async (req, res) => {
         dueDate: t.dueDate, dueSetByHand: Boolean(t.dueOverridden), startDate: t.startDate, completedDate: t.completedDate,
         status: t.status, bucket: d.bucket, overdueDays: d.overdueDays, pendingDays: d.pendingDays, dueInDays: d.dueInDays,
         priority: t.priority, assignedTo: (t.assignedTo || []).map((a) => a.employeeName).join(', '),
-        remarks: t.remarks || '', naReason: t.naReason || '', attachments: (t.attachments || []).length,
+        remarks: [t.remarks, ...(t.remarkLog || []).map((r) => `${DateTime.fromJSDate(new Date(r.at), { zone: OFFICE_TZ }).toFormat('dd-LLL-yyyy')}: ${r.text}`)].filter(Boolean).join(' | '), naReason: t.naReason || '', attachments: (t.attachments || []).length,
       };
     });
     res.json({ today, voyages: voyages.map(voyageCols), rows, truncated: tasks.length === MAX_ROWS });

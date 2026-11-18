@@ -782,3 +782,93 @@ test('working time: planned hours from the template, Start / Hold / Stop through
   const own = await patchTask(t._id, { plannedHours: 4 });
   assert.equal(own.data.task.plannedHours, 4, 'planned hours can be changed for one task');
 });
+
+// ------------------------------------------------------------------ Operation module changes (17-Nov-2026)
+test('voyage activated from the Cargo step alone: no vessel, operators or ports; cargo fixed = first save; completed later', async () => {
+  const created = await call('POST', '/ops/voyages', { cargo: [{ description: 'Cargo-only test', quantity: 1000 }], fixture: { cargoLaycanFrom: iso('2026-12-01T10:30', 'Asia/Kolkata'), cargoLaycanTo: iso('2026-12-05T18:00', 'Asia/Kolkata') } });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  assert.ok(created.data.fixture.cargoFixedAt, 'cargo fixed is set when the voyage is first saved');
+  assert.equal(created.data.fixture.cargoLaycanFrom, iso('2026-12-01T10:30', 'Asia/Kolkata'), 'laycan keeps its time');
+  assert.equal(created.data.vessel, null);
+  const id = created.data._id;
+  ctx.cargoOnly = id;
+
+  const act = await call('POST', `/ops/voyages/${id}/activate`, {});
+  assert.equal(act.status, 200, JSON.stringify(act.data));
+  assert.equal(act.data.status, 'ACTIVE');
+  assert.ok(act.data.activation.created > 0);
+  let tasks = (await call('GET', `/ops/voyages/${id}/tasks`)).data.tasks;
+  assert.ok(taskByCode(tasks, 'T001').dueDate, 'cargo-stage tasks get a due date from the first save');
+  assert.ok(tasks.every((t) => !t.portCall), 'no port-call tasks before port calls exist');
+  assert.ok(tasks.every((t) => !(t.assignedTo || []).length), 'nobody to assign to yet');
+
+  // Operators chosen later take the unassigned open tasks
+  const upd = await call('PUT', `/ops/voyages/${id}`, { operators: [ctx.e2] });
+  assert.equal(upd.status, 200, JSON.stringify(upd.data));
+  tasks = (await call('GET', `/ops/voyages/${id}/tasks`)).data.tasks;
+  assert.ok(tasks.filter((t) => ['NOT_STARTED', 'INITIATED', 'AWAITING'].includes(t.status)).every((t) => t.assignedTo.some((a) => a._id === ctx.e2)));
+
+  // The vessel and a port call can be added to the active voyage; the port call gets its tasks
+  const vessel = (await call('GET', '/ops/vessels?active=true')).data[0];
+  const withVessel = await call('PUT', `/ops/voyages/${id}`, { vessel: vessel._id });
+  assert.equal(withVessel.status, 200, JSON.stringify(withVessel.data));
+  assert.equal(withVessel.data.vessel._id, vessel._id);
+  const pc = await call('POST', `/ops/voyages/${id}/port-calls`, { port: ctx.calls.salalah.port._id, type: 'LOADING', planned: { eta: iso('2026-12-10T08:00', MUSCAT) } });
+  assert.ok([200, 201].includes(pc.status), JSON.stringify(pc.data));
+  assert.ok(pc.data.tasksCreated > 0);
+});
+
+test('task remarks: added with Initiated / Awaiting / N/A, kept day by day, never edited', async () => {
+  const tasks = (await call('GET', `/ops/voyages/${ctx.cargoOnly}/tasks`)).data.tasks;
+  const [a, b] = tasks.filter((t) => t.status === 'NOT_STARTED');
+  let r = await call('PATCH', `/ops/tasks/${a._id}`, { status: 'INITIATED', remark: 'Asked the charterers for the recap' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.task.remarkLog.length, 1);
+  assert.equal(r.data.task.remarkLog[0].status, 'INITIATED');
+  assert.equal(r.data.task.remarkLog[0].by.username, 'admin');
+  r = await call('PATCH', `/ops/tasks/${a._id}`, { status: 'AWAITING', remark: 'Waiting for the charterers' });
+  assert.equal(r.data.task.remarkLog.length, 2);
+  assert.equal(r.data.task.remarkLog[1].status, 'AWAITING');
+  r = await call('PATCH', `/ops/tasks/${a._id}`, { remark: 'Chased again' });
+  assert.equal(r.data.task.remarkLog.length, 3);
+  assert.equal(r.data.task.status, 'AWAITING');
+  r = await call('PATCH', `/ops/tasks/${a._id}`, { remarks: 'rewritten' });
+  assert.equal(r.status, 400, 'remarks cannot be edited');
+  r = await call('PATCH', `/ops/tasks/${b._id}`, { status: 'NA', naReason: 'Not needed for this cargo' });
+  assert.equal(r.data.task.remarkLog.length, 1);
+  assert.equal(r.data.task.remarkLog[0].status, 'NA');
+  assert.equal(r.data.task.remarkLog[0].text, 'Not needed for this cargo');
+  ctx.remarkTask = a._id;
+});
+
+test('tasks done today: listed for managers, checked by managers only, re-opening removes the check', async () => {
+  const id = ctx.remarkTask;
+  let r = await call('PATCH', `/ops/tasks/${id}`, { status: 'DONE' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  let list = await call('GET', '/ops/tasks/done-today');
+  assert.equal(list.status, 200, JSON.stringify(list.data));
+  assert.equal(list.data.canVerify, true);
+  const row = list.data.tasks.find((t) => t._id === id);
+  assert.ok(row, 'the task done today is listed');
+  assert.equal(row.doneBy, 'admin');
+  assert.ok(!row.verified || !row.verified.at);
+
+  r = await call('POST', '/ops/tasks/verify', { ids: [id] }, 'ops2');
+  assert.equal(r.status, 403, 'operators cannot check');
+  r = await call('POST', '/ops/tasks/verify', { ids: [id] });
+  assert.equal(r.data.updated, 1);
+  list = await call('GET', '/ops/tasks/done-today');
+  assert.ok(list.data.tasks.find((t) => t._id === id).verified.at);
+  assert.equal(list.data.tasks.find((t) => t._id === id).verified.by.username, 'admin');
+
+  const open = (await call('GET', `/ops/voyages/${ctx.cargoOnly}/tasks`)).data.tasks.find((t) => t.status === 'NOT_STARTED');
+  r = await call('POST', '/ops/tasks/verify', { ids: [open._id] });
+  assert.equal(r.data.updated, 0);
+  assert.equal(r.data.skipped.length, 1, 'only Done tasks can be checked');
+
+  r = await call('PATCH', `/ops/tasks/${id}`, { status: 'INITIATED' });
+  assert.ok(!r.data.task.verified || !r.data.task.verified.at, 're-opened task loses its check');
+  list = await call('GET', '/ops/tasks/done-today', null, 'ops2');
+  assert.equal(list.data.canVerify, false);
+  assert.ok(!list.data.tasks.some((t) => t._id === id), 'no longer done');
+});

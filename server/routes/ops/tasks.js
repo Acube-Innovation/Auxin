@@ -14,6 +14,11 @@ const engine = require('../../services/ops/dueDateEngine');
 const { applyTaskPatch, writeLinkedValue, resolveLinkedTarget, badRequest } = require('../../services/ops/taskUpdate');
 const timer = require('../../services/ops/taskTimer');
 const { sendError, httpError } = require('./helpers');
+const { DateTime } = require('luxon');
+const { OFFICE_TZ } = require('../../services/ops/config');
+const { ADMIN, MANAGERS } = require('../../services/ops/roles');
+
+const canVerify = (user) => access.isIn(user, ADMIN) || access.isIn(user, MANAGERS);
 
 // Task attachments are kept outside the public /uploads folder and served only to people who may see the voyage
 const STORAGE = path.join(__dirname, '..', '..', 'storage', 'voyages');
@@ -48,7 +53,7 @@ async function loadTask(req, taskId, { forWrite = false, session = null } = {}) 
 
 async function taskOut(id) {
   const t = await VoyageTask.findById(id).populate(POPULATE).populate('history.by', 'username').populate('attachments.uploadedBy', 'username')
-    .populate('timeLog.by', 'username').lean();
+    .populate('timeLog.by', 'username').populate('remarkLog.by', 'username').populate('verified.by', 'username').lean();
   await timer.fillPlannedHours([t]);
   return { ...t, ...engine.derive(t), actualSeconds: timer.actualSeconds(t) };
 }
@@ -81,6 +86,72 @@ router.get('/mine', async (req, res) => {
   } catch (err) { sendError(res, err, 'Error fetching your tasks'); }
 });
 
+// ------------------------------------------------------------------ tasks done on a day, for managers to check
+// GET ?date=YYYY-MM-DD (default today, office time) &voyage=<id>. A task counts when it was marked Done that day
+// or its completion date is that day. Declared before /:taskId.
+router.get('/done-today', async (req, res) => {
+  try {
+    const today = engine.todayIn();
+    const date = req.query.date || today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw badRequest('date must be YYYY-MM-DD');
+    const dayStart = DateTime.fromISO(date, { zone: OFFICE_TZ }).startOf('day');
+    const from = dayStart.toJSDate();
+    const to = dayStart.plus({ days: 1 }).toJSDate();
+    const voyageIds = await Voyage.find({ ...(await access.voyageFilter(req.user)), status: { $in: ['ACTIVE', 'COMPLETED'] } }).distinct('_id');
+    const filter = { voyage: { $in: voyageIds }, status: 'DONE', $or: [{ completedDate: date }, { history: { $elemMatch: { field: 'status', to: 'DONE', at: { $gte: from, $lt: to } } } }] };
+    if (req.query.voyage) {
+      if (!mongoose.isValidObjectId(req.query.voyage)) throw badRequest('voyage is not a valid id');
+      filter.voyage = { $in: voyageIds.filter((v) => String(v) === String(req.query.voyage)) };
+    }
+    const tasks = await VoyageTask.find(filter)
+      .select('-reminderSent -timeLog')
+      .populate(POPULATE)
+      .populate('remarkLog.by', 'username')
+      .populate('verified.by', 'username')
+      .populate('history.by', 'username')
+      .populate({ path: 'voyage', select: 'voyageNo vessel status', populate: { path: 'vessel', select: 'name' } })
+      .lean();
+    const out = tasks.map((t) => {
+      const doneAt = [...(t.history || [])].reverse().find((h) => h.field === 'status' && h.to === 'DONE');
+      const { history, ...rest } = t;
+      return { ...rest, ...engine.derive(t, today), doneAt: doneAt ? doneAt.at : null, doneBy: doneAt && doneAt.by ? doneAt.by.username : null };
+    }).sort((a, b) => a.voyage.voyageNo.localeCompare(b.voyage.voyageNo) || a.sortKey - b.sortKey);
+    res.json({ date, today, canVerify: canVerify(req.user), total: out.length, verified: out.filter((t) => t.verified && t.verified.at).length, tasks: out });
+  } catch (err) { sendError(res, err, 'Error fetching the tasks done today'); }
+});
+
+// POST { ids, undo } — managers / admin mark Done tasks as checked (or take the check back)
+router.post('/verify', async (req, res) => {
+  try {
+    if (!canVerify(req.user)) throw httpError(403, 'Only managers can check completed tasks');
+    const ids = Array.isArray(req.body.ids) ? [...new Set(req.body.ids.map(String))] : [];
+    if (!ids.length) throw badRequest('Select at least one task');
+    if (ids.length > 500) throw badRequest('At most 500 tasks at a time');
+    const undo = Boolean(req.body.undo);
+    const now = new Date();
+    const updated = [];
+    const skipped = [];
+    const voyages = new Set();
+    for (const id of ids) {
+      try {
+        const { task } = await loadTask(req, id);
+        if (task.status !== 'DONE') throw badRequest('Only Done tasks can be checked');
+        const isVerified = Boolean(task.verified && task.verified.at);
+        if (isVerified !== undo) continue; // already as asked
+        task.verified = undo ? { at: null, by: null } : { at: now, by: req.user._id };
+        task.history.push({ at: now, by: req.user._id, field: 'verified', from: !undo, to: !undo, note: undo ? 'Check taken back' : 'Checked by manager' });
+        await task.save();
+        updated.push(String(task._id));
+        voyages.add(String(task.voyage));
+      } catch (e) {
+        skipped.push({ id, reason: e.message });
+      }
+    }
+    emitUpdated(req, [...voyages]);
+    res.json({ updated: updated.length, skipped });
+  } catch (err) { sendError(res, err, 'Error checking tasks'); }
+});
+
 // ------------------------------------------------------------------ bulk changes (D8): { ids, patch }
 // patch: status (+ naReason), priority, assignedTo (replace), addAssignees, dueDate. Declared before /:taskId.
 router.post('/bulk', async (req, res) => {
@@ -105,7 +176,7 @@ router.post('/bulk', async (req, res) => {
             p.assignedTo = [...new Set([...(task.assignedTo || []).map(String), ...p.addAssignees.map(String)])];
             delete p.addAssignees;
           }
-          const changes = await applyTaskPatch(task, p, { session });
+          const changes = await applyTaskPatch(task, p, { session, user: req.user });
           if (changes.length) {
             changes.forEach((c) => task.history.push({ at: new Date(), by: req.user._id, ...c, note: c.note || 'Bulk change' }));
             await task.save({ session });
@@ -149,7 +220,7 @@ router.patch('/:taskId', async (req, res) => {
   try {
     const out = await taskEngine.withTransaction(async (session) => {
       const { task, voyage } = await loadTask(req, req.params.taskId, { forWrite: true, session });
-      const changes = await applyTaskPatch(task, req.body, { session });
+      const changes = await applyTaskPatch(task, req.body, { session, user: req.user });
       let linked = null;
       if (req.body.linkedValue !== undefined && req.body.linkedValue !== null && req.body.linkedValue !== '') {
         if (!task.linkedField) throw badRequest('This task does not record a date on the voyage');
@@ -191,7 +262,7 @@ router.post('/:taskId/timer', async (req, res) => {
       const { task, voyage } = await loadTask(req, req.params.taskId, { forWrite: true, session });
       const now = new Date();
       const entries = [timer.applyTimerAction(task, req.body.action, req.user, now)];
-      if (req.body.action === 'start' && task.status === 'NOT_STARTED') entries.push(...await applyTaskPatch(task, { status: 'INITIATED' }, { session }));
+      if (req.body.action === 'start' && task.status === 'NOT_STARTED') entries.push(...await applyTaskPatch(task, { status: 'INITIATED' }, { session, user: req.user }));
       entries.forEach((c) => task.history.push({ at: now, by: req.user._id, ...c }));
       await task.save({ session });
       return { task, voyage };

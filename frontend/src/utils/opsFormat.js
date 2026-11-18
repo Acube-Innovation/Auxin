@@ -111,6 +111,13 @@ export function formatInstantDate(iso, timeZone) {
   return p ? p.date : "";
 }
 
+// Laycan "05-Jul-2026 10:00 – 10-Jul-2026 18:00 LT" (date and time in the zone); "" when not set
+export function laycanText(from, to, timeZone) {
+  if (!from) return "";
+  const a = formatInstant(from, timeZone, { withUtc: false }).replace(/ LT$/, "");
+  return `${a} – ${to ? formatInstant(to, timeZone, { withUtc: false }) : "?"}`;
+}
+
 // All IANA zone names the browser knows (falls back to a short list on very old browsers)
 export function allTimeZones() {
   try {

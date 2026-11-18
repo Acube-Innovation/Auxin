@@ -26,8 +26,10 @@ const CLIENT_TYPES = ["Charterer", "Ship Owners", "Broker", "Agent", "Supplier"]
 const addTo = (list, opt) => [...(list || []).filter((o) => o.value !== opt.value), opt].sort((a, b) => a.label.localeCompare(b.label));
 
 // New Voyage wizard — /operations/voyages/new and /operations/voyages/:id/edit (drafts) — features B1–B10.
-// Steps: Cargo → Fixture & Vessel → Port Rotation (each with its own task list) → Review & Activate.
-// A draft can be saved from Cargo alone; activation (from any step) needs the vessel, operators and ports.
+// Steps: Cargo → Vessel → Port Rotation (each with its own task list) → Review & Activate.
+// A draft can be saved and activated from Cargo alone; vessel, operators and ports can be added later.
+// An active voyage opens here too (steps 1–3, no task lists) so the vessel, operators and ports can be completed;
+// port calls added then get their tasks, and operators chosen then take the unassigned tasks.
 // ?step=1&tasks=1 opens a step with its task list (link of the cargo-assignee notification).
 function VoyageWizard() {
   const { id } = useParams();
@@ -104,10 +106,11 @@ function VoyageWizard() {
     if (!id || loadedId.current === id) return;
     loadedId.current = id;
     OpsVoyageService.get(id).then((v) => {
-      if (v.status !== "DRAFT") {
-        setLoadError(`${v.voyageNo} is ${v.status.toLowerCase()}. Only drafts are edited here; an active voyage is changed in its workspace.`);
+      if (!["DRAFT", "ACTIVE"].includes(v.status)) {
+        setLoadError(`${v.voyageNo} is ${v.status.toLowerCase()}. Re-open it in its workspace before editing.`);
         return;
       }
+      if (v.status === "ACTIVE") { setView("details"); setStep((s) => Math.min(s, 3)); }
       setVoyageId(v._id);
       setSaved(v);
       setForm(fromVoyage(v));
@@ -176,7 +179,9 @@ function VoyageWizard() {
       // 2. port calls: remove, update, add
       const server = await OpsVoyageService.get(voyageId);
       const keep = new Set(rows.filter((r) => r._id).map((r) => r._id));
-      for (const pc of server.portCalls) if (!keep.has(pc._id)) await OpsVoyageService.removePortCall(voyageId, pc._id);
+      // On an active voyage a removed call is cancelled (its open tasks become N/A); cancelled calls stay listed
+      const cancelled = server.portCalls.filter((pc) => pc.status === "CANCELLED").map((pc) => pc._id);
+      for (const pc of server.portCalls) if (pc.status !== "CANCELLED" && !keep.has(pc._id)) await OpsVoyageService.removePortCall(voyageId, pc._id);
       const ids = [];
       for (const row of rows) {
         if (row._id) {
@@ -188,7 +193,7 @@ function VoyageWizard() {
         }
       }
       // 3. order
-      if (ids.length > 1) await OpsVoyageService.reorderPortCalls(voyageId, ids);
+      if (ids.length > 1) await OpsVoyageService.reorderPortCalls(voyageId, [...ids, ...cancelled]);
       v = await OpsVoyageService.get(voyageId);
     }
     setSaved(v);
@@ -240,7 +245,7 @@ function VoyageWizard() {
   // The notification link (?tasks=1) opens the step with its task list
   const autoTasks = useRef(false);
   useEffect(() => {
-    if (!openTasks || autoTasks.current || !saved || !meta) return;
+    if (!openTasks || autoTasks.current || !saved || !meta || saved.status !== "DRAFT") return;
     autoTasks.current = true;
     loadPreview().catch((e) => setError(e.message));
   }, [openTasks, saved, meta]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -291,7 +296,7 @@ function VoyageWizard() {
     setBusy(true);
     try {
       const v = await saveDraft();
-      showToast(`Draft ${v.voyageNo} saved`, "success");
+      showToast(v.status === "ACTIVE" ? `${v.voyageNo} saved` : `Draft ${v.voyageNo} saved`, "success");
     } catch (e) {
       setError(e.message);
     } finally {
@@ -299,12 +304,12 @@ function VoyageWizard() {
     }
   };
 
-  // Activate from any step: everything is checked first (vessel, operators, ports), the draft saved and the tasks generated
+  // Activate from any step, the Cargo step included: what was entered is checked, the draft saved and the tasks
+  // generated. Vessel, operators and port calls are not required (they can be added later with "Edit voyage").
   const activate = async () => {
     setError("");
     const problem = checkUpTo(3);
     if (problem) { setError(problem.err); setStep(problem.step); return; }
-    if (!form.rows.some((r) => r.port)) { setError("Add at least one port call before activating"); setStep(3); return; }
     setBusy(true);
     let p = preview;
     let exSet = excluded;
@@ -323,7 +328,9 @@ function VoyageWizard() {
     }
     setBusy(false);
     const included = p.tasks.length - exSet.size;
-    if (!window.confirm(`Activate ${voyageNo}? ${included + adhoc.length} tasks will be created${exSet.size ? ` and ${exSet.size} kept as Not applicable` : ""}.`)) return;
+    const later = [!form.vessel && "the vessel", !form.operators.length && "operators", !form.rows.some((r) => r.port) && "port calls"].filter(Boolean);
+    const laterText = later.length ? `\n\nNot entered yet: ${later.join(", ")}. You can add them later with “Edit voyage”${!form.operators.length ? "; tasks stay unassigned until operators are chosen" : ""}.` : "";
+    if (!window.confirm(`Activate ${voyageNo}? ${included + adhoc.length} tasks will be created${exSet.size ? ` and ${exSet.size} kept as Not applicable` : ""}.${laterText}`)) return;
     setBusy(true);
     try {
       const ex = p.tasks.filter((t) => exSet.has(t.key)).map((t) => ({ code: t.code, portCall: t.portCall ? t.portCall._id : null }));
@@ -341,7 +348,7 @@ function VoyageWizard() {
   const cancel = () => {
     if (dirty && !window.confirm("Leave without saving your changes?")) return;
     setDirty(false);
-    navigate("/operations/voyages");
+    navigate(saved?.status === "ACTIVE" ? `/operations/voyages/${saved._id}` : "/operations/voyages");
   };
 
   const counts = useMemo(() => ({
@@ -350,7 +357,9 @@ function VoyageWizard() {
     adhoc: adhoc.length,
   }), [preview, excluded, adhoc]);
 
-  const title = saved ? `Edit draft ${saved.voyageNo}` : "New Voyage";
+  const isActive = saved?.status === "ACTIVE"; // completing an active voyage: steps 1–3, no task lists, no activation
+  const steps = isActive ? STEPS.slice(0, 3) : STEPS;
+  const title = saved ? (isActive ? `Edit voyage ${saved.voyageNo}` : `Edit draft ${saved.voyageNo}`) : "New Voyage";
   const crumbs = [{ label: "Vessel Operations" }, { label: "Voyages", to: "/operations/voyages" }, { label: saved ? saved.voyageNo : "New Voyage" }];
 
   if (loadError) {
@@ -370,8 +379,8 @@ function VoyageWizard() {
     <OpsLayout title={title} breadcrumbs={crumbs}>
       <div className={`${shared.page} ${styles.wizard}`}>
         <div className={styles.steps}>
-          <ProgressSteps steps={STEPS} currentStep={step} onStepClick={(s) => !busy && goTo(s)} />
-          {saved && <span className={shared.subtle}>Draft {saved.voyageNo}{dirty ? " · unsaved changes" : " · saved"}</span>}
+          <ProgressSteps steps={steps} currentStep={step} onStepClick={(s) => !busy && goTo(s)} />
+          {saved && <span className={shared.subtle}>{isActive ? "Active voyage" : "Draft"} {saved.voyageNo}{dirty ? " · unsaved changes" : " · saved"}</span>}
           {!saved && dirty && <span className={shared.subtle}>Not saved yet</span>}
         </div>
 
@@ -380,7 +389,8 @@ function VoyageWizard() {
           {error && <div className={shared.formError} role="alert">{error}</div>}
           {!meta ? <div className={shared.empty}>Loading…</div> : (
             <>
-              {step <= 3 && (
+              {isActive && <div className={shared.readOnlyBanner}>This voyage is active. Saving recalculates its due dates; port calls added here get their tasks, a removed port call is cancelled (its open tasks become N/A), and operators chosen here take the tasks nobody has yet.</div>}
+              {step <= 3 && !isActive && (
                 <div className={styles.subTabs} role="tablist" aria-label="Step sections">
                   <button type="button" role="tab" aria-selected={view === "details"} className={view === "details" ? styles.subTabActive : styles.subTab} onClick={() => setView("details")}>
                     {STEPS[step - 1]}
@@ -393,7 +403,7 @@ function VoyageWizard() {
               {step === 1 && view === "details" && <StepCargo {...stepProps} />}
               {step === 2 && view === "details" && <StepFixture {...stepProps} />}
               {step === 3 && view === "details" && <StepRotation {...stepProps} />}
-              {step <= 3 && view === "tasks" && <StepTasks step={step} preview={preview} excluded={excluded} setExcluded={setExcluded} stale={previewStale || dirty} busy={busy} onRefresh={refreshTasks} />}
+              {step <= 3 && view === "tasks" && !isActive && <StepTasks step={step} preview={preview} excluded={excluded} setExcluded={setExcluded} stale={previewStale || dirty} busy={busy} onRefresh={refreshTasks} />}
               {step === 4 && <><OneOffTasks adhoc={adhoc} setAdhoc={setAdhoc} /><StepReview voyage={saved} officeTz={officeTz} counts={counts} /></>}
             </>
           )}
@@ -403,9 +413,11 @@ function VoyageWizard() {
           <button className={shared.btnSecondary} onClick={cancel} disabled={busy}>Cancel</button>
           <div className={shared.toolbarLeft}>
             {step > 1 && <button className={shared.btnSecondary} onClick={() => goTo(step - 1)} disabled={busy}>Back</button>}
-            <button className={shared.btnSecondary} onClick={saveOnly} disabled={busy || (!dirty && Boolean(voyageId))}>{busy ? "Saving…" : "Save draft"}</button>
-            {step < 4 && <button className={shared.btnSecondary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 3 ? "Next: review" : "Next"}</button>}
-            <button className={shared.btnPrimary} onClick={activate} disabled={busy}>{busy ? "Working…" : "Activate voyage"}</button>
+            <button className={isActive ? shared.btnPrimary : shared.btnSecondary} onClick={saveOnly} disabled={busy || (!dirty && Boolean(voyageId))}>{busy ? "Saving…" : isActive ? "Save changes" : "Save draft"}</button>
+            {step < steps.length && <button className={shared.btnSecondary} onClick={() => goTo(step + 1)} disabled={busy}>{step === 3 ? "Next: review" : "Next"}</button>}
+            {isActive
+              ? <button className={shared.btnPrimary} onClick={() => (dirty ? window.alert("Save your changes first") : navigate(`/operations/voyages/${saved._id}`))} disabled={busy}>Back to voyage</button>
+              : <button className={shared.btnPrimary} onClick={activate} disabled={busy}>{busy ? "Working…" : "Activate voyage"}</button>}
           </div>
         </div>
       </div>

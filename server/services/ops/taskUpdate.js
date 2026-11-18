@@ -21,8 +21,10 @@ function badRequest(message) {
 }
 
 // Apply a patch to a task document (not saved). Returns the list of changes for the history.
-// patch: { status, naReason, startDate, completedDate, dueDate, unlockDueDate, priority, assignedTo, remarks, plannedHours }
-async function applyTaskPatch(task, patch, { session } = {}) {
+// patch: { status, naReason, remark, startDate, completedDate, dueDate, unlockDueDate, priority, assignedTo, plannedHours }
+// `remark` adds a remark to the log (with the new status when given together); remarks are never edited.
+// `user` is who makes the change (for the remark log).
+async function applyTaskPatch(task, patch, { session, user = null } = {}) {
   const changes = [];
   const set = (field, value) => {
     const before = task[field];
@@ -40,7 +42,16 @@ async function applyTaskPatch(task, patch, { session } = {}) {
     if (task.reminderProfile === task.priority) task.reminderProfile = patch.priority;
     set('priority', patch.priority);
   }
-  if (patch.remarks !== undefined) set('remarks', String(patch.remarks || ''));
+  if (patch.remarks !== undefined && String(patch.remarks || '') !== String(task.remarks || '')) {
+    throw badRequest('Remarks cannot be edited; add a new remark instead');
+  }
+  const addRemark = (text, status) => {
+    const t = String(text || '').trim();
+    if (!t) return;
+    if (t.length > 2000) throw badRequest('A remark can be at most 2000 characters');
+    task.remarkLog.push({ at: new Date(), by: user ? user._id : null, status: status || task.status, text: t });
+    changes.push({ field: 'remark', from: null, to: t });
+  };
   if (patch.plannedHours !== undefined) {
     const h = patch.plannedHours === null || patch.plannedHours === '' ? null : Number(patch.plannedHours);
     if (h !== null && !(Number.isFinite(h) && h >= 0)) throw badRequest('Planned hours must be a number of 0 or more');
@@ -95,6 +106,12 @@ async function applyTaskPatch(task, patch, { session } = {}) {
       if (['INITIATED', 'AWAITING'].includes(to) && !task.startDate) set('startDate', today);
     }
     set('status', to);
+    if (to !== 'DONE' && task.verified && task.verified.at) {
+      changes.push({ field: 'verified', from: true, to: false, note: 'Re-opened: needs checking again when done' });
+      task.verified = { at: null, by: null };
+    }
+    if (to === 'NA') addRemark(task.naReason, 'NA');
+    else addRemark(patch.remark, to);
     if (to === 'DONE' || to === 'NA') {
       const stopped = stopOnClose(task);
       if (stopped) changes.push(stopped);
@@ -106,6 +123,9 @@ async function applyTaskPatch(task, patch, { session } = {}) {
   } else if (patch.naReason !== undefined && task.status === 'NA') {
     if (!String(patch.naReason).trim()) throw badRequest('A reason is required to mark a task Not applicable');
     set('naReason', String(patch.naReason).trim());
+  }
+  if (patch.remark !== undefined && (patch.status === undefined || patch.status === task.status) && !changes.some((c) => c.field === 'remark')) {
+    addRemark(patch.remark, task.status);
   }
   return changes;
 }

@@ -7,7 +7,8 @@ import styles from "../masters/Masters.module.css";
 
 const UNITS = ["MT", "CBM", "Units", "TEU", "Pieces"];
 
-// Step 1 — Customer, cargo lines and the cargo fixture dates (feature B4)
+// Step 1 — Customer, cargo lines, CP date and cargo laycan (feature B4). "Cargo fixed" is not entered:
+// the cargo is fixed when the voyage is first saved.
 function StepCargo({ form, update, opts, officeTz, quickAdd }) {
   const setCustomer = (patch) => update((f) => ({ ...f, customer: { ...f.customer, ...patch } }));
   const setFixture = (k) => (v) => update((f) => ({ ...f, fixture: { ...f.fixture, [k]: v } }));
@@ -72,19 +73,17 @@ function StepCargo({ form, update, opts, officeTz, quickAdd }) {
           <label style={{ fontSize: "0.95rem", color: "#0b3a6f" }}>Fixture <span className={styles.subtle} style={{ fontWeight: 400 }}>· office time ({officeTz})</span></label>
         </div>
         <div className={styles.field}>
-          <label>Cargo fixed</label>
-          <PortDateTimeInput value={form.fixture.cargoFixedAt} zone={officeTz} onChange={setFixture("cargoFixedAt")} ariaLabel="Cargo fixed" />
-        </div>
-        <div className={styles.field}>
           <label>CP date</label>
           <ZoneDateInput value={form.fixture.cpDate} zone={officeTz} onChange={setFixture("cpDate")} ariaLabel="CP date" />
         </div>
+        <div />
         <div className={styles.field}>
-          <label>Cargo laycan (from – to)</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <ZoneDateInput value={form.fixture.cargoLaycanFrom} zone={officeTz} onChange={setFixture("cargoLaycanFrom")} ariaLabel="Cargo laycan from" />
-            <ZoneDateInput value={form.fixture.cargoLaycanTo} zone={officeTz} onChange={setFixture("cargoLaycanTo")} ariaLabel="Cargo laycan to" />
-          </div>
+          <label>Cargo laycan from (date and time)</label>
+          <PortDateTimeInput value={form.fixture.cargoLaycanFrom} zone={officeTz} onChange={setFixture("cargoLaycanFrom")} ariaLabel="Cargo laycan from" />
+        </div>
+        <div className={styles.field}>
+          <label>Cargo laycan to (date and time)</label>
+          <PortDateTimeInput value={form.fixture.cargoLaycanTo} zone={officeTz} onChange={setFixture("cargoLaycanTo")} ariaLabel="Cargo laycan to" />
         </div>
       </div>
     </div>
